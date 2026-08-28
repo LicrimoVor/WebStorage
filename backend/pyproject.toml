@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "webstorage-backend"
 version = "0.1.0"
-description = "Materials and inventory API for WebStorage"
+description = "Materials, manufactured items and inventory API for WebStorage"
 requires-python = ">=3.12"
 dependencies = [
   "alembic==1.19.1",
@@ -46,6 +46,7 @@ select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "migrations/versions/*.py" = ["E501"]
+"tests/**/*.py" = ["RUF001"]
 
 [tool.mypy]
 python_version = "3.12"

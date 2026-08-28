@@ -6,15 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
+from app.core.query import AvailabilityFilter, SortOrder
 from app.modules.materials import service
 from app.modules.materials.schemas import (
-    AvailabilityFilter,
     MaterialCreate,
     MaterialList,
     MaterialRead,
     MaterialSortField,
     MaterialUpdate,
-    SortOrder,
 )
 
 router = APIRouter(

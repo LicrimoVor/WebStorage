@@ -5,6 +5,10 @@ from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
 from app.modules.inventory.model import InventoryMovement  # noqa: F401
+from app.modules.manufactured_items.model import (  # noqa: F401
+    ManufacturedItem,
+    ManufacturedItemMovement,
+)
 from app.modules.materials.model import Material  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config

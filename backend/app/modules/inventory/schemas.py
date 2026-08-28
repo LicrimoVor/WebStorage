@@ -1,18 +1,11 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.modules.materials.schemas import Quantity
-
-
-class ManualMovementType(StrEnum):
-    RECEIPT = "receipt"
-    CONSUMPTION = "consumption"
-    ADJUSTMENT = "adjustment"
-    WRITE_OFF = "write_off"
+from app.core.types import Quantity
+from app.modules.inventory.types import ManualMovementType
 
 
 class InventoryMovementCreate(BaseModel):
@@ -26,11 +19,6 @@ class InventoryMovementCreate(BaseModel):
         if value == 0:
             raise ValueError("quantity must not be zero")
         return value
-
-    def validate_semantics(self) -> None:
-        if self.movement_type != ManualMovementType.ADJUSTMENT and self.quantity < 0:
-            raise ValueError("quantity must be positive for this movement type")
-
 
 class InventoryMovementRead(BaseModel):
     id: uuid.UUID
@@ -51,4 +39,3 @@ class InventoryMovementList(BaseModel):
     page_size: int
     total: int
     pages: int
-

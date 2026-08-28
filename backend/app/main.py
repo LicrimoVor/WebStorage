@@ -11,7 +11,7 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title=settings.app_name,
         version="0.1.0",
-        description="Materials and inventory API",
+        description="Materials, manufactured items and inventory API",
     )
     application.add_middleware(
         CORSMiddleware,
@@ -31,4 +31,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

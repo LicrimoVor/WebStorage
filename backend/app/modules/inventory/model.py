@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
 
 from sqlalchemy import (
     CheckConstraint,
@@ -17,15 +16,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UUIDPrimaryKeyMixin
-
-
-class MovementType(StrEnum):
-    RECEIPT = "receipt"
-    CONSUMPTION = "consumption"
-    PRODUCTION = "production"
-    SALE = "sale"
-    ADJUSTMENT = "adjustment"
-    WRITE_OFF = "write_off"
 
 
 class InventoryMovement(UUIDPrimaryKeyMixin, Base):

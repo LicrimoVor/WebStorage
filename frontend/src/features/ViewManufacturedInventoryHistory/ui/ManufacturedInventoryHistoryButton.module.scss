@@ -1,0 +1,14 @@
+.center {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+.content {
+  display: grid;
+  gap: var(--g-spacing-4);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}

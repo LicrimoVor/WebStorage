@@ -5,13 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainValidationError
 from app.modules.inventory import repository
-from app.modules.inventory.model import InventoryMovement, MovementType
+from app.modules.inventory.domain import manual_movement_delta
+from app.modules.inventory.model import InventoryMovement
 from app.modules.inventory.schemas import (
     InventoryMovementCreate,
     InventoryMovementList,
     InventoryMovementRead,
-    ManualMovementType,
 )
+from app.modules.inventory.types import MovementType
 
 
 def to_read_model(movement: InventoryMovement) -> InventoryMovementRead:
@@ -36,15 +37,9 @@ async def apply_manual_movement(
     payload: InventoryMovementCreate,
 ) -> InventoryMovementRead:
     try:
-        payload.validate_semantics()
+        delta = manual_movement_delta(payload.movement_type, payload.quantity)
     except ValueError as error:
         raise DomainValidationError(str(error)) from error
-
-    negative_types = {
-        ManualMovementType.CONSUMPTION,
-        ManualMovementType.WRITE_OFF,
-    }
-    delta = -payload.quantity if payload.movement_type in negative_types else payload.quantity
     movement = await repository.create_movement(
         session,
         material_id=material_id,

@@ -2,12 +2,10 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
-Quantity = Annotated[Decimal, Field(max_digits=20, decimal_places=6)]
-Money = Annotated[Decimal, Field(max_digits=20, decimal_places=2, ge=0)]
+from app.core.types import Money, Quantity
 
 
 class MaterialSortField(StrEnum):
@@ -15,17 +13,6 @@ class MaterialSortField(StrEnum):
     FREE_QUANTITY = "free_quantity"
     PRICE = "price"
     CREATED_AT = "created_at"
-
-
-class SortOrder(StrEnum):
-    ASC = "asc"
-    DESC = "desc"
-
-
-class AvailabilityFilter(StrEnum):
-    ALL = "all"
-    IN_STOCK = "in_stock"
-    OUT_OF_STOCK = "out_of_stock"
 
 
 class MaterialCreate(BaseModel):
@@ -86,4 +73,3 @@ class MaterialList(BaseModel):
     page_size: int
     total: int
     pages: int
-

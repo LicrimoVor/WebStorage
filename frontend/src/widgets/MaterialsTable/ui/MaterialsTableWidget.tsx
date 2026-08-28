@@ -9,9 +9,9 @@ import {
   Switch,
   Text,
   TextInput,
-} from '@gravity-ui/uikit';
-import {Boxes3} from '@gravity-ui/icons';
-import {useSearchParams} from 'react-router-dom';
+} from "@gravity-ui/uikit";
+import { Boxes3 } from "@gravity-ui/icons";
+import { useSearchParams } from "react-router-dom";
 
 import {
   MaterialsTable,
@@ -21,27 +21,30 @@ import {
   type MaterialListParams,
   type MaterialSortField,
   type SortOrder,
-} from '@/entities/Material';
-import {AdjustStockButton} from '@/features/AdjustStock';
-import {ArchiveMaterialButton} from '@/features/ArchiveMaterial';
-import {CreateMaterialButton} from '@/features/CreateMaterial';
-import {EditMaterialButton} from '@/features/EditMaterial';
-import {InventoryHistoryButton} from '@/features/ViewInventoryHistory';
-import {getErrorMessage} from '@/shared/api';
+} from "@/entities/Material";
+import { AdjustStockButton } from "@/features/AdjustStock";
+import { ArchiveMaterialButton } from "@/features/ArchiveMaterial";
+import { CreateMaterialButton } from "@/features/CreateMaterial";
+import { EditMaterialButton } from "@/features/EditMaterial";
+import { InventoryHistoryButton } from "@/features/ViewInventoryHistory";
+import { getErrorMessage } from "@/shared/api";
 
-import styles from './MaterialsTableWidget.module.scss';
+import styles from "./MaterialsTableWidget.module.scss";
 
-const sortOptions: Array<{value: MaterialSortField; content: string}> = [
-  {value: 'name', content: 'По названию'},
-  {value: 'free_quantity', content: 'По остатку'},
-  {value: 'price', content: 'По цене'},
-  {value: 'created_at', content: 'По дате создания'},
+const sortOptions: Array<{ value: MaterialSortField; content: string }> = [
+  { value: "name", content: "По названию" },
+  { value: "free_quantity", content: "По остатку" },
+  { value: "price", content: "По цене" },
+  { value: "created_at", content: "По дате создания" },
 ];
 
-const availabilityOptions: Array<{value: AvailabilityFilter; content: string}> = [
-  {value: 'all', content: 'Любое наличие'},
-  {value: 'in_stock', content: 'Есть в наличии'},
-  {value: 'out_of_stock', content: 'Нет в наличии'},
+const availabilityOptions: Array<{
+  value: AvailabilityFilter;
+  content: string;
+}> = [
+  { value: "all", content: "Любое наличие" },
+  { value: "in_stock", content: "Есть в наличии" },
+  { value: "out_of_stock", content: "Нет в наличии" },
 ];
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -51,13 +54,14 @@ function positiveInteger(value: string | null, fallback: number): number {
 
 export function MaterialsTableWidget() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = positiveInteger(searchParams.get('page'), 1);
-  const pageSize = positiveInteger(searchParams.get('page_size'), 20);
-  const search = searchParams.get('search') ?? '';
-  const sortBy = (searchParams.get('sort_by') ?? 'name') as MaterialSortField;
-  const sortOrder = (searchParams.get('sort_order') ?? 'asc') as SortOrder;
-  const availability = (searchParams.get('availability') ?? 'all') as AvailabilityFilter;
-  const deficitOnly = searchParams.get('deficit_only') === 'true';
+  const page = positiveInteger(searchParams.get("page"), 1);
+  const pageSize = positiveInteger(searchParams.get("page_size"), 20);
+  const search = searchParams.get("search") ?? "";
+  const sortBy = (searchParams.get("sort_by") ?? "name") as MaterialSortField;
+  const sortOrder = (searchParams.get("sort_order") ?? "asc") as SortOrder;
+  const availability = (searchParams.get("availability") ??
+    "all") as AvailabilityFilter;
+  const deficitOnly = searchParams.get("deficit_only") === "true";
 
   const params: MaterialListParams = {
     page,
@@ -70,13 +74,16 @@ export function MaterialsTableWidget() {
   };
   const query = useMaterialsQuery(params);
 
-  const updateUrl = (updates: Record<string, string | number | boolean | undefined>) => {
+  const updateUrl = (
+    updates: Record<string, string | number | boolean | undefined>,
+  ) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === '' || value === false) next.delete(key);
+      if (value === undefined || value === "" || value === false)
+        next.delete(key);
       else next.set(key, String(value));
     });
-    setSearchParams(next, {replace: true});
+    setSearchParams(next, { replace: true });
   };
 
   const renderActions = (material: Material) => (
@@ -95,9 +102,6 @@ export function MaterialsTableWidget() {
           <Text as="h2" variant="header-2">
             Материалы
           </Text>
-          <Text as="p" color="secondary" className={styles.subtitle}>
-            Фактический остаток формируется только складскими движениями
-          </Text>
         </div>
         <CreateMaterialButton />
       </div>
@@ -106,17 +110,17 @@ export function MaterialsTableWidget() {
         <TextInput
           type="search"
           value={search}
-          onUpdate={(value) => updateUrl({search: value, page: 1})}
+          onUpdate={(value) => updateUrl({ search: value, page: 1 })}
           placeholder="Поиск по названию"
           hasClear
           size="l"
-          controlProps={{'aria-label': 'Поиск материалов'}}
+          controlProps={{ "aria-label": "Поиск материалов" }}
         />
         <Select
           options={availabilityOptions}
           value={[availability]}
           onUpdate={(values) =>
-            updateUrl({availability: values[0] ?? 'all', page: 1})
+            updateUrl({ availability: values[0] ?? "all", page: 1 })
           }
           width="max"
           size="l"
@@ -125,7 +129,9 @@ export function MaterialsTableWidget() {
         <Select
           options={sortOptions}
           value={[sortBy]}
-          onUpdate={(values) => updateUrl({sort_by: values[0] ?? 'name', page: 1})}
+          onUpdate={(values) =>
+            updateUrl({ sort_by: values[0] ?? "name", page: 1 })
+          }
           width="max"
           size="l"
           aria-label="Сортировка материалов"
@@ -134,15 +140,18 @@ export function MaterialsTableWidget() {
           view="outlined"
           size="l"
           onClick={() =>
-            updateUrl({sort_order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1})
+            updateUrl({
+              sort_order: sortOrder === "asc" ? "desc" : "asc",
+              page: 1,
+            })
           }
         >
-          {sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
+          {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
         </Button>
         <Switch
           size="l"
           checked={deficitOnly}
-          onUpdate={(checked) => updateUrl({deficit_only: checked, page: 1})}
+          onUpdate={(checked) => updateUrl({ deficit_only: checked, page: 1 })}
         >
           Только дефицит
         </Switch>
@@ -150,7 +159,7 @@ export function MaterialsTableWidget() {
 
       {query.isPending ? (
         <div className={styles.loading} aria-label="Загрузка материалов">
-          {Array.from({length: 6}, (_, index) => (
+          {Array.from({ length: 6 }, (_, index) => (
             <Skeleton key={index} className={styles.skeleton} />
           ))}
         </div>
@@ -164,17 +173,22 @@ export function MaterialsTableWidget() {
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
           image={<Boxes3 />}
-          title={search || deficitOnly ? 'Ничего не найдено' : 'Материалов пока нет'}
+          title={
+            search || deficitOnly ? "Ничего не найдено" : "Материалов пока нет"
+          }
           description={
             search || deficitOnly
-              ? 'Измените поисковый запрос или фильтры.'
-              : 'Создайте первый материал и укажите его начальный остаток.'
+              ? "Измените поисковый запрос или фильтры."
+              : "Создайте первый материал и укажите его начальный остаток."
           }
           actions={!search && !deficitOnly ? <CreateMaterialButton /> : null}
         />
       ) : (
         <div className={styles.content}>
-          <MaterialsTable items={query.data.items} renderActions={renderActions} />
+          <MaterialsTable
+            items={query.data.items}
+            renderActions={renderActions}
+          />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
             <Pagination
@@ -183,7 +197,7 @@ export function MaterialsTableWidget() {
               total={query.data.total}
               pageSizeOptions={[10, 20, 50, 100]}
               onUpdate={(nextPage, nextPageSize) =>
-                updateUrl({page: nextPage, page_size: nextPageSize})
+                updateUrl({ page: nextPage, page_size: nextPageSize })
               }
               showInput
             />

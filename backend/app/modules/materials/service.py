@@ -7,18 +7,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, NotFoundError
-from app.modules.inventory.model import MovementType
+from app.core.query import AvailabilityFilter, SortOrder
 from app.modules.inventory.repository import create_movement
+from app.modules.inventory.types import MovementType
 from app.modules.materials import repository
 from app.modules.materials.model import Material
 from app.modules.materials.schemas import (
-    AvailabilityFilter,
     MaterialCreate,
     MaterialList,
     MaterialRead,
     MaterialSortField,
     MaterialUpdate,
-    SortOrder,
 )
 
 
@@ -147,4 +146,3 @@ async def archive(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Material was not found")
     return to_read_model(*result)
-

@@ -38,7 +38,10 @@ async def database_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL)
     async with engine.begin() as connection:
         await connection.execute(
-            text("TRUNCATE TABLE inventory_movements, materials CASCADE")
+            text(
+                "TRUNCATE TABLE manufactured_item_movements, manufactured_items, "
+                "inventory_movements, materials CASCADE"
+            )
         )
     yield engine
     await engine.dispose()

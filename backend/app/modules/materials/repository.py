@@ -5,13 +5,10 @@ from sqlalchemy import Select, asc, desc, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.query import AvailabilityFilter, SortOrder
 from app.modules.inventory.model import InventoryMovement
 from app.modules.materials.model import Material
-from app.modules.materials.schemas import (
-    AvailabilityFilter,
-    MaterialSortField,
-    SortOrder,
-)
+from app.modules.materials.schemas import MaterialSortField
 
 
 def balance_expression() -> ColumnElement[Decimal]:

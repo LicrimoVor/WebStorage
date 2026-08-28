@@ -5,7 +5,8 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, NotFoundError
-from app.modules.inventory.model import InventoryMovement, MovementType
+from app.modules.inventory.model import InventoryMovement
+from app.modules.inventory.types import MovementType
 from app.modules.materials.model import Material
 
 
@@ -73,4 +74,3 @@ async def list_movements(
     )
     items = list((await session.execute(statement)).scalars().all())
     return items, total
-

@@ -9,13 +9,13 @@
 - Tests: PostgreSQL API integration, React component/user flows, lint/typecheck/build.
 - Dependencies: отсутствуют.
 
-## 2. Manufactured items / Products
+## 2. Manufactured items / Products — реализовано
 
 - Scope: производимые складские сущности и признак продукта.
-- Backend: `manufactured_items`, общий inventory port для разных item types.
-- Frontend: entity/table/create/edit/archive/stock features в секции склада.
-- Migrations: manufactured items и generalized ledger reference либо отдельный строгий ledger.
-- Tests: CRUD, движения, фильтры, запрет отрицательных остатков.
+- Backend: `manufactured_items`, общие типы и правила движений, отдельный ledger со строгим FK и row-level serialization.
+- Frontend: ManufacturedItem entity, table и Create/Edit/Archive/Adjust/History features во второй секции `/warehouse`.
+- Migrations: `manufactured_items`, `manufactured_item_movements`, constraints/indexes.
+- Tests: PostgreSQL CRUD/движения/фильтры/отрицательный остаток и React component/user flows.
 - Dependencies: этап 1.
 
 ## 3. Operations + Employees
@@ -107,4 +107,3 @@
 - Migrations: instruction/version/assets/public links and permission/audit data.
 - Tests: XSS, publication isolation, link rotation/expiry, export fidelity, mobile E2E.
 - Dependencies: этап 3 и production-ready authentication/RBAC.
-

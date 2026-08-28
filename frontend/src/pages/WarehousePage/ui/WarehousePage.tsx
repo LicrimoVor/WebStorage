@@ -1,8 +1,9 @@
-import {Text} from '@gravity-ui/uikit';
+import { Text } from "@gravity-ui/uikit";
 
-import {MaterialsTableWidget} from '@/widgets/MaterialsTable';
+import { MaterialsTableWidget } from "@/widgets/MaterialsTable";
+import { ManufacturedItemsTableWidget } from "@/widgets/ManufacturedItemsTable";
 
-import styles from './WarehousePage.module.scss';
+import styles from "./WarehousePage.module.scss";
 
 export function WarehousePage() {
   return (
@@ -12,13 +13,12 @@ export function WarehousePage() {
           <Text as="h1" variant="display-1">
             Склад
           </Text>
-          <Text as="p" color="secondary" className={styles.description}>
-            Материалы, доступные остатки и прозрачная история движений
-          </Text>
         </div>
       </header>
-      <MaterialsTableWidget />
+      <div className={styles.sections}>
+        <MaterialsTableWidget />
+        <ManufacturedItemsTableWidget />
+      </div>
     </main>
   );
 }
-

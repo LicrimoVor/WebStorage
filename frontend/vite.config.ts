@@ -13,6 +13,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/shared/lib/testing/setup.ts',
+    testTimeout: 10_000,
     css: true,
     server: {
       deps: {

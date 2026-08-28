@@ -12,6 +12,11 @@
   margin: var(--g-spacing-2) 0 0;
 }
 
+.sections {
+  display: grid;
+  gap: var(--g-spacing-7);
+}
+
 @media (width <= 680px) {
   .root {
     width: calc(100% - var(--g-spacing-4));

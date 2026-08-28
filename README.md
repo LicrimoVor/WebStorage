@@ -1,6 +1,6 @@
 # Веб-склад
 
-Первый законченный vertical slice внутренней производственной системы: справочник материалов и транзакционный складской учёт. Пользователь может создать, найти, отфильтровать, отсортировать, отредактировать и архивировать материал, провести приход/расход/корректировку/списание и открыть полную историю движений.
+Два законченных vertical slice внутренней производственной системы: материалы, полуфабрикаты и продукты с транзакционным складским учётом. Пользователь может создать, найти, отфильтровать, отсортировать, отредактировать и архивировать позицию, провести приход/расход/корректировку/списание и открыть полную историю движений.
 
 ## Стек
 
@@ -48,7 +48,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-API: <http://localhost:8000/api/v1/materials>. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
+API: <http://localhost:8000/api/v1/materials> и <http://localhost:8000/api/v1/manufactured-items>. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
 
 ### 3. Frontend
 
@@ -104,7 +104,7 @@ npm test
 npm run build
 ```
 
-## API первого среза
+## API реализованных срезов
 
 | Метод | Путь | Назначение |
 | --- | --- | --- |
@@ -115,6 +115,13 @@ npm run build
 | `POST` | `/api/v1/materials/{id}/archive` | архивировать |
 | `POST` | `/api/v1/materials/{id}/movements` | провести складское движение |
 | `GET` | `/api/v1/materials/{id}/movements` | пагинированная история |
+| `POST` | `/api/v1/manufactured-items` | создать полуфабрикат/продукт; начальный остаток становится приходом |
+| `GET` | `/api/v1/manufactured-items` | список, pagination, search, sorting, availability/kind filters |
+| `GET` | `/api/v1/manufactured-items/{id}` | карточка и вычисленный остаток |
+| `PATCH` | `/api/v1/manufactured-items/{id}` | изменить метаданные без изменения остатка |
+| `POST` | `/api/v1/manufactured-items/{id}/archive` | архивировать |
+| `POST` | `/api/v1/manufactured-items/{id}/movements` | провести складское движение |
+| `GET` | `/api/v1/manufactured-items/{id}/movements` | пагинированная история |
 
 Количество передаётся decimal-строкой. Для `receipt`, `consumption` и `write_off` клиент отправляет положительное количество; backend сохраняет расход как отрицательную ledger-дельту. `adjustment` принимает положительную или отрицательную ненулевую дельту. Отрицательный итоговый остаток запрещён.
 
@@ -125,4 +132,3 @@ docker compose --profile test down
 ```
 
 Обычный `down` не удаляет volume основной БД. Удаление данных через `down -v` намеренно не включено в стандартные команды.
-
