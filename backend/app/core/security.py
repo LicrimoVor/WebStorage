@@ -33,4 +33,3 @@ async def get_current_actor(
     if scheme.lower() != "bearer" or not token or token != expected:
         raise AuthenticationError("A valid bearer token is required")
     return Actor(subject="configured-service-user", roles=frozenset({Role.ADMIN}))
-

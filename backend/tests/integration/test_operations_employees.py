@@ -69,9 +69,7 @@ async def test_operation_validation_duplicate_and_archive(client: AsyncClient) -
     )
     assert invalid.status_code == 422
 
-    duplicate = await client.post(
-        "/api/v1/operations", json={"name": "резка"}
-    )
+    duplicate = await client.post("/api/v1/operations", json={"name": "резка"})
     assert duplicate.status_code == 409
 
     archived = await client.post(f"/api/v1/operations/{created['id']}/archive")
@@ -114,9 +112,7 @@ async def test_employee_archive_and_include_inactive(client: AsyncClient) -> Non
     assert archived.json()["active"] is False
     assert (await client.get("/api/v1/employees")).json()["total"] == 0
 
-    included = await client.get(
-        "/api/v1/employees", params={"include_inactive": "true"}
-    )
+    included = await client.get("/api/v1/employees", params={"include_inactive": "true"})
     assert included.status_code == 200
     assert included.json()["total"] == 1
 
@@ -127,9 +123,7 @@ async def test_employees_allow_same_full_name_and_paginate(client: AsyncClient) 
     second = await create_employee(client, comment="Вторая смена")
     assert first["id"] != second["id"]
 
-    page = await client.get(
-        "/api/v1/employees", params={"page": 2, "page_size": 1}
-    )
+    page = await client.get("/api/v1/employees", params={"page": 2, "page_size": 1})
     assert page.status_code == 200
     assert page.json()["total"] == 2
     assert page.json()["pages"] == 2

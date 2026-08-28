@@ -49,9 +49,7 @@ class DomainValidationError(ApplicationError):
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApplicationError)
-    async def handle_application_error(
-        _request: Request, error: ApplicationError
-    ) -> JSONResponse:
+    async def handle_application_error(_request: Request, error: ApplicationError) -> JSONResponse:
         problem = ProblemDetail(
             status=error.status_code,
             code=error.code,

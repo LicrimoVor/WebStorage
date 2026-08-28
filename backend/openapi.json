@@ -3155,6 +3155,465 @@
         }
       }
     },
+    "/api/v1/production-plans": {
+      "post": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "Create Production Plan",
+        "operationId": "createProductionPlan",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductionPlanCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "List Production Plans",
+        "operationId": "listProductionPlans",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProductionPlanStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanList"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/production-plans/summary": {
+      "get": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "Get Production Plan Summary",
+        "operationId": "getProductionPlanSummary",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/production-plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "Get Production Plan",
+        "operationId": "getProductionPlan",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "Update Production Plan",
+        "operationId": "updateProductionPlan",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductionPlanUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/production-plans/{plan_id}/recalculate": {
+      "post": {
+        "tags": [
+          "production plans"
+        ],
+        "summary": "Recalculate Production Plan",
+        "operationId": "recalculateProductionPlan",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductionPlanRecalculate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionPlanRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -4672,6 +5131,211 @@
         "type": "object",
         "title": "OperationUpdate"
       },
+      "PlanItemRequirementRead": {
+        "properties": {
+          "manufactured_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Manufactured Item Id"
+          },
+          "process_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Version Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "stock_used_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Stock Used Quantity"
+          },
+          "to_produce_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "To Produce Quantity"
+          },
+          "is_plan_output": {
+            "type": "boolean",
+            "title": "Is Plan Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manufactured_item_id",
+          "process_version_id",
+          "name",
+          "unit",
+          "required_quantity",
+          "stock_used_quantity",
+          "to_produce_quantity",
+          "is_plan_output"
+        ],
+        "title": "PlanItemRequirementRead"
+      },
+      "PlanMaterialRequirementRead": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "stock_used_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Stock Used Quantity"
+          },
+          "deficit_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Deficit Quantity"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "name",
+          "unit",
+          "required_quantity",
+          "stock_used_quantity",
+          "deficit_quantity",
+          "unit_price",
+          "cost"
+        ],
+        "title": "PlanMaterialRequirementRead"
+      },
+      "PlanOperationRequirementRead": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "time_norm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Norm"
+          },
+          "required_time_minutes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Time Minutes"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "name",
+          "required_quantity",
+          "time_norm",
+          "required_time_minutes",
+          "price",
+          "cost"
+        ],
+        "title": "PlanOperationRequirementRead"
+      },
       "ProblemDetail": {
         "properties": {
           "status": {
@@ -5203,6 +5867,396 @@
           "updated_at"
         ],
         "title": "ProcessVersionSummary"
+      },
+      "ProductionPlanCreate": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id"
+          },
+          "planned_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Planned Quantity"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProductionPlanStatus",
+            "default": "active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "planned_quantity"
+        ],
+        "title": "ProductionPlanCreate"
+      },
+      "ProductionPlanList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionPlanRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "ProductionPlanList"
+      },
+      "ProductionPlanRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "product_unit": {
+            "type": "string",
+            "title": "Product Unit"
+          },
+          "process_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Process Version Id"
+          },
+          "process_version_number": {
+            "type": "integer",
+            "title": "Process Version Number"
+          },
+          "planned_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Planned Quantity"
+          },
+          "produced_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Produced Quantity"
+          },
+          "remaining_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Remaining Quantity"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProductionPlanStatus"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "calculation_complete": {
+            "type": "boolean",
+            "title": "Calculation Complete"
+          },
+          "missing_data": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Data"
+          },
+          "total_required_time_minutes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Required Time Minutes"
+          },
+          "total_required_hours": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Required Hours"
+          },
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMaterialRequirementRead"
+            },
+            "type": "array",
+            "title": "Materials"
+          },
+          "manufactured_items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItemRequirementRead"
+            },
+            "type": "array",
+            "title": "Manufactured Items"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOperationRequirementRead"
+            },
+            "type": "array",
+            "title": "Operations"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "product_id",
+          "product_name",
+          "product_unit",
+          "process_version_id",
+          "process_version_number",
+          "planned_quantity",
+          "produced_quantity",
+          "remaining_quantity",
+          "status",
+          "target_date",
+          "created_by",
+          "calculation_complete",
+          "missing_data",
+          "total_required_time_minutes",
+          "total_required_hours",
+          "estimated_cost",
+          "materials",
+          "manufactured_items",
+          "operations",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProductionPlanRead"
+      },
+      "ProductionPlanRecalculate": {
+        "properties": {
+          "use_latest_process_version": {
+            "type": "boolean",
+            "title": "Use Latest Process Version",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "ProductionPlanRecalculate"
+      },
+      "ProductionPlanStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "active",
+          "completed",
+          "cancelled"
+        ],
+        "title": "ProductionPlanStatus"
+      },
+      "ProductionPlanSummary": {
+        "properties": {
+          "active_plans": {
+            "type": "integer",
+            "title": "Active Plans"
+          },
+          "products_to_produce": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Products To Produce",
+            "default": "0"
+          },
+          "material_positions": {
+            "type": "integer",
+            "title": "Material Positions"
+          },
+          "material_deficit_positions": {
+            "type": "integer",
+            "title": "Material Deficit Positions"
+          },
+          "total_required_hours": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Required Hours"
+          },
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost"
+          },
+          "calculation_complete": {
+            "type": "boolean",
+            "title": "Calculation Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_plans",
+          "material_positions",
+          "material_deficit_positions",
+          "total_required_hours",
+          "estimated_cost",
+          "calculation_complete"
+        ],
+        "title": "ProductionPlanSummary"
+      },
+      "ProductionPlanUpdate": {
+        "properties": {
+          "planned_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Quantity"
+          },
+          "produced_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Produced Quantity"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProductionPlanStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ProductionPlanUpdate"
       },
       "SortOrder": {
         "type": "string",

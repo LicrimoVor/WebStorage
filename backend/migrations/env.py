@@ -12,6 +12,12 @@ from app.modules.manufactured_items.model import (  # noqa: F401
 )
 from app.modules.materials.model import Material  # noqa: F401
 from app.modules.operations.model import Operation  # noqa: F401
+from app.modules.production_plans.model import (  # noqa: F401
+    ProductionPlan,
+    ProductionPlanItemRequirement,
+    ProductionPlanMaterialRequirement,
+    ProductionPlanOperationRequirement,
+)
 from app.modules.technological_processes.model import (  # noqa: F401
     TechnologicalProcess,
     TechnologicalProcessEdge,

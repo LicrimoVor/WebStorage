@@ -9,6 +9,7 @@ from app.modules.manufactured_items.router import router as manufactured_items_r
 from app.modules.materials.router import router as materials_router
 from app.modules.media.router import router as media_router
 from app.modules.operations.router import router as operations_router
+from app.modules.production_plans.router import router as production_plans_router
 from app.modules.technological_processes.router import (
     router as technological_processes_router,
 )
@@ -21,6 +22,7 @@ api_router.include_router(manufactured_items_router)
 api_router.include_router(operations_router)
 api_router.include_router(employees_router)
 api_router.include_router(technological_processes_router)
+api_router.include_router(production_plans_router)
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 

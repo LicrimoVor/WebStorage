@@ -442,6 +442,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/production-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Production Plans */
+        get: operations["listProductionPlans"];
+        put?: never;
+        /** Create Production Plan */
+        post: operations["createProductionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/production-plans/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Production Plan Summary */
+        get: operations["getProductionPlanSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/production-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Production Plan */
+        get: operations["getProductionPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Production Plan */
+        patch: operations["updateProductionPlan"];
+        trace?: never;
+    };
+    "/api/v1/production-plans/{plan_id}/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recalculate Production Plan */
+        post: operations["recalculateProductionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -976,6 +1046,70 @@ export interface components {
             /** Price Per Operation */
             price_per_operation?: number | string | null;
         };
+        /** PlanItemRequirementRead */
+        PlanItemRequirementRead: {
+            /**
+             * Manufactured Item Id
+             * Format: uuid
+             */
+            manufactured_item_id: string;
+            /** Process Version Id */
+            process_version_id: string | null;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Stock Used Quantity */
+            stock_used_quantity: string;
+            /** To Produce Quantity */
+            to_produce_quantity: string;
+            /** Is Plan Output */
+            is_plan_output: boolean;
+        };
+        /** PlanMaterialRequirementRead */
+        PlanMaterialRequirementRead: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Stock Used Quantity */
+            stock_used_quantity: string;
+            /** Deficit Quantity */
+            deficit_quantity: string;
+            /** Unit Price */
+            unit_price: string | null;
+            /** Cost */
+            cost: string | null;
+        };
+        /** PlanOperationRequirementRead */
+        PlanOperationRequirementRead: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Name */
+            name: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Time Norm */
+            time_norm: string | null;
+            /** Required Time Minutes */
+            required_time_minutes: string | null;
+            /** Price */
+            price: string | null;
+            /** Cost */
+            cost: string | null;
+        };
         /** ProblemDetail */
         ProblemDetail: {
             /** Status */
@@ -1180,6 +1314,137 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ProductionPlanCreate */
+        ProductionPlanCreate: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Planned Quantity */
+            planned_quantity: number | string;
+            /** Target Date */
+            target_date?: string | null;
+            /** @default active */
+            status: components["schemas"]["ProductionPlanStatus"];
+        };
+        /** ProductionPlanList */
+        ProductionPlanList: {
+            /** Items */
+            items: components["schemas"]["ProductionPlanRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** ProductionPlanRead */
+        ProductionPlanRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /** Product Unit */
+            product_unit: string;
+            /**
+             * Process Version Id
+             * Format: uuid
+             */
+            process_version_id: string;
+            /** Process Version Number */
+            process_version_number: number;
+            /** Planned Quantity */
+            planned_quantity: string;
+            /** Produced Quantity */
+            produced_quantity: string;
+            /** Remaining Quantity */
+            remaining_quantity: string;
+            status: components["schemas"]["ProductionPlanStatus"];
+            /** Target Date */
+            target_date: string | null;
+            /** Created By */
+            created_by: string;
+            /** Calculation Complete */
+            calculation_complete: boolean;
+            /** Missing Data */
+            missing_data: string[];
+            /** Total Required Time Minutes */
+            total_required_time_minutes: string | null;
+            /** Total Required Hours */
+            total_required_hours: string | null;
+            /** Estimated Cost */
+            estimated_cost: string | null;
+            /** Materials */
+            materials: components["schemas"]["PlanMaterialRequirementRead"][];
+            /** Manufactured Items */
+            manufactured_items: components["schemas"]["PlanItemRequirementRead"][];
+            /** Operations */
+            operations: components["schemas"]["PlanOperationRequirementRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProductionPlanRecalculate */
+        ProductionPlanRecalculate: {
+            /**
+             * Use Latest Process Version
+             * @default true
+             */
+            use_latest_process_version: boolean;
+        };
+        /**
+         * ProductionPlanStatus
+         * @enum {string}
+         */
+        ProductionPlanStatus: "draft" | "active" | "completed" | "cancelled";
+        /** ProductionPlanSummary */
+        ProductionPlanSummary: {
+            /** Active Plans */
+            active_plans: number;
+            /**
+             * Products To Produce
+             * @default 0
+             */
+            products_to_produce: string;
+            /** Material Positions */
+            material_positions: number;
+            /** Material Deficit Positions */
+            material_deficit_positions: number;
+            /** Total Required Hours */
+            total_required_hours: string | null;
+            /** Estimated Cost */
+            estimated_cost: string | null;
+            /** Calculation Complete */
+            calculation_complete: boolean;
+        };
+        /** ProductionPlanUpdate */
+        ProductionPlanUpdate: {
+            /** Planned Quantity */
+            planned_quantity?: number | string | null;
+            /** Produced Quantity */
+            produced_quantity?: number | string | null;
+            /** Target Date */
+            target_date?: string | null;
+            status?: components["schemas"]["ProductionPlanStatus"] | null;
         };
         /**
          * SortOrder
@@ -2894,6 +3159,277 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProcessVersionRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listProductionPlans: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: components["schemas"]["ProductionPlanStatus"] | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanList"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createProductionPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductionPlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getProductionPlanSummary: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanSummary"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getProductionPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    updateProductionPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductionPlanUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    recalculateProductionPlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductionPlanRecalculate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionPlanRead"];
                 };
             };
             /** @description Not Found */

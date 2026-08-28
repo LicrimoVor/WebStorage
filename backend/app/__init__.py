@@ -1,2 +1,1 @@
 """WebStorage backend application."""
-

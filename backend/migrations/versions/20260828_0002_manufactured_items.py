@@ -4,6 +4,7 @@ Revision ID: 20260828_0002
 Revises: 20260828_0001
 Create Date: 2026-08-28
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -25,9 +26,7 @@ def upgrade() -> None:
         sa.Column("unit", sa.String(length=32), nullable=False),
         sa.Column("image", sa.Text(), nullable=True),
         sa.Column("active_process_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column(
-            "archived", sa.Boolean(), server_default=sa.text("false"), nullable=False
-        ),
+        sa.Column("archived", sa.Boolean(), server_default=sa.text("false"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -64,17 +63,11 @@ def upgrade() -> None:
     op.create_table(
         "manufactured_item_movements",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column(
-            "manufactured_item_id", postgresql.UUID(as_uuid=True), nullable=False
-        ),
+        sa.Column("manufactured_item_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("movement_type", sa.String(length=24), nullable=False),
         sa.Column("quantity", sa.Numeric(precision=20, scale=6), nullable=False),
-        sa.Column(
-            "balance_before", sa.Numeric(precision=20, scale=6), nullable=False
-        ),
-        sa.Column(
-            "balance_after", sa.Numeric(precision=20, scale=6), nullable=False
-        ),
+        sa.Column("balance_before", sa.Numeric(precision=20, scale=6), nullable=False),
+        sa.Column("balance_after", sa.Numeric(precision=20, scale=6), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column("source_type", sa.String(length=64), nullable=True),
         sa.Column("source_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -86,15 +79,11 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "balance_after >= 0",
-            name=op.f(
-                "ck_manufactured_item_movements_balance_after_non_negative"
-            ),
+            name=op.f("ck_manufactured_item_movements_balance_after_non_negative"),
         ),
         sa.CheckConstraint(
             "balance_before >= 0",
-            name=op.f(
-                "ck_manufactured_item_movements_balance_before_non_negative"
-            ),
+            name=op.f("ck_manufactured_item_movements_balance_before_non_negative"),
         ),
         sa.CheckConstraint(
             "movement_type IN ('receipt', 'consumption', 'production', 'sale', 'adjustment', 'write_off')",
@@ -110,9 +99,7 @@ def upgrade() -> None:
             name="fk_manufactured_movements_item",
             ondelete="RESTRICT",
         ),
-        sa.PrimaryKeyConstraint(
-            "id", name=op.f("pk_manufactured_item_movements")
-        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_manufactured_item_movements")),
     )
     op.create_index(
         "ix_manufactured_item_movements_item_created",
@@ -138,11 +125,7 @@ def downgrade() -> None:
         table_name="manufactured_item_movements",
     )
     op.drop_table("manufactured_item_movements")
-    op.drop_index(
-        "ix_manufactured_items_name_lower", table_name="manufactured_items"
-    )
-    op.drop_index(
-        "ix_manufactured_items_is_product", table_name="manufactured_items"
-    )
+    op.drop_index("ix_manufactured_items_name_lower", table_name="manufactured_items")
+    op.drop_index("ix_manufactured_items_is_product", table_name="manufactured_items")
     op.drop_index("ix_manufactured_items_archived", table_name="manufactured_items")
     op.drop_table("manufactured_items")

@@ -120,4 +120,3 @@ async def test_duplicate_name_is_case_insensitive_conflict(client: AsyncClient) 
     )
     assert response.status_code == 409
     assert response.json()["code"] == "conflict"
-

@@ -19,6 +19,10 @@ const WarehousePage = lazy(async () => {
   const module = await import("@/pages/WarehousePage");
   return { default: module.WarehousePage };
 });
+const ProductionPlansPage = lazy(async () => {
+  const module = await import("@/pages/ProductionPlansPage");
+  return { default: module.ProductionPlansPage };
+});
 const OperationsPage = lazy(async () => {
   const module = await import("@/pages/OperationsPage");
   return { default: module.OperationsPage };
@@ -47,6 +51,13 @@ function AppLayout() {
           <Text variant="header-1">Веб-склад</Text>
         </div>
         <nav className={styles.nav} aria-label="Основная навигация">
+          <Button
+            view="flat-action"
+            onClick={() => navigate(routes.productionPlans)}
+            selected={location.pathname === routes.productionPlans}
+          >
+            Планирование
+          </Button>
           <Button
             view="flat-action"
             onClick={() => navigate(routes.processes)}
@@ -81,8 +92,9 @@ function AppLayout() {
         <Routes>
           <Route
             path="/"
-            element={<Navigate to={routes.warehouse} replace />}
+            element={<Navigate to={routes.productionPlans} replace />}
           />
+          <Route path={routes.productionPlans} element={<ProductionPlansPage />} />
           <Route path={routes.warehouse} element={<WarehousePage />} />
           <Route path={routes.operations} element={<OperationsPage />} />
           <Route

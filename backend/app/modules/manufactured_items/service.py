@@ -26,7 +26,9 @@ def _url_value(value: AnyHttpUrl | None) -> str | None:
 
 
 def to_read_model(
-    item: ManufacturedItem, free_quantity: Decimal
+    item: ManufacturedItem,
+    free_quantity: Decimal,
+    required_quantity: Decimal = Decimal("0"),
 ) -> ManufacturedItemRead:
     return ManufacturedItemRead(
         id=item.id,
@@ -34,8 +36,8 @@ def to_read_model(
         is_product=item.is_product,
         unit=item.unit,
         free_quantity=free_quantity,
-        required_quantity=Decimal("0"),
-        to_produce_quantity=Decimal("0"),
+        required_quantity=required_quantity,
+        to_produce_quantity=max(required_quantity - free_quantity, Decimal("0")),
         image=item.image,
         active_process_id=item.active_process_id,
         archived=item.archived,
@@ -44,9 +46,7 @@ def to_read_model(
     )
 
 
-async def create(
-    session: AsyncSession, payload: ManufacturedItemCreate
-) -> ManufacturedItemRead:
+async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> ManufacturedItemRead:
     item = ManufacturedItem(
         name=payload.name,
         is_product=payload.is_product,
@@ -69,9 +69,7 @@ async def create(
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
-        raise ConflictError(
-            "A manufactured item with this name already exists"
-        ) from error
+        raise ConflictError("A manufactured item with this name already exists") from error
     await session.refresh(item)
     return to_read_model(item, balance)
 
@@ -100,7 +98,7 @@ async def list_all(
         sort_order=sort_order,
     )
     return ManufacturedItemList(
-        items=[to_read_model(item, balance) for item, balance in rows],
+        items=[to_read_model(item, balance, required) for item, balance, required in rows],
         page=page,
         page_size=page_size,
         total=total,
@@ -132,9 +130,7 @@ async def update(
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
-        raise ConflictError(
-            "A manufactured item with this name already exists"
-        ) from error
+        raise ConflictError("A manufactured item with this name already exists") from error
     await session.refresh(item)
     result = await repository.get_item_with_balance(session, item_id)
     if result is None:  # pragma: no cover - protected by the row lock above
@@ -142,9 +138,7 @@ async def update(
     return to_read_model(*result)
 
 
-async def archive(
-    session: AsyncSession, item_id: uuid.UUID
-) -> ManufacturedItemRead:
+async def archive(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItemRead:
     item = await repository.get_item_for_update(session, item_id)
     if item is None:
         raise NotFoundError("Manufactured item was not found")

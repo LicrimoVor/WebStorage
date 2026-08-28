@@ -1,0 +1,195 @@
+.root {
+  width: min(1540px, calc(100% - var(--g-spacing-8)));
+  margin: 0 auto;
+  padding: var(--g-spacing-8) 0 var(--g-spacing-10);
+}
+
+.header,
+.toolbar,
+.planHeading,
+.titleRow,
+.planActions {
+  display: flex;
+  align-items: center;
+}
+
+.header,
+.toolbar,
+.planHeading {
+  justify-content: space-between;
+  gap: var(--g-spacing-5);
+}
+
+.header {
+  margin-bottom: var(--g-spacing-7);
+}
+
+.header p {
+  margin: var(--g-spacing-2) 0 0;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--g-spacing-4);
+  margin-bottom: var(--g-spacing-7);
+}
+
+.summaryGrid > div {
+  display: grid;
+  gap: var(--g-spacing-2);
+  min-height: 104px;
+  padding: var(--g-spacing-5);
+  background: color-mix(in srgb, var(--g-color-base-background) 92%, transparent);
+}
+
+.summaryGrid strong {
+  font-size: 24px;
+}
+
+.toolbar {
+  margin-bottom: var(--g-spacing-4);
+}
+
+.planList,
+.loading {
+  display: grid;
+  gap: var(--g-spacing-4);
+  margin-bottom: var(--g-spacing-5);
+}
+
+.planCard {
+  display: grid;
+  gap: var(--g-spacing-5);
+  padding: var(--g-spacing-6);
+  background: var(--g-color-base-background);
+}
+
+.titleRow,
+.planActions {
+  gap: var(--g-spacing-3);
+}
+
+.titleRow h3 {
+  margin: 0;
+}
+
+.planMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--g-spacing-3);
+}
+
+.planMetrics > div {
+  display: grid;
+  gap: var(--g-spacing-1);
+  padding: var(--g-spacing-3);
+  background: var(--g-color-base-generic-ultralight);
+  border-radius: var(--g-border-radius-m);
+}
+
+.details summary {
+  width: fit-content;
+  color: var(--g-color-text-link);
+  cursor: pointer;
+}
+
+.requirements {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--g-spacing-5);
+  margin-top: var(--g-spacing-5);
+}
+
+.requirements section {
+  overflow-x: auto;
+}
+
+.requirements h4 {
+  margin: 0 0 var(--g-spacing-3);
+}
+
+.requirements table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.requirements th,
+.requirements td {
+  padding: var(--g-spacing-2) var(--g-spacing-3);
+  text-align: left;
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+
+.requirements th {
+  color: var(--g-color-text-secondary);
+  font-weight: 500;
+}
+
+.deficit {
+  color: var(--g-color-text-danger);
+  font-weight: 600;
+}
+
+.form {
+  display: grid;
+  gap: var(--g-spacing-4);
+}
+
+.dateField {
+  display: grid;
+  gap: var(--g-spacing-2);
+  color: var(--g-color-text-secondary);
+  font-size: 13px;
+}
+
+.dateField input {
+  min-height: 42px;
+  padding: 0 var(--g-spacing-3);
+  color: var(--g-color-text-primary);
+  font: inherit;
+  color-scheme: light dark;
+  background: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic-accent);
+  border-radius: var(--g-border-radius-m);
+}
+
+.skeleton {
+  height: 220px;
+  border-radius: var(--g-border-radius-xl);
+}
+
+@media (width <= 1100px) {
+  .summaryGrid,
+  .planMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .requirements {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width <= 680px) {
+  .root {
+    width: calc(100% - var(--g-spacing-4));
+    padding-top: var(--g-spacing-5);
+  }
+
+  .header,
+  .toolbar,
+  .planHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summaryGrid,
+  .planMetrics {
+    grid-template-columns: 1fr;
+  }
+
+  .planActions {
+    flex-wrap: wrap;
+  }
+}

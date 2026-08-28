@@ -3,9 +3,7 @@ from decimal import Decimal
 from app.modules.inventory.types import ManualMovementType
 
 
-def manual_movement_delta(
-    movement_type: ManualMovementType, quantity: Decimal
-) -> Decimal:
+def manual_movement_delta(movement_type: ManualMovementType, quantity: Decimal) -> Decimal:
     if quantity == 0:
         raise ValueError("quantity must not be zero")
     if movement_type != ManualMovementType.ADJUSTMENT and quantity < 0:

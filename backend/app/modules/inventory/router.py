@@ -33,9 +33,7 @@ async def create_inventory_movement(
     payload: InventoryMovementCreate,
     session: Session,
 ) -> InventoryMovementRead:
-    return await service.apply_manual_movement(
-        session, material_id=material_id, payload=payload
-    )
+    return await service.apply_manual_movement(session, material_id=material_id, payload=payload)
 
 
 @router.get(

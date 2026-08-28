@@ -41,9 +41,7 @@ async def create_manufactured_item(
     return await service.create(session, payload)
 
 
-@router.get(
-    "", response_model=ManufacturedItemList, operation_id="listManufacturedItems"
-)
+@router.get("", response_model=ManufacturedItemList, operation_id="listManufacturedItems")
 async def list_manufactured_items(
     session: Session,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -74,9 +72,7 @@ async def list_manufactured_items(
     operation_id="getManufacturedItem",
     responses={404: {"model": ProblemDetail}},
 )
-async def get_manufactured_item(
-    item_id: uuid.UUID, session: Session
-) -> ManufacturedItemRead:
+async def get_manufactured_item(item_id: uuid.UUID, session: Session) -> ManufacturedItemRead:
     return await service.get(session, item_id)
 
 
@@ -98,9 +94,7 @@ async def update_manufactured_item(
     operation_id="archiveManufacturedItem",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_manufactured_item(
-    item_id: uuid.UUID, session: Session
-) -> ManufacturedItemRead:
+async def archive_manufactured_item(item_id: uuid.UUID, session: Session) -> ManufacturedItemRead:
     return await service.archive(session, item_id)
 
 
@@ -116,9 +110,7 @@ async def create_manufactured_item_movement(
     payload: InventoryMovementCreate,
     session: Session,
 ) -> ManufacturedItemMovementRead:
-    return await movement_service.apply_manual_movement(
-        session, item_id=item_id, payload=payload
-    )
+    return await movement_service.apply_manual_movement(session, item_id=item_id, payload=payload)
 
 
 @router.get(
@@ -133,6 +125,4 @@ async def list_manufactured_item_movements(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> ManufacturedItemMovementList:
-    return await movement_service.history(
-        session, item_id=item_id, page=page, page_size=page_size
-    )
+    return await movement_service.history(session, item_id=item_id, page=page, page_size=page_size)

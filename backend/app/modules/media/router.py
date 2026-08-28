@@ -17,7 +17,5 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
     operation_id="uploadImage",
 )
-async def upload_image(
-    payload: ImageUploadRequest, request: Request
-) -> ImageUploadRead:
+async def upload_image(payload: ImageUploadRequest, request: Request) -> ImageUploadRead:
     return await service.upload(payload, base_url=str(request.base_url))

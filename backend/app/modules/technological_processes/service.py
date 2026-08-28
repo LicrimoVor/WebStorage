@@ -146,9 +146,7 @@ async def _version_read(
     )
 
 
-async def _get_output_item(
-    session: AsyncSession, item_id: uuid.UUID
-) -> ManufacturedItem:
+async def _get_output_item(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItem:
     item = await session.get(ManufacturedItem, item_id)
     if item is None:
         raise DomainValidationError("Output manufactured item was not found")
@@ -192,9 +190,7 @@ async def create(
     session: AsyncSession, payload: ProcessCreate, *, created_by: str
 ) -> ProcessImportResult:
     output = await _get_output_item(session, payload.output_item_id)
-    process = TechnologicalProcess(
-        name=_clean_name(payload.name), output_item_id=output.id
-    )
+    process = TechnologicalProcess(name=_clean_name(payload.name), output_item_id=output.id)
     try:
         await repository.create_process(session, process)
         version = TechnologicalProcessVersion(
@@ -335,9 +331,7 @@ async def update_process(
     return await get(session, process.id)
 
 
-async def list_versions(
-    session: AsyncSession, process_id: uuid.UUID
-) -> ProcessVersionList:
+async def list_versions(session: AsyncSession, process_id: uuid.UUID) -> ProcessVersionList:
     await _get_process(session, process_id)
     versions = await repository.list_versions(session, process_id)
     return ProcessVersionList(items=[_version_summary(item) for item in versions])
@@ -439,13 +433,9 @@ async def _replace_draft_graph(
     if document.output_item_id != process.output_item_id:
         raise DomainValidationError("Document outputItemId must match the process output")
     if expected_revision is not None and version.revision != expected_revision:
-        raise ConflictError(
-            "Draft was changed in another session; reload it before saving"
-        )
+        raise ConflictError("Draft was changed in another session; reload it before saving")
     nodes, edges = _graph_entities(version.id, document)
-    await repository.replace_graph(
-        session, version_id=version.id, nodes=nodes, edges=edges
-    )
+    await repository.replace_graph(session, version_id=version.id, nodes=nodes, edges=edges)
     version.revision += 1
     await session.commit()
     await session.refresh(version)
@@ -520,21 +510,18 @@ async def _activation_errors(
     material_ids = {
         node.reference_id
         for node in nodes
-        if node.node_type == ProcessNodeType.MATERIAL.value
-        and node.reference_id is not None
+        if node.node_type == ProcessNodeType.MATERIAL.value and node.reference_id is not None
     }
     manufactured_ids = {
         node.reference_id
         for node in nodes
-        if node.node_type
-        in {ProcessNodeType.MANUFACTURED_ITEM.value, ProcessNodeType.OUTPUT.value}
+        if node.node_type in {ProcessNodeType.MANUFACTURED_ITEM.value, ProcessNodeType.OUTPUT.value}
         and node.reference_id is not None
     }
     operation_ids = {
         node.reference_id
         for node in nodes
-        if node.node_type == ProcessNodeType.OPERATION.value
-        and node.reference_id is not None
+        if node.node_type == ProcessNodeType.OPERATION.value and node.reference_id is not None
     }
     material_states, item_states, operation_states = await repository.get_reference_states(
         session,

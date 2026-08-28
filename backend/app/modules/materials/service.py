@@ -25,14 +25,16 @@ def _url_value(value: AnyHttpUrl | None) -> str | None:
     return str(value) if value is not None else None
 
 
-def to_read_model(material: Material, free_quantity: Decimal) -> MaterialRead:
+def to_read_model(
+    material: Material, free_quantity: Decimal, required_quantity: Decimal = Decimal("0")
+) -> MaterialRead:
     return MaterialRead(
         id=material.id,
         name=material.name,
         unit=material.unit,
         free_quantity=free_quantity,
-        required_quantity=Decimal("0"),
-        deficit_quantity=Decimal("0"),
+        required_quantity=required_quantity,
+        deficit_quantity=max(required_quantity - free_quantity, Decimal("0")),
         price=material.price,
         url=material.url,
         image=material.image,
@@ -42,9 +44,7 @@ def to_read_model(material: Material, free_quantity: Decimal) -> MaterialRead:
     )
 
 
-async def create(
-    session: AsyncSession, payload: MaterialCreate
-) -> MaterialRead:
+async def create(session: AsyncSession, payload: MaterialCreate) -> MaterialRead:
     material = Material(
         name=payload.name,
         unit=payload.unit,
@@ -97,7 +97,7 @@ async def list_all(
         sort_order=sort_order,
     )
     return MaterialList(
-        items=[to_read_model(material, balance) for material, balance in rows],
+        items=[to_read_model(material, balance, required) for material, balance, required in rows],
         page=page,
         page_size=page_size,
         total=total,

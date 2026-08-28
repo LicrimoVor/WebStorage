@@ -4,6 +4,7 @@ Revision ID: 20260828_0001
 Revises:
 Create Date: 2026-08-28
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -26,8 +27,12 @@ def upgrade() -> None:
         sa.Column("url", sa.Text(), nullable=True),
         sa.Column("image", sa.Text(), nullable=True),
         sa.Column("archived", sa.Boolean(), server_default=sa.text("false"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_materials")),
         sa.CheckConstraint(
             "price IS NULL OR price >= 0",
@@ -53,7 +58,9 @@ def upgrade() -> None:
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column("source_type", sa.String(length=64), nullable=True),
         sa.Column("source_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.CheckConstraint(
             "balance_after >= 0",
             name=op.f("ck_inventory_movements_balance_after_non_negative"),

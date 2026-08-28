@@ -14,14 +14,34 @@ from app.modules.manufactured_items.schemas import (
     ManufacturedItemKind,
     ManufacturedItemSortField,
 )
+from app.modules.production_plans.model import (
+    ProductionPlan,
+    ProductionPlanItemRequirement,
+)
 
 
 def balance_expression() -> ColumnElement[Decimal]:
     return (
-        select(
-            func.coalesce(func.sum(ManufacturedItemMovement.quantity), Decimal("0"))
-        )
+        select(func.coalesce(func.sum(ManufacturedItemMovement.quantity), Decimal("0")))
         .where(ManufacturedItemMovement.manufactured_item_id == ManufacturedItem.id)
+        .correlate(ManufacturedItem)
+        .scalar_subquery()
+    )
+
+
+def required_expression() -> ColumnElement[Decimal]:
+    return (
+        select(
+            func.coalesce(func.sum(ProductionPlanItemRequirement.required_quantity), Decimal("0"))
+        )
+        .join(
+            ProductionPlan,
+            ProductionPlan.id == ProductionPlanItemRequirement.plan_id,
+        )
+        .where(
+            ProductionPlanItemRequirement.manufactured_item_id == ManufacturedItem.id,
+            ProductionPlan.status == "active",
+        )
         .correlate(ManufacturedItem)
         .scalar_subquery()
     )
@@ -63,8 +83,9 @@ async def list_items(
     kind: ManufacturedItemKind,
     sort_by: ManufacturedItemSortField,
     sort_order: SortOrder,
-) -> tuple[list[tuple[ManufacturedItem, Decimal]], int]:
+) -> tuple[list[tuple[ManufacturedItem, Decimal, Decimal]], int]:
     balance = balance_expression().label("free_quantity")
+    required = required_expression().label("required_quantity")
     statement = _apply_filters(
         select(ManufacturedItem),
         search=search,
@@ -80,39 +101,32 @@ async def list_items(
         ManufacturedItemSortField.CREATED_AT: ManufacturedItem.created_at,
     }
     direction = asc if sort_order == SortOrder.ASC else desc
-    data_statement = statement.add_columns(balance).order_by(
+    data_statement = statement.add_columns(balance, required).order_by(
         direction(order_columns[sort_by]), asc(ManufacturedItem.id)
     )
     data_statement = data_statement.offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(data_statement)).all()
-    return [(row[0], Decimal(row[1])) for row in rows], total
+    return [(row[0], Decimal(row[1]), Decimal(row[2])) for row in rows], total
 
 
 async def get_item_with_balance(
     session: AsyncSession, item_id: uuid.UUID
-) -> tuple[ManufacturedItem, Decimal] | None:
+) -> tuple[ManufacturedItem, Decimal, Decimal] | None:
     balance = balance_expression().label("free_quantity")
-    statement = select(ManufacturedItem, balance).where(ManufacturedItem.id == item_id)
+    required = required_expression().label("required_quantity")
+    statement = select(ManufacturedItem, balance, required).where(ManufacturedItem.id == item_id)
     row = (await session.execute(statement)).one_or_none()
     if row is None:
         return None
-    return row[0], Decimal(row[1])
+    return row[0], Decimal(row[1]), Decimal(row[2])
 
 
-async def get_item_for_update(
-    session: AsyncSession, item_id: uuid.UUID
-) -> ManufacturedItem | None:
-    statement = (
-        select(ManufacturedItem)
-        .where(ManufacturedItem.id == item_id)
-        .with_for_update()
-    )
+async def get_item_for_update(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItem | None:
+    statement = select(ManufacturedItem).where(ManufacturedItem.id == item_id).with_for_update()
     return (await session.execute(statement)).scalar_one_or_none()
 
 
-async def create_item(
-    session: AsyncSession, item: ManufacturedItem
-) -> ManufacturedItem:
+async def create_item(session: AsyncSession, item: ManufacturedItem) -> ManufacturedItem:
     session.add(item)
     await session.flush()
     return item

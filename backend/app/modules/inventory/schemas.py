@@ -20,6 +20,7 @@ class InventoryMovementCreate(BaseModel):
             raise ValueError("quantity must not be zero")
         return value
 
+
 class InventoryMovementRead(BaseModel):
     id: uuid.UUID
     material_id: uuid.UUID

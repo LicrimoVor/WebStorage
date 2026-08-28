@@ -20,9 +20,7 @@ async def create_movement(
     source_type: str | None,
     source_id: uuid.UUID | None = None,
 ) -> InventoryMovement:
-    material_statement = (
-        select(Material).where(Material.id == material_id).with_for_update()
-    )
+    material_statement = select(Material).where(Material.id == material_id).with_for_update()
     material = (await session.execute(material_statement)).scalar_one_or_none()
     if material is None:
         raise NotFoundError("Material was not found")
@@ -62,9 +60,7 @@ async def list_movements(
     exists = await session.get(Material, material_id)
     if exists is None:
         raise NotFoundError("Material was not found")
-    base = select(InventoryMovement).where(
-        InventoryMovement.material_id == material_id
-    )
+    base = select(InventoryMovement).where(InventoryMovement.material_id == material_id)
     count_statement = select(func.count()).select_from(base.subquery())
     total = int((await session.execute(count_statement)).scalar_one())
     statement = (

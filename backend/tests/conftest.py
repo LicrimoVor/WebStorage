@@ -39,7 +39,10 @@ async def database_engine() -> AsyncIterator[AsyncEngine]:
     async with engine.begin() as connection:
         await connection.execute(
             text(
-                "TRUNCATE TABLE technological_process_edges, "
+                "TRUNCATE TABLE production_plan_operation_requirements, "
+                "production_plan_item_requirements, "
+                "production_plan_material_requirements, production_plans, "
+                "technological_process_edges, "
                 "technological_process_nodes, technological_process_versions, "
                 "technological_processes, employees, operations, "
                 "manufactured_item_movements, manufactured_items, "
@@ -53,7 +56,5 @@ async def database_engine() -> AsyncIterator[AsyncEngine]:
 @pytest_asyncio.fixture
 async def client(database_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     del database_engine
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as http_client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http_client:
         yield http_client

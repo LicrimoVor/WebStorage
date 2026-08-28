@@ -58,9 +58,7 @@ async def import_technological_process(
     return await service.import_document(session, payload, created_by=actor.subject)
 
 
-@router.get(
-    "", response_model=ProcessList, operation_id="listTechnologicalProcesses"
-)
+@router.get("", response_model=ProcessList, operation_id="listTechnologicalProcesses")
 async def list_technological_processes(
     session: Session,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -87,9 +85,7 @@ async def list_technological_processes(
     operation_id="getTechnologicalProcess",
     responses={404: {"model": ProblemDetail}},
 )
-async def get_technological_process(
-    process_id: uuid.UUID, session: Session
-) -> ProcessRead:
+async def get_technological_process(process_id: uuid.UUID, session: Session) -> ProcessRead:
     return await service.get(session, process_id)
 
 
@@ -111,9 +107,7 @@ async def update_technological_process(
     operation_id="archiveTechnologicalProcess",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_technological_process(
-    process_id: uuid.UUID, session: Session
-) -> ProcessRead:
+async def archive_technological_process(process_id: uuid.UUID, session: Session) -> ProcessRead:
     return await service.archive(session, process_id)
 
 
@@ -130,9 +124,7 @@ async def create_technological_process_version(
     session: Session,
     actor: ActorDependency,
 ) -> ProcessVersionRead:
-    return await service.create_version(
-        session, process_id, payload, created_by=actor.subject
-    )
+    return await service.create_version(session, process_id, payload, created_by=actor.subject)
 
 
 @router.get(

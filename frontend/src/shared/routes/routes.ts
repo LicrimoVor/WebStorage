@@ -1,4 +1,5 @@
 export const routes = {
+  productionPlans: '/production-plans',
   warehouse: '/warehouse',
   operations: '/operations',
   processes: '/processes',

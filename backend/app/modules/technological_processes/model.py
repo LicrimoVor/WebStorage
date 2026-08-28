@@ -61,12 +61,8 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("version_number > 0", name="version_number_positive"),
         CheckConstraint("schema_version > 0", name="schema_version_positive"),
         CheckConstraint("revision >= 0", name="revision_non_negative"),
-        CheckConstraint(
-            "status IN ('draft', 'active', 'archived')", name="status_valid"
-        ),
-        UniqueConstraint(
-            "process_id", "version_number", name="uq_process_versions_number"
-        ),
+        CheckConstraint("status IN ('draft', 'active', 'archived')", name="status_valid"),
+        UniqueConstraint("process_id", "version_number", name="uq_process_versions_number"),
         Index(
             "ux_process_versions_one_active",
             "process_id",
@@ -97,9 +93,7 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Integer, nullable=False, server_default=text("0"), default=0
     )
     created_by: Mapped[str] = mapped_column(String(200), nullable=False)
-    activated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class TechnologicalProcessNode(UUIDPrimaryKeyMixin, Base):
@@ -109,9 +103,7 @@ class TechnologicalProcessNode(UUIDPrimaryKeyMixin, Base):
             "node_type IN ('material', 'manufactured_item', 'operation', 'output')",
             name="node_type_valid",
         ),
-        UniqueConstraint(
-            "version_id", "external_id", name="uq_process_nodes_external_id"
-        ),
+        UniqueConstraint("version_id", "external_id", name="uq_process_nodes_external_id"),
         Index("ix_process_nodes_version", "version_id"),
         Index("ix_process_nodes_reference", "node_type", "reference_id"),
     )
@@ -128,9 +120,7 @@ class TechnologicalProcessNode(UUIDPrimaryKeyMixin, Base):
     )
     external_id: Mapped[str] = mapped_column(String(100), nullable=False)
     node_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    reference_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
+    reference_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     label: Mapped[str | None] = mapped_column(String(200), nullable=True)
     position_x: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     position_y: Mapped[float] = mapped_column(Float, nullable=False, default=0)
@@ -139,9 +129,7 @@ class TechnologicalProcessNode(UUIDPrimaryKeyMixin, Base):
 class TechnologicalProcessEdge(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "technological_process_edges"
     __table_args__ = (
-        UniqueConstraint(
-            "version_id", "external_id", name="uq_process_edges_external_id"
-        ),
+        UniqueConstraint("version_id", "external_id", name="uq_process_edges_external_id"),
         Index("ix_process_edges_version", "version_id"),
     )
 

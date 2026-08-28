@@ -1,6 +1,6 @@
 # Веб-склад
 
-Три законченных vertical slice внутренней производственной системы: склад материалов/полуфабрикатов/продуктов, справочник операций и персонал. Каталоги поддерживают создание, поиск, сортировку, редактирование и архивирование; складские сущности дополнительно имеют транзакционные движения и историю.
+Шесть законченных vertical slice внутренней производственной системы: склад материалов/полуфабрикатов/продуктов, справочники операций и персонала, версионируемые технологические процессы с Canvas-редактором и производственное планирование. Планы рекурсивно рассчитывают материалы, полуфабрикаты, операции, время, стоимость и дефицит с учётом складских остатков.
 
 ## Стек
 
@@ -48,7 +48,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-API-каталоги: `/api/v1/materials`, `/api/v1/manufactured-items`, `/api/v1/operations`, `/api/v1/employees`. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
+API-каталоги: `/api/v1/materials`, `/api/v1/manufactured-items`, `/api/v1/operations`, `/api/v1/employees`, `/api/v1/technological-processes`, `/api/v1/production-plans`. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
 
 ### 3. Frontend
 
@@ -60,7 +60,7 @@ npm ci
 npm run dev
 ```
 
-Откройте <http://localhost:5173/warehouse>, <http://localhost:5173/operations> или <http://localhost:5173/personnel>.
+Откройте <http://localhost:5173/production-plans>, <http://localhost:5173/warehouse>, <http://localhost:5173/processes>, <http://localhost:5173/operations> или <http://localhost:5173/personnel>.
 
 Локально `AUTH_DISABLED=true`, поэтому UI работает без экрана входа. Перед любым внешним развёртыванием отключите этот режим и задайте секретный `DEVELOPMENT_TOKEN`; полноценные пользователи, cookie-сессии и RBAC являются отдельным следующим security slice.
 
@@ -78,6 +78,17 @@ npm run dev
 | `GET` | `/api/v1/technological-processes/{id}/versions/{versionId}/export` | экспортировать переносимый JSON |
 | `PUT` | `/api/v1/technological-processes/{id}/versions/{versionId}/graph` | заменить граф черновика |
 | `POST` | `/api/v1/technological-processes/{id}/versions/{versionId}/activate` | проверить DAG и активировать версию |
+
+## Производственное планирование
+
+Экран <http://localhost:5173/production-plans> создаёт планы по продукту и количеству. Backend закрепляет план за версией техпроцесса, рекурсивно раскрывает полуфабрикаты, учитывает их остатки и сохраняет рассчитанные потребности. Для открытого плана доступны изменение количества/прогресса через API, отмена и явный перерасчёт по текущей активной версии процесса.
+
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `POST/GET` | `/api/v1/production-plans` | создать рассчитанный план или получить список |
+| `GET/PATCH` | `/api/v1/production-plans/{id}` | получить карточку или изменить открытый план |
+| `POST` | `/api/v1/production-plans/{id}/recalculate` | пересчитать и при необходимости закрепить новую активную версию |
+| `GET` | `/api/v1/production-plans/summary` | сводка активных планов, времени, стоимости и дефицита |
 
 ## OpenAPI → TypeScript
 
@@ -146,7 +157,7 @@ npm run build
 
 Количество передаётся decimal-строкой. Для `receipt`, `consumption` и `write_off` клиент отправляет положительное количество; backend сохраняет расход как отрицательную ledger-дельту. `adjustment` принимает положительную или отрицательную ненулевую дельту. Отрицательный итоговый остаток запрещён.
 
-`time_norm` хранится как decimal-число минут на одну операцию, `price_per_operation` — как денежное decimal-значение. Агрегаты потребности, выполненных работ и оплаты пока равны нулю: они будут вычисляться планированием и payroll, а не изменяться через CRUD справочников.
+`time_norm` хранится как decimal-число минут на одну операцию, `price_per_operation` — как денежное decimal-значение. Потребности материалов, производимых позиций и операций вычисляются активными производственными планами; выполненные работы и оплата появятся на следующих этапах execution/payroll.
 
 ## Остановка
 

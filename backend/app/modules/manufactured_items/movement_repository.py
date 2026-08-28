@@ -23,17 +23,13 @@ async def create_movement(
     source_id: uuid.UUID | None = None,
 ) -> ManufacturedItemMovement:
     item_statement = (
-        select(ManufacturedItem)
-        .where(ManufacturedItem.id == item_id)
-        .with_for_update()
+        select(ManufacturedItem).where(ManufacturedItem.id == item_id).with_for_update()
     )
     item = (await session.execute(item_statement)).scalar_one_or_none()
     if item is None:
         raise NotFoundError("Manufactured item was not found")
     if item.archived:
-        raise ConflictError(
-            "Archived manufactured item cannot receive inventory movements"
-        )
+        raise ConflictError("Archived manufactured item cannot receive inventory movements")
 
     balance_statement = select(
         func.coalesce(func.sum(ManufacturedItemMovement.quantity), Decimal("0"))

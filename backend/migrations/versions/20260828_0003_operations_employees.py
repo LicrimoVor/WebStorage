@@ -4,6 +4,7 @@ Revision ID: 20260828_0003
 Revises: 20260828_0002
 Create Date: 2026-08-28
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -22,12 +23,8 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("time_norm", sa.Numeric(precision=20, scale=6), nullable=True),
-        sa.Column(
-            "price_per_operation", sa.Numeric(precision=20, scale=2), nullable=True
-        ),
-        sa.Column(
-            "archived", sa.Boolean(), server_default=sa.text("false"), nullable=False
-        ),
+        sa.Column("price_per_operation", sa.Numeric(precision=20, scale=2), nullable=True),
+        sa.Column("archived", sa.Boolean(), server_default=sa.text("false"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -50,9 +47,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_operations")),
     )
-    op.create_index(
-        "ix_operations_archived", "operations", ["archived"], unique=False
-    )
+    op.create_index("ix_operations_archived", "operations", ["archived"], unique=False)
     op.create_index(
         "ix_operations_name_lower",
         "operations",
@@ -64,9 +59,7 @@ def upgrade() -> None:
         "employees",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("full_name", sa.String(length=200), nullable=False),
-        sa.Column(
-            "active", sa.Boolean(), server_default=sa.text("true"), nullable=False
-        ),
+        sa.Column("active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column(
             "created_at",

@@ -35,9 +35,7 @@ async def list_employees(
         EmployeeSortField.CREATED_AT: Employee.created_at,
     }
     direction = asc if sort_order == SortOrder.ASC else desc
-    statement = statement.order_by(
-        direction(order_columns[sort_by]), asc(Employee.id)
-    )
+    statement = statement.order_by(direction(order_columns[sort_by]), asc(Employee.id))
     statement = statement.offset((page - 1) * page_size).limit(page_size)
     return list((await session.execute(statement)).scalars().all()), total
 

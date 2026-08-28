@@ -4,6 +4,7 @@ Revision ID: 20260828_0005
 Revises: 20260828_0004
 Create Date: 2026-08-28
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -18,9 +19,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column(
         "technological_process_versions",
-        sa.Column(
-            "revision", sa.Integer(), server_default=sa.text("0"), nullable=False
-        ),
+        sa.Column("revision", sa.Integer(), server_default=sa.text("0"), nullable=False),
     )
     op.create_check_constraint(
         op.f("ck_technological_process_versions_revision_non_negative"),

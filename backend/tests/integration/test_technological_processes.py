@@ -6,9 +6,7 @@ import pytest
 from httpx import AsyncClient
 
 
-async def create_item(
-    client: AsyncClient, *, name: str, is_product: bool = True
-) -> dict[str, Any]:
+async def create_item(client: AsyncClient, *, name: str, is_product: bool = True) -> dict[str, Any]:
     response = await client.post(
         "/api/v1/manufactured-items",
         json={"name": name, "is_product": is_product, "unit": "шт"},
@@ -18,9 +16,7 @@ async def create_item(
 
 
 async def create_material(client: AsyncClient, *, name: str) -> dict[str, Any]:
-    response = await client.post(
-        "/api/v1/materials", json={"name": name, "unit": "кг"}
-    )
+    response = await client.post("/api/v1/materials", json={"name": name, "unit": "кг"})
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -31,9 +27,7 @@ async def create_operation(client: AsyncClient, *, name: str) -> dict[str, Any]:
     return response.json()
 
 
-async def create_process(
-    client: AsyncClient, *, name: str, output_item_id: str
-) -> dict[str, Any]:
+async def create_process(client: AsyncClient, *, name: str, output_item_id: str) -> dict[str, Any]:
     response = await client.post(
         "/api/v1/technological-processes",
         json={"name": name, "output_item_id": output_item_id},
@@ -128,9 +122,7 @@ def graph(
 @pytest.mark.asyncio
 async def test_create_list_and_partial_json_round_trip(client: AsyncClient) -> None:
     output = await create_item(client, name="Редуктор")
-    created = await create_process(
-        client, name="Сборка редуктора", output_item_id=output["id"]
-    )
+    created = await create_process(client, name="Сборка редуктора", output_item_id=output["id"])
     process = created["process"]
     version = created["version"]
     assert process["active_version"] is None
@@ -138,9 +130,7 @@ async def test_create_list_and_partial_json_round_trip(client: AsyncClient) -> N
     assert version["revision"] == 0
     assert version["graph"]["nodes"][0]["type"] == "output"
 
-    listed = await client.get(
-        "/api/v1/technological-processes", params={"search": "РЕДУКТОР"}
-    )
+    listed = await client.get("/api/v1/technological-processes", params={"search": "РЕДУКТОР"})
     assert listed.status_code == 200
     assert listed.json()["total"] == 1
 
@@ -166,9 +156,7 @@ async def test_create_list_and_partial_json_round_trip(client: AsyncClient) -> N
             }
         ],
     }
-    imported = await client.post(
-        "/api/v1/technological-processes/import", json=partial_document
-    )
+    imported = await client.post("/api/v1/technological-processes/import", json=partial_document)
     assert imported.status_code == 201, imported.text
     imported_body = imported.json()
     export = await client.get(
@@ -185,9 +173,7 @@ async def test_activation_versions_and_active_immutability(client: AsyncClient) 
     output = await create_item(client, name="Вал в сборе")
     material = await create_material(client, name="Пруток")
     operation = await create_operation(client, name="Точение")
-    created = await create_process(
-        client, name="Изготовление вала", output_item_id=output["id"]
-    )
+    created = await create_process(client, name="Изготовление вала", output_item_id=output["id"])
     process_id = created["process"]["id"]
     version_id = created["version"]["id"]
     document = graph(
@@ -233,9 +219,7 @@ async def test_activation_versions_and_active_immutability(client: AsyncClient) 
         f"/api/v1/technological-processes/{process_id}/versions/{second_id}/activate"
     )
     assert second_activation.status_code == 200, second_activation.text
-    versions = await client.get(
-        f"/api/v1/technological-processes/{process_id}/versions"
-    )
+    versions = await client.get(f"/api/v1/technological-processes/{process_id}/versions")
     statuses = {item["version_number"]: item["status"] for item in versions.json()["items"]}
     assert statuses == {2: "active", 1: "archived"}
 
@@ -245,9 +229,7 @@ async def test_activation_rejects_missing_archived_and_broken_references(
     client: AsyncClient,
 ) -> None:
     output = await create_item(client, name="Крышка")
-    created = await create_process(
-        client, name="Обработка крышки", output_item_id=output["id"]
-    )
+    created = await create_process(client, name="Обработка крышки", output_item_id=output["id"])
     process_id = created["process"]["id"]
     version_id = created["version"]["id"]
     invalid_document = graph(
@@ -283,9 +265,7 @@ async def test_activation_rejects_local_and_interprocess_cycles(
 ) -> None:
     output = await create_item(client, name="Циклическая деталь")
     operation = await create_operation(client, name="Циклическая операция")
-    created = await create_process(
-        client, name="Локальный цикл", output_item_id=output["id"]
-    )
+    created = await create_process(client, name="Локальный цикл", output_item_id=output["id"])
     process_id = created["process"]["id"]
     version_id = created["version"]["id"]
     cyclic = graph(
@@ -316,9 +296,7 @@ async def test_activation_rejects_local_and_interprocess_cycles(
 
     item_a = await create_item(client, name="Узел A", is_product=False)
     item_b = await create_item(client, name="Узел B", is_product=False)
-    process_a = await create_process(
-        client, name="Процесс A", output_item_id=item_a["id"]
-    )
+    process_a = await create_process(client, name="Процесс A", output_item_id=item_a["id"])
     graph_a = graph(
         name="Процесс A",
         output_item_id=item_a["id"],
@@ -334,14 +312,10 @@ async def test_activation_rejects_local_and_interprocess_cycles(
         )
     ).status_code == 200
     assert (
-        await client.post(
-            f"/api/v1/technological-processes/{a_id}/versions/{a_version}/activate"
-        )
+        await client.post(f"/api/v1/technological-processes/{a_id}/versions/{a_version}/activate")
     ).status_code == 200
 
-    process_b = await create_process(
-        client, name="Процесс B", output_item_id=item_b["id"]
-    )
+    process_b = await create_process(client, name="Процесс B", output_item_id=item_b["id"])
     graph_b = graph(
         name="Процесс B",
         output_item_id=item_b["id"],
@@ -366,9 +340,7 @@ async def test_activation_rejects_local_and_interprocess_cycles(
 @pytest.mark.asyncio
 async def test_draft_autosave_uses_optimistic_revision(client: AsyncClient) -> None:
     output = await create_item(client, name="Автосохраняемая деталь")
-    created = await create_process(
-        client, name="Автосохранение", output_item_id=output["id"]
-    )
+    created = await create_process(client, name="Автосохранение", output_item_id=output["id"])
     process_id = created["process"]["id"]
     version_id = created["version"]["id"]
     document = created["version"]["graph"]

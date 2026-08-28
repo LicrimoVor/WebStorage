@@ -4,6 +4,7 @@ Revision ID: 20260828_0004
 Revises: 20260828_0003
 Create Date: 2026-08-28
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -22,9 +23,7 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("output_item_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column(
-            "archived", sa.Boolean(), server_default=sa.text("false"), nullable=False
-        ),
+        sa.Column("archived", sa.Boolean(), server_default=sa.text("false"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -114,12 +113,8 @@ def upgrade() -> None:
             name="fk_process_versions_process",
             ondelete="RESTRICT",
         ),
-        sa.PrimaryKeyConstraint(
-            "id", name=op.f("pk_technological_process_versions")
-        ),
-        sa.UniqueConstraint(
-            "process_id", "version_number", name="uq_process_versions_number"
-        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_technological_process_versions")),
+        sa.UniqueConstraint("process_id", "version_number", name="uq_process_versions_number"),
     )
     op.create_index(
         "ix_process_versions_process_created",
@@ -173,9 +168,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_technological_process_nodes")),
-        sa.UniqueConstraint(
-            "version_id", "external_id", name="uq_process_nodes_external_id"
-        ),
+        sa.UniqueConstraint("version_id", "external_id", name="uq_process_nodes_external_id"),
     )
     op.create_index(
         "ix_process_nodes_reference",
@@ -205,9 +198,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_technological_process_edges")),
-        sa.UniqueConstraint(
-            "version_id", "external_id", name="uq_process_edges_external_id"
-        ),
+        sa.UniqueConstraint("version_id", "external_id", name="uq_process_edges_external_id"),
     )
     op.create_index(
         "ix_process_edges_version",
@@ -218,16 +209,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_process_edges_version", table_name="technological_process_edges"
-    )
+    op.drop_index("ix_process_edges_version", table_name="technological_process_edges")
     op.drop_table("technological_process_edges")
-    op.drop_index(
-        "ix_process_nodes_version", table_name="technological_process_nodes"
-    )
-    op.drop_index(
-        "ix_process_nodes_reference", table_name="technological_process_nodes"
-    )
+    op.drop_index("ix_process_nodes_version", table_name="technological_process_nodes")
+    op.drop_index("ix_process_nodes_reference", table_name="technological_process_nodes")
     op.drop_table("technological_process_nodes")
     op.execute(
         sa.text(

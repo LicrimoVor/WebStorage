@@ -57,14 +57,10 @@ async def replace_graph(
     edges: list[TechnologicalProcessEdge],
 ) -> None:
     await session.execute(
-        delete(TechnologicalProcessEdge).where(
-            TechnologicalProcessEdge.version_id == version_id
-        )
+        delete(TechnologicalProcessEdge).where(TechnologicalProcessEdge.version_id == version_id)
     )
     await session.execute(
-        delete(TechnologicalProcessNode).where(
-            TechnologicalProcessNode.version_id == version_id
-        )
+        delete(TechnologicalProcessNode).where(TechnologicalProcessNode.version_id == version_id)
     )
     await session.flush()
     await add_graph(session, nodes=nodes, edges=edges)
@@ -133,9 +129,7 @@ async def list_processes(
         ProcessSortField.CREATED_AT: TechnologicalProcess.created_at,
     }
     direction = asc if sort_order == SortOrder.ASC else desc
-    statement = statement.order_by(
-        direction(order_columns[sort_by]), asc(TechnologicalProcess.id)
-    )
+    statement = statement.order_by(direction(order_columns[sort_by]), asc(TechnologicalProcess.id))
     statement = statement.offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(statement)).all()
     process_ids = [row[0].id for row in rows]
@@ -172,9 +166,7 @@ async def _versions_by_process(
     return result
 
 
-async def get_process_bundle(
-    session: AsyncSession, process_id: uuid.UUID
-) -> ProcessBundle | None:
+async def get_process_bundle(session: AsyncSession, process_id: uuid.UUID) -> ProcessBundle | None:
     row = (
         await session.execute(
             select(TechnologicalProcess, ManufacturedItem.name)
@@ -238,16 +230,15 @@ async def list_versions(
     )
 
 
-async def next_version_number(
-    session: AsyncSession, process_id: uuid.UUID
-) -> int:
+async def next_version_number(session: AsyncSession, process_id: uuid.UUID) -> int:
     process = await get_process_for_update(session, process_id)
     if process is None:
         return 0
     current = (
         await session.execute(
-            select(func.coalesce(func.max(TechnologicalProcessVersion.version_number), 0))
-            .where(TechnologicalProcessVersion.process_id == process_id)
+            select(func.coalesce(func.max(TechnologicalProcessVersion.version_number), 0)).where(
+                TechnologicalProcessVersion.process_id == process_id
+            )
         )
     ).scalar_one()
     return int(current) + 1
@@ -263,11 +254,7 @@ async def get_reference_states(
     materials = {
         item.id: item.archived
         for item in (
-            (
-                await session.execute(
-                    select(Material).where(Material.id.in_(material_ids))
-                )
-            )
+            (await session.execute(select(Material).where(Material.id.in_(material_ids))))
             .scalars()
             .all()
             if material_ids
@@ -291,11 +278,7 @@ async def get_reference_states(
     operations = {
         item.id: item.archived
         for item in (
-            (
-                await session.execute(
-                    select(Operation).where(Operation.id.in_(operation_ids))
-                )
-            )
+            (await session.execute(select(Operation).where(Operation.id.in_(operation_ids))))
             .scalars()
             .all()
             if operation_ids
@@ -361,9 +344,7 @@ async def activate_version(
     await session.flush()
 
 
-async def archive_process(
-    session: AsyncSession, process: TechnologicalProcess
-) -> None:
+async def archive_process(session: AsyncSession, process: TechnologicalProcess) -> None:
     process.archived = True
     await session.execute(
         update(TechnologicalProcessVersion)

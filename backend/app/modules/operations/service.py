@@ -18,15 +18,19 @@ from app.modules.operations.schemas import (
 )
 
 
-def to_read_model(operation: Operation) -> OperationRead:
+def to_read_model(
+    operation: Operation,
+    required_quantity: Decimal = Decimal("0"),
+    required_time_minutes: Decimal = Decimal("0"),
+) -> OperationRead:
     return OperationRead(
         id=operation.id,
         name=operation.name,
         time_norm=operation.time_norm,
         price_per_operation=operation.price_per_operation,
-        required_quantity=Decimal("0"),
+        required_quantity=required_quantity,
         completed_quantity=Decimal("0"),
-        required_time_minutes=Decimal("0"),
+        required_time_minutes=required_time_minutes,
         archived=operation.archived,
         created_at=operation.created_at,
         updated_at=operation.updated_at,
@@ -65,7 +69,7 @@ async def list_all(
         sort_order=sort_order,
     )
     return OperationList(
-        items=[to_read_model(item) for item in items],
+        items=[to_read_model(*item) for item in items],
         page=page,
         page_size=page_size,
         total=total,
@@ -74,10 +78,10 @@ async def list_all(
 
 
 async def get(session: AsyncSession, operation_id: uuid.UUID) -> OperationRead:
-    operation = await repository.get_operation(session, operation_id)
-    if operation is None:
+    result = await repository.get_operation_with_projection(session, operation_id)
+    if result is None:
         raise NotFoundError("Operation was not found")
-    return to_read_model(operation)
+    return to_read_model(*result)
 
 
 async def update(
