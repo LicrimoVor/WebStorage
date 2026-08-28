@@ -1,0 +1,133 @@
+.root {
+  width: min(1700px, calc(100% - var(--g-spacing-8)));
+  margin: 0 auto;
+  padding: var(--g-spacing-7) 0 var(--g-spacing-10);
+}
+
+.header,
+.titleBlock,
+.titleLine,
+.toolbar,
+.cardHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--g-spacing-3);
+}
+
+.header,
+.cardHeading {
+  justify-content: space-between;
+}
+
+.titleBlock {
+  align-items: flex-start;
+}
+
+.titleLine {
+  flex-wrap: wrap;
+}
+
+.description {
+  margin: var(--g-spacing-1) 0 0;
+}
+
+.alert {
+  margin-top: var(--g-spacing-5);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--g-spacing-3);
+  margin-top: var(--g-spacing-6);
+}
+
+.metric {
+  display: grid;
+  gap: var(--g-spacing-2);
+  padding: var(--g-spacing-4);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 0.9fr);
+  gap: var(--g-spacing-5);
+  align-items: start;
+  margin-top: var(--g-spacing-5);
+}
+
+.structureCard,
+.jsonCard {
+  display: grid;
+  gap: var(--g-spacing-5);
+  padding: var(--g-spacing-6);
+  background: var(--g-color-base-background);
+}
+
+.jsonCard {
+  position: sticky;
+  top: 88px;
+}
+
+.tableSection {
+  display: grid;
+  gap: var(--g-spacing-3);
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.source {
+  font-family: var(--g-font-family-monospace);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.headerSkeleton {
+  height: 80px;
+}
+
+.editorSkeleton,
+.sourceSkeleton {
+  height: 540px;
+  margin-top: var(--g-spacing-5);
+}
+
+@media (width <= 1200px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .jsonCard {
+    position: static;
+  }
+}
+
+@media (width <= 760px) {
+  .root {
+    width: calc(100% - var(--g-spacing-4));
+    padding-top: var(--g-spacing-4);
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar,
+  .cardHeading {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .structureCard,
+  .jsonCard {
+    padding: var(--g-spacing-4);
+  }
+}

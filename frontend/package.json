@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "stylelint": "stylelint \"src/**/*.scss\"",
     "test": "vitest run",
-    "api:schema": "cd ../backend && python scripts/export_openapi.py",
+    "api:schema": "node scripts/export-openapi.mjs",
     "api:generate": "npm run api:schema && openapi-typescript ../backend/openapi.json -o src/shared/api/generated/schema.d.ts"
   },
   "dependencies": {

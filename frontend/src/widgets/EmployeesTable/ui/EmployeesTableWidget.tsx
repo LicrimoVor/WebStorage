@@ -1,4 +1,4 @@
-import {Persons} from '@gravity-ui/icons';
+import { Persons } from "@gravity-ui/icons";
 import {
   Alert,
   Button,
@@ -10,8 +10,8 @@ import {
   Switch,
   Text,
   TextInput,
-} from '@gravity-ui/uikit';
-import {useSearchParams} from 'react-router-dom';
+} from "@gravity-ui/uikit";
+import { useSearchParams } from "react-router-dom";
 
 import {
   EmployeesTable,
@@ -20,17 +20,17 @@ import {
   type EmployeeListParams,
   type EmployeeSortField,
   type SortOrder,
-} from '@/entities/Employee';
-import {ArchiveEmployeeButton} from '@/features/ArchiveEmployee';
-import {CreateEmployeeButton} from '@/features/CreateEmployee';
-import {EditEmployeeButton} from '@/features/EditEmployee';
-import {getErrorMessage} from '@/shared/api';
+} from "@/entities/Employee";
+import { ArchiveEmployeeButton } from "@/features/ArchiveEmployee";
+import { CreateEmployeeButton } from "@/features/CreateEmployee";
+import { EditEmployeeButton } from "@/features/EditEmployee";
+import { getErrorMessage } from "@/shared/api";
 
-import styles from './EmployeesTableWidget.module.scss';
+import styles from "./EmployeesTableWidget.module.scss";
 
-const sortOptions: Array<{value: EmployeeSortField; content: string}> = [
-  {value: 'full_name', content: 'По ФИО'},
-  {value: 'created_at', content: 'По дате добавления'},
+const sortOptions: Array<{ value: EmployeeSortField; content: string }> = [
+  { value: "full_name", content: "По ФИО" },
+  { value: "created_at", content: "По дате добавления" },
 ];
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -40,12 +40,13 @@ function positiveInteger(value: string | null, fallback: number): number {
 
 export function EmployeesTableWidget() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = positiveInteger(searchParams.get('page'), 1);
-  const pageSize = positiveInteger(searchParams.get('page_size'), 20);
-  const search = searchParams.get('search') ?? '';
-  const sortBy = (searchParams.get('sort_by') ?? 'full_name') as EmployeeSortField;
-  const sortOrder = (searchParams.get('sort_order') ?? 'asc') as SortOrder;
-  const includeInactive = searchParams.get('include_inactive') === 'true';
+  const page = positiveInteger(searchParams.get("page"), 1);
+  const pageSize = positiveInteger(searchParams.get("page_size"), 20);
+  const search = searchParams.get("search") ?? "";
+  const sortBy = (searchParams.get("sort_by") ??
+    "full_name") as EmployeeSortField;
+  const sortOrder = (searchParams.get("sort_order") ?? "asc") as SortOrder;
+  const includeInactive = searchParams.get("include_inactive") === "true";
   const params: EmployeeListParams = {
     page,
     page_size: pageSize,
@@ -60,10 +61,11 @@ export function EmployeesTableWidget() {
   ) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === '' || value === false) next.delete(key);
+      if (value === undefined || value === "" || value === false)
+        next.delete(key);
       else next.set(key, String(value));
     });
-    setSearchParams(next, {replace: true});
+    setSearchParams(next, { replace: true });
   };
   const renderActions = (employee: Employee) => (
     <div className={styles.actions}>
@@ -79,9 +81,6 @@ export function EmployeesTableWidget() {
           <Text as="h2" variant="header-2">
             Сотрудники
           </Text>
-          <Text as="p" color="secondary" className={styles.subtitle}>
-            Начисления и выполненные работы появятся после подключения этапа payroll
-          </Text>
         </div>
         <CreateEmployeeButton />
       </div>
@@ -89,17 +88,17 @@ export function EmployeesTableWidget() {
         <TextInput
           type="search"
           value={search}
-          onUpdate={(value) => updateUrl({search: value, page: 1})}
+          onUpdate={(value) => updateUrl({ search: value, page: 1 })}
           placeholder="Поиск по ФИО"
           hasClear
           size="l"
-          controlProps={{'aria-label': 'Поиск сотрудников'}}
+          controlProps={{ "aria-label": "Поиск сотрудников" }}
         />
         <Select
           options={sortOptions}
           value={[sortBy]}
           onUpdate={(values) =>
-            updateUrl({sort_by: values[0] ?? 'full_name', page: 1})
+            updateUrl({ sort_by: values[0] ?? "full_name", page: 1 })
           }
           width="max"
           size="l"
@@ -109,22 +108,27 @@ export function EmployeesTableWidget() {
           view="outlined"
           size="l"
           onClick={() =>
-            updateUrl({sort_order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1})
+            updateUrl({
+              sort_order: sortOrder === "asc" ? "desc" : "asc",
+              page: 1,
+            })
           }
         >
-          {sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
+          {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
         </Button>
         <Switch
           size="l"
           checked={includeInactive}
-          onUpdate={(checked) => updateUrl({include_inactive: checked, page: 1})}
+          onUpdate={(checked) =>
+            updateUrl({ include_inactive: checked, page: 1 })
+          }
         >
           Показывать неактивных
         </Switch>
       </div>
       {query.isPending ? (
         <div className={styles.loading} aria-label="Загрузка сотрудников">
-          {Array.from({length: 5}, (_, index) => (
+          {Array.from({ length: 5 }, (_, index) => (
             <Skeleton key={index} className={styles.skeleton} />
           ))}
         </div>
@@ -138,17 +142,20 @@ export function EmployeesTableWidget() {
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
           image={<Persons />}
-          title={hasFilters ? 'Ничего не найдено' : 'Сотрудников пока нет'}
+          title={hasFilters ? "Ничего не найдено" : "Сотрудников пока нет"}
           description={
             hasFilters
-              ? 'Измените поиск или фильтры.'
-              : 'Добавьте первого сотрудника производственного участка.'
+              ? "Измените поиск или фильтры."
+              : "Добавьте первого сотрудника производственного участка."
           }
           actions={!hasFilters ? <CreateEmployeeButton /> : null}
         />
       ) : (
         <div className={styles.content}>
-          <EmployeesTable items={query.data.items} renderActions={renderActions} />
+          <EmployeesTable
+            items={query.data.items}
+            renderActions={renderActions}
+          />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
             <Pagination
@@ -157,7 +164,7 @@ export function EmployeesTableWidget() {
               total={query.data.total}
               pageSizeOptions={[10, 20, 50, 100]}
               onUpdate={(nextPage, nextPageSize) =>
-                updateUrl({page: nextPage, page_size: nextPageSize})
+                updateUrl({ page: nextPage, page_size: nextPageSize })
               }
               showInput
             />

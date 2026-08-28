@@ -7,4 +7,8 @@
 .table {
   min-width: 1080px;
   background: var(--g-color-base-background);
+
+  table {
+    width: 100%;
+  }
 }

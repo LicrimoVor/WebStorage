@@ -34,7 +34,14 @@ class ManufacturedItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
     image: Mapped[str | None] = mapped_column(Text, nullable=True)
     active_process_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        UUID(as_uuid=True),
+        ForeignKey(
+            "technological_process_versions.id",
+            name="fk_manufactured_items_active_process",
+            ondelete="RESTRICT",
+            use_alter=True,
+        ),
+        nullable=True,
     )
     archived: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false"), default=False

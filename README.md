@@ -64,6 +64,21 @@ npm run dev
 
 Локально `AUTH_DISABLED=true`, поэтому UI работает без экрана входа. Перед любым внешним развёртыванием отключите этот режим и задайте секретный `DEVELOPMENT_TOKEN`; полноценные пользователи, cookie-сессии и RBAC являются отдельным следующим security slice.
 
+## Технологические процессы
+
+Этап 4 доступен в UI по адресам <http://localhost:5173/processes> и `/processes/{processId}`. В списке можно создать процесс для производимой позиции, импортировать JSON и архивировать процесс. Редактор показывает версии, узлы и связи, позволяет править JSON только у черновика, экспортировать любую версию и запускать отдельную строгую активацию.
+
+Основные API-группы:
+
+| Метод | Путь | Назначение |
+| --- | --- | --- |
+| `POST/GET` | `/api/v1/technological-processes` | создать процесс с v1 draft или получить список |
+| `POST` | `/api/v1/technological-processes/import` | импортировать полный или неполный JSON как новый draft |
+| `POST/GET` | `/api/v1/technological-processes/{id}/versions` | клонировать новую версию или получить историю |
+| `GET` | `/api/v1/technological-processes/{id}/versions/{versionId}/export` | экспортировать переносимый JSON |
+| `PUT` | `/api/v1/technological-processes/{id}/versions/{versionId}/graph` | заменить граф черновика |
+| `POST` | `/api/v1/technological-processes/{id}/versions/{versionId}/activate` | проверить DAG и активировать версию |
+
 ## OpenAPI → TypeScript
 
 FastAPI является источником истины. Не редактируйте `frontend/src/shared/api/generated/schema.d.ts` вручную.

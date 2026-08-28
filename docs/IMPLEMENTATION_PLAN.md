@@ -27,7 +27,7 @@
 - Tests: PostgreSQL validation/archive/search/pagination и React component/user flows.
 - Dependencies: foundation этапа 1.
 
-## 4. Tech Process domain model
+## 4. Tech Process domain model — реализовано
 
 - Scope: версии, узлы/рёбра, draft/active/archive, валидация DAG, JSON import/export.
 - Backend: `technological_processes`, cycle detection и activation use case.
@@ -35,6 +35,15 @@
 - Migrations: process/version/node/edge tables и единственная active version.
 - Tests: version immutability, cycles, invalid references, round-trip JSON.
 - Dependencies: этапы 2–3.
+
+Реализованный контракт этапа:
+
+- один технологический процесс закреплён за одной производимой позицией, а его история хранится отдельными версиями;
+- изменяется только `draft`; активация архивирует предыдущую активную версию и записывает UUID новой версии в `manufactured_items.active_process_id`;
+- неполный импорт остаётся допустимым черновиком, но activation command проверяет сопоставления, архивные/отсутствующие ссылки, положительные количества, целостность рёбер, путь каждого узла к результату и единственный финальный output;
+- циклы запрещены и внутри версии, и между активными процессами производимых позиций;
+- JSON schema version 1 является переносимым контрактом импорта/экспорта; decimal-количества передаются строками без потери точности;
+- frontend добавляет `/processes` и `/processes/:processId`: список, версии, статусы, автор, импорт/экспорт, табличную структуру узлов/связей и JSON-редактирование черновика.
 
 ## 5. Tech Process Canvas editor
 

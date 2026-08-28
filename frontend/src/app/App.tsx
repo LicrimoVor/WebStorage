@@ -27,6 +27,14 @@ const PersonnelPage = lazy(async () => {
   const module = await import('@/pages/PersonnelPage');
   return {default: module.PersonnelPage};
 });
+const TechnologicalProcessesPage = lazy(async () => {
+  const module = await import('@/pages/TechnologicalProcessesPage');
+  return {default: module.TechnologicalProcessesPage};
+});
+const ProcessEditorPage = lazy(async () => {
+  const module = await import('@/pages/ProcessEditorPage');
+  return {default: module.ProcessEditorPage};
+});
 
 function AppLayout() {
   const location = useLocation();
@@ -42,6 +50,13 @@ function AppLayout() {
             </Text>
           </div>
           <nav className={styles.nav} aria-label="Основная навигация">
+            <Button
+              view="flat-action"
+              onClick={() => navigate(routes.processes)}
+              selected={location.pathname.startsWith(routes.processes)}
+            >
+              Техпроцессы
+            </Button>
             <Button
               view="flat-action"
               onClick={() => navigate(routes.warehouse)}
@@ -70,6 +85,14 @@ function AppLayout() {
             <Route path="/" element={<Navigate to={routes.warehouse} replace />} />
             <Route path={routes.warehouse} element={<WarehousePage />} />
             <Route path={routes.operations} element={<OperationsPage />} />
+            <Route
+              path={routes.processes}
+              element={<TechnologicalProcessesPage />}
+            />
+            <Route
+              path={routes.processEditorPattern}
+              element={<ProcessEditorPage />}
+            />
             <Route path={routes.personnel} element={<PersonnelPage />} />
             <Route
               path="*"

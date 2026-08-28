@@ -1,4 +1,4 @@
-import {Boxes3} from '@gravity-ui/icons';
+import { Boxes3 } from "@gravity-ui/icons";
 import {
   Alert,
   Button,
@@ -9,8 +9,8 @@ import {
   Skeleton,
   Text,
   TextInput,
-} from '@gravity-ui/uikit';
-import {useSearchParams} from 'react-router-dom';
+} from "@gravity-ui/uikit";
+import { useSearchParams } from "react-router-dom";
 
 import {
   ManufacturedItemsTable,
@@ -21,35 +21,38 @@ import {
   type ManufacturedItemListParams,
   type ManufacturedItemSortField,
   type SortOrder,
-} from '@/entities/ManufacturedItem';
-import {AdjustManufacturedStockButton} from '@/features/AdjustManufacturedStock';
-import {ArchiveManufacturedItemButton} from '@/features/ArchiveManufacturedItem';
-import {CreateManufacturedItemButton} from '@/features/CreateManufacturedItem';
-import {EditManufacturedItemButton} from '@/features/EditManufacturedItem';
-import {ManufacturedInventoryHistoryButton} from '@/features/ViewManufacturedInventoryHistory';
-import {getErrorMessage} from '@/shared/api';
+} from "@/entities/ManufacturedItem";
+import { AdjustManufacturedStockButton } from "@/features/AdjustManufacturedStock";
+import { ArchiveManufacturedItemButton } from "@/features/ArchiveManufacturedItem";
+import { CreateManufacturedItemButton } from "@/features/CreateManufacturedItem";
+import { EditManufacturedItemButton } from "@/features/EditManufacturedItem";
+import { ManufacturedInventoryHistoryButton } from "@/features/ViewManufacturedInventoryHistory";
+import { getErrorMessage } from "@/shared/api";
 
-import styles from './ManufacturedItemsTableWidget.module.scss';
+import styles from "./ManufacturedItemsTableWidget.module.scss";
 
-const sortOptions: Array<{value: ManufacturedItemSortField; content: string}> = [
-  {value: 'name', content: 'По названию'},
-  {value: 'free_quantity', content: 'По остатку'},
-  {value: 'created_at', content: 'По дате создания'},
+const sortOptions: Array<{
+  value: ManufacturedItemSortField;
+  content: string;
+}> = [
+  { value: "name", content: "По названию" },
+  { value: "free_quantity", content: "По остатку" },
+  { value: "created_at", content: "По дате создания" },
 ];
 
 const availabilityOptions: Array<{
   value: AvailabilityFilter;
   content: string;
 }> = [
-  {value: 'all', content: 'Любое наличие'},
-  {value: 'in_stock', content: 'Есть в наличии'},
-  {value: 'out_of_stock', content: 'Нет в наличии'},
+  { value: "all", content: "Любое наличие" },
+  { value: "in_stock", content: "Есть в наличии" },
+  { value: "out_of_stock", content: "Нет в наличии" },
 ];
 
-const kindOptions: Array<{value: ManufacturedItemKind; content: string}> = [
-  {value: 'all', content: 'Все типы'},
-  {value: 'semi_finished', content: 'Полуфабрикаты'},
-  {value: 'product', content: 'Продукты'},
+const kindOptions: Array<{ value: ManufacturedItemKind; content: string }> = [
+  { value: "all", content: "Все типы" },
+  { value: "semi_finished", content: "Полуфабрикаты" },
+  { value: "product", content: "Продукты" },
 ];
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -59,15 +62,17 @@ function positiveInteger(value: string | null, fallback: number): number {
 
 export function ManufacturedItemsTableWidget() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = positiveInteger(searchParams.get('items_page'), 1);
-  const pageSize = positiveInteger(searchParams.get('items_page_size'), 20);
-  const search = searchParams.get('items_search') ?? '';
-  const sortBy = (searchParams.get('items_sort_by') ??
-    'name') as ManufacturedItemSortField;
-  const sortOrder = (searchParams.get('items_sort_order') ?? 'asc') as SortOrder;
-  const availability = (searchParams.get('items_availability') ??
-    'all') as AvailabilityFilter;
-  const kind = (searchParams.get('items_kind') ?? 'all') as ManufacturedItemKind;
+  const page = positiveInteger(searchParams.get("items_page"), 1);
+  const pageSize = positiveInteger(searchParams.get("items_page_size"), 20);
+  const search = searchParams.get("items_search") ?? "";
+  const sortBy = (searchParams.get("items_sort_by") ??
+    "name") as ManufacturedItemSortField;
+  const sortOrder = (searchParams.get("items_sort_order") ??
+    "asc") as SortOrder;
+  const availability = (searchParams.get("items_availability") ??
+    "all") as AvailabilityFilter;
+  const kind = (searchParams.get("items_kind") ??
+    "all") as ManufacturedItemKind;
 
   const params: ManufacturedItemListParams = {
     page,
@@ -83,10 +88,10 @@ export function ManufacturedItemsTableWidget() {
   const updateUrl = (updates: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === '') next.delete(key);
+      if (value === undefined || value === "") next.delete(key);
       else next.set(key, String(value));
     });
-    setSearchParams(next, {replace: true});
+    setSearchParams(next, { replace: true });
   };
 
   const renderActions = (item: ManufacturedItem) => (
@@ -98,7 +103,8 @@ export function ManufacturedItemsTableWidget() {
     </div>
   );
 
-  const hasFilters = Boolean(search) || kind !== 'all' || availability !== 'all';
+  const hasFilters =
+    Boolean(search) || kind !== "all" || availability !== "all";
 
   return (
     <Card className={styles.root} view="outlined">
@@ -106,9 +112,6 @@ export function ManufacturedItemsTableWidget() {
         <div>
           <Text as="h2" variant="header-2">
             Полуфабрикаты и продукты
-          </Text>
-          <Text as="p" color="secondary" className={styles.subtitle}>
-            Производимые позиции и их независимый складской журнал
           </Text>
         </div>
         <CreateManufacturedItemButton />
@@ -118,17 +121,19 @@ export function ManufacturedItemsTableWidget() {
         <TextInput
           type="search"
           value={search}
-          onUpdate={(value) => updateUrl({items_search: value, items_page: 1})}
+          onUpdate={(value) =>
+            updateUrl({ items_search: value, items_page: 1 })
+          }
           placeholder="Поиск по названию"
           hasClear
           size="l"
-          controlProps={{'aria-label': 'Поиск производимых позиций'}}
+          controlProps={{ "aria-label": "Поиск производимых позиций" }}
         />
         <Select
           options={kindOptions}
           value={[kind]}
           onUpdate={(values) =>
-            updateUrl({items_kind: values[0] ?? 'all', items_page: 1})
+            updateUrl({ items_kind: values[0] ?? "all", items_page: 1 })
           }
           width="max"
           size="l"
@@ -138,7 +143,7 @@ export function ManufacturedItemsTableWidget() {
           options={availabilityOptions}
           value={[availability]}
           onUpdate={(values) =>
-            updateUrl({items_availability: values[0] ?? 'all', items_page: 1})
+            updateUrl({ items_availability: values[0] ?? "all", items_page: 1 })
           }
           width="max"
           size="l"
@@ -148,7 +153,7 @@ export function ManufacturedItemsTableWidget() {
           options={sortOptions}
           value={[sortBy]}
           onUpdate={(values) =>
-            updateUrl({items_sort_by: values[0] ?? 'name', items_page: 1})
+            updateUrl({ items_sort_by: values[0] ?? "name", items_page: 1 })
           }
           width="max"
           size="l"
@@ -159,18 +164,21 @@ export function ManufacturedItemsTableWidget() {
           size="l"
           onClick={() =>
             updateUrl({
-              items_sort_order: sortOrder === 'asc' ? 'desc' : 'asc',
+              items_sort_order: sortOrder === "asc" ? "desc" : "asc",
               items_page: 1,
             })
           }
         >
-          {sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
+          {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
         </Button>
       </div>
 
       {query.isPending ? (
-        <div className={styles.loading} aria-label="Загрузка производимых позиций">
-          {Array.from({length: 6}, (_, index) => (
+        <div
+          className={styles.loading}
+          aria-label="Загрузка производимых позиций"
+        >
+          {Array.from({ length: 6 }, (_, index) => (
             <Skeleton key={index} className={styles.skeleton} />
           ))}
         </div>
@@ -184,11 +192,13 @@ export function ManufacturedItemsTableWidget() {
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
           image={<Boxes3 />}
-          title={hasFilters ? 'Ничего не найдено' : 'Производимых позиций пока нет'}
+          title={
+            hasFilters ? "Ничего не найдено" : "Производимых позиций пока нет"
+          }
           description={
             hasFilters
-              ? 'Измените поисковый запрос или фильтры.'
-              : 'Создайте первый полуфабрикат или готовый продукт.'
+              ? "Измените поисковый запрос или фильтры."
+              : "Создайте первый полуфабрикат или готовый продукт."
           }
           actions={!hasFilters ? <CreateManufacturedItemButton /> : null}
         />
@@ -206,7 +216,10 @@ export function ManufacturedItemsTableWidget() {
               total={query.data.total}
               pageSizeOptions={[10, 20, 50, 100]}
               onUpdate={(nextPage, nextPageSize) =>
-                updateUrl({items_page: nextPage, items_page_size: nextPageSize})
+                updateUrl({
+                  items_page: nextPage,
+                  items_page_size: nextPageSize,
+                })
               }
               showInput
             />

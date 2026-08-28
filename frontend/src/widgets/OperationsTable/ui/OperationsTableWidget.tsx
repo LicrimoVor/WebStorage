@@ -1,4 +1,4 @@
-import {Wrench} from '@gravity-ui/icons';
+import { Wrench } from "@gravity-ui/icons";
 import {
   Alert,
   Button,
@@ -10,8 +10,8 @@ import {
   Switch,
   Text,
   TextInput,
-} from '@gravity-ui/uikit';
-import {useSearchParams} from 'react-router-dom';
+} from "@gravity-ui/uikit";
+import { useSearchParams } from "react-router-dom";
 
 import {
   OperationsTable,
@@ -20,19 +20,19 @@ import {
   type OperationListParams,
   type OperationSortField,
   type SortOrder,
-} from '@/entities/Operation';
-import {ArchiveOperationButton} from '@/features/ArchiveOperation';
-import {CreateOperationButton} from '@/features/CreateOperation';
-import {EditOperationButton} from '@/features/EditOperation';
-import {getErrorMessage} from '@/shared/api';
+} from "@/entities/Operation";
+import { ArchiveOperationButton } from "@/features/ArchiveOperation";
+import { CreateOperationButton } from "@/features/CreateOperation";
+import { EditOperationButton } from "@/features/EditOperation";
+import { getErrorMessage } from "@/shared/api";
 
-import styles from './OperationsTableWidget.module.scss';
+import styles from "./OperationsTableWidget.module.scss";
 
-const sortOptions: Array<{value: OperationSortField; content: string}> = [
-  {value: 'name', content: 'По названию'},
-  {value: 'time_norm', content: 'По норме времени'},
-  {value: 'price_per_operation', content: 'По ставке'},
-  {value: 'created_at', content: 'По дате создания'},
+const sortOptions: Array<{ value: OperationSortField; content: string }> = [
+  { value: "name", content: "По названию" },
+  { value: "time_norm", content: "По норме времени" },
+  { value: "price_per_operation", content: "По ставке" },
+  { value: "created_at", content: "По дате создания" },
 ];
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -42,12 +42,12 @@ function positiveInteger(value: string | null, fallback: number): number {
 
 export function OperationsTableWidget() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = positiveInteger(searchParams.get('page'), 1);
-  const pageSize = positiveInteger(searchParams.get('page_size'), 20);
-  const search = searchParams.get('search') ?? '';
-  const sortBy = (searchParams.get('sort_by') ?? 'name') as OperationSortField;
-  const sortOrder = (searchParams.get('sort_order') ?? 'asc') as SortOrder;
-  const includeArchived = searchParams.get('include_archived') === 'true';
+  const page = positiveInteger(searchParams.get("page"), 1);
+  const pageSize = positiveInteger(searchParams.get("page_size"), 20);
+  const search = searchParams.get("search") ?? "";
+  const sortBy = (searchParams.get("sort_by") ?? "name") as OperationSortField;
+  const sortOrder = (searchParams.get("sort_order") ?? "asc") as SortOrder;
+  const includeArchived = searchParams.get("include_archived") === "true";
   const params: OperationListParams = {
     page,
     page_size: pageSize,
@@ -62,15 +62,18 @@ export function OperationsTableWidget() {
   ) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === '' || value === false) next.delete(key);
+      if (value === undefined || value === "" || value === false)
+        next.delete(key);
       else next.set(key, String(value));
     });
-    setSearchParams(next, {replace: true});
+    setSearchParams(next, { replace: true });
   };
   const renderActions = (operation: Operation) => (
     <div className={styles.actions}>
       <EditOperationButton operation={operation} />
-      {!operation.archived ? <ArchiveOperationButton operation={operation} /> : null}
+      {!operation.archived ? (
+        <ArchiveOperationButton operation={operation} />
+      ) : null}
     </div>
   );
   const hasFilters = Boolean(search) || includeArchived;
@@ -81,9 +84,6 @@ export function OperationsTableWidget() {
           <Text as="h2" variant="header-2">
             Справочник операций
           </Text>
-          <Text as="p" color="secondary" className={styles.subtitle}>
-            Нормы времени задаются в минутах на одну операцию
-          </Text>
         </div>
         <CreateOperationButton />
       </div>
@@ -91,16 +91,18 @@ export function OperationsTableWidget() {
         <TextInput
           type="search"
           value={search}
-          onUpdate={(value) => updateUrl({search: value, page: 1})}
+          onUpdate={(value) => updateUrl({ search: value, page: 1 })}
           placeholder="Поиск по названию"
           hasClear
           size="l"
-          controlProps={{'aria-label': 'Поиск операций'}}
+          controlProps={{ "aria-label": "Поиск операций" }}
         />
         <Select
           options={sortOptions}
           value={[sortBy]}
-          onUpdate={(values) => updateUrl({sort_by: values[0] ?? 'name', page: 1})}
+          onUpdate={(values) =>
+            updateUrl({ sort_by: values[0] ?? "name", page: 1 })
+          }
           width="max"
           size="l"
           aria-label="Сортировка операций"
@@ -109,22 +111,27 @@ export function OperationsTableWidget() {
           view="outlined"
           size="l"
           onClick={() =>
-            updateUrl({sort_order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1})
+            updateUrl({
+              sort_order: sortOrder === "asc" ? "desc" : "asc",
+              page: 1,
+            })
           }
         >
-          {sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
+          {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
         </Button>
         <Switch
           size="l"
           checked={includeArchived}
-          onUpdate={(checked) => updateUrl({include_archived: checked, page: 1})}
+          onUpdate={(checked) =>
+            updateUrl({ include_archived: checked, page: 1 })
+          }
         >
           Показывать архивные
         </Switch>
       </div>
       {query.isPending ? (
         <div className={styles.loading} aria-label="Загрузка операций">
-          {Array.from({length: 5}, (_, index) => (
+          {Array.from({ length: 5 }, (_, index) => (
             <Skeleton key={index} className={styles.skeleton} />
           ))}
         </div>
@@ -138,17 +145,20 @@ export function OperationsTableWidget() {
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
           image={<Wrench />}
-          title={hasFilters ? 'Ничего не найдено' : 'Операций пока нет'}
+          title={hasFilters ? "Ничего не найдено" : "Операций пока нет"}
           description={
             hasFilters
-              ? 'Измените поиск или фильтры.'
-              : 'Создайте первую производственную операцию.'
+              ? "Измените поиск или фильтры."
+              : "Создайте первую производственную операцию."
           }
           actions={!hasFilters ? <CreateOperationButton /> : null}
         />
       ) : (
         <div className={styles.content}>
-          <OperationsTable items={query.data.items} renderActions={renderActions} />
+          <OperationsTable
+            items={query.data.items}
+            renderActions={renderActions}
+          />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
             <Pagination
@@ -157,7 +167,7 @@ export function OperationsTableWidget() {
               total={query.data.total}
               pageSizeOptions={[10, 20, 50, 100]}
               onUpdate={(nextPage, nextPageSize) =>
-                updateUrl({page: nextPage, page_size: nextPageSize})
+                updateUrl({ page: nextPage, page_size: nextPageSize })
               }
               showInput
             />
