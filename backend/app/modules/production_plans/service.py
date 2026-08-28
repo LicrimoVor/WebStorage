@@ -468,6 +468,11 @@ async def _recalculate_active(session: AsyncSession) -> None:
         )
 
 
+async def recalculate_active_snapshots(session: AsyncSession) -> None:
+    """Refresh open plan snapshots inside the caller's transaction."""
+    await _recalculate_active(session)
+
+
 async def _recalculate_one(
     session: AsyncSession, plan: ProductionPlan, *, preserve_pins: bool = True
 ) -> None:

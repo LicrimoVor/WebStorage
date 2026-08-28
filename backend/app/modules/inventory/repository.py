@@ -19,6 +19,7 @@ async def create_movement(
     comment: str | None,
     source_type: str | None,
     source_id: uuid.UUID | None = None,
+    production_record_id: uuid.UUID | None = None,
 ) -> InventoryMovement:
     material_statement = select(Material).where(Material.id == material_id).with_for_update()
     material = (await session.execute(material_statement)).scalar_one_or_none()
@@ -44,6 +45,7 @@ async def create_movement(
         comment=comment,
         source_type=source_type,
         source_id=source_id,
+        production_record_id=production_record_id,
     )
     session.add(movement)
     await session.flush()

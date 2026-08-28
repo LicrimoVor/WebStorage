@@ -3614,6 +3614,198 @@
         }
       }
     },
+    "/api/v1/production-plans/{plan_id}/production-records": {
+      "post": {
+        "tags": [
+          "production execution"
+        ],
+        "summary": "Register Production",
+        "operationId": "registerProduction",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 100,
+              "description": "Stable unique key for a retried production command",
+              "title": "Idempotency-Key"
+            },
+            "description": "Stable unique key for a retried production command"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductionRecordCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionRecordRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "production execution"
+        ],
+        "summary": "List Production Records",
+        "operationId": "listProductionRecords",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionRecordList"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -4201,6 +4393,18 @@
             ],
             "title": "Source Id"
           },
+          "production_record_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Record Id"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4218,6 +4422,7 @@
           "comment",
           "source_type",
           "source_id",
+          "production_record_id",
           "created_at"
         ],
         "title": "InventoryMovementRead"
@@ -4432,6 +4637,18 @@
             ],
             "title": "Source Id"
           },
+          "production_record_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Record Id"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4449,6 +4666,7 @@
           "comment",
           "source_type",
           "source_id",
+          "production_record_id",
           "created_at"
         ],
         "title": "ManufacturedItemMovementRead"
@@ -5868,6 +6086,54 @@
         ],
         "title": "ProcessVersionSummary"
       },
+      "ProductionComponentKind": {
+        "type": "string",
+        "enum": [
+          "material",
+          "manufactured_item"
+        ],
+        "title": "ProductionComponentKind"
+      },
+      "ProductionComponentRead": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ProductionComponentKind"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entity Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity"
+          },
+          "movement_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Movement Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "entity_id",
+          "name",
+          "unit",
+          "quantity",
+          "movement_id"
+        ],
+        "title": "ProductionComponentRead"
+      },
       "ProductionPlanCreate": {
         "properties": {
           "product_id": {
@@ -6257,6 +6523,183 @@
         },
         "type": "object",
         "title": "ProductionPlanUpdate"
+      },
+      "ProductionRecordCreate": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "quantity"
+        ],
+        "title": "ProductionRecordCreate"
+      },
+      "ProductionRecordList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionRecordRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "ProductionRecordList"
+      },
+      "ProductionRecordRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "production_plan_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Production Plan Id"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "item_name": {
+            "type": "string",
+            "title": "Item Name"
+          },
+          "item_unit": {
+            "type": "string",
+            "title": "Item Unit"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity"
+          },
+          "process_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Process Version Id"
+          },
+          "process_version_number": {
+            "type": "integer",
+            "title": "Process Version Number"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "output_movement_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Output Movement Id"
+          },
+          "output_balance_after": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Output Balance After"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionComponentRead"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "production_plan_id",
+          "item_id",
+          "item_name",
+          "item_unit",
+          "quantity",
+          "process_version_id",
+          "process_version_number",
+          "idempotency_key",
+          "created_by",
+          "comment",
+          "output_movement_id",
+          "output_balance_after",
+          "components",
+          "created_at"
+        ],
+        "title": "ProductionRecordRead"
       },
       "SortOrder": {
         "type": "string",

@@ -126,6 +126,19 @@ async def requirements(session: AsyncSession, plan_id: uuid.UUID) -> Requirement
     return material_rows, item_rows, operation_rows
 
 
+async def item_requirement(
+    session: AsyncSession, *, plan_id: uuid.UUID, item_id: uuid.UUID
+) -> ProductionPlanItemRequirement | None:
+    return (
+        await session.execute(
+            select(ProductionPlanItemRequirement).where(
+                ProductionPlanItemRequirement.plan_id == plan_id,
+                ProductionPlanItemRequirement.manufactured_item_id == item_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+
 async def clear_requirements(session: AsyncSession, plan_ids: list[uuid.UUID]) -> None:
     if not plan_ids:
         return

@@ -26,6 +26,7 @@ describe('AdjustManufacturedStockButton', () => {
       comment: 'Выпуск',
       source_type: 'manual',
       source_id: null,
+      production_record_id: null,
       created_at: '2026-08-28T06:00:00Z',
     });
     const user = userEvent.setup();

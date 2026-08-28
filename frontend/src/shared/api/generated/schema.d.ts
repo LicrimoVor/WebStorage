@@ -512,6 +512,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/production-plans/{plan_id}/production-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Production Records */
+        get: operations["listProductionRecords"];
+        put?: never;
+        /** Register Production */
+        post: operations["registerProduction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -730,6 +748,8 @@ export interface components {
             source_type: string | null;
             /** Source Id */
             source_id: string | null;
+            /** Production Record Id */
+            production_record_id: string | null;
             /**
              * Created At
              * Format: date-time
@@ -814,6 +834,8 @@ export interface components {
             source_type: string | null;
             /** Source Id */
             source_id: string | null;
+            /** Production Record Id */
+            production_record_id: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1315,6 +1337,31 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * ProductionComponentKind
+         * @enum {string}
+         */
+        ProductionComponentKind: "material" | "manufactured_item";
+        /** ProductionComponentRead */
+        ProductionComponentRead: {
+            kind: components["schemas"]["ProductionComponentKind"];
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Quantity */
+            quantity: string;
+            /**
+             * Movement Id
+             * Format: uuid
+             */
+            movement_id: string;
+        };
         /** ProductionPlanCreate */
         ProductionPlanCreate: {
             /**
@@ -1445,6 +1492,82 @@ export interface components {
             /** Target Date */
             target_date?: string | null;
             status?: components["schemas"]["ProductionPlanStatus"] | null;
+        };
+        /** ProductionRecordCreate */
+        ProductionRecordCreate: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ProductionRecordList */
+        ProductionRecordList: {
+            /** Items */
+            items: components["schemas"]["ProductionRecordRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** ProductionRecordRead */
+        ProductionRecordRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Production Plan Id
+             * Format: uuid
+             */
+            production_plan_id: string;
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Item Name */
+            item_name: string;
+            /** Item Unit */
+            item_unit: string;
+            /** Quantity */
+            quantity: string;
+            /**
+             * Process Version Id
+             * Format: uuid
+             */
+            process_version_id: string;
+            /** Process Version Number */
+            process_version_number: number;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Created By */
+            created_by: string;
+            /** Comment */
+            comment: string | null;
+            /**
+             * Output Movement Id
+             * Format: uuid
+             */
+            output_movement_id: string;
+            /** Output Balance After */
+            output_balance_after: string;
+            /** Components */
+            components: components["schemas"]["ProductionComponentRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * SortOrder
@@ -3430,6 +3553,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductionPlanRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listProductionRecords: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionRecordList"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registerProduction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable unique key for a retried production command */
+                "Idempotency-Key": string;
+                authorization?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductionRecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionRecordRead"];
                 };
             };
             /** @description Not Found */
