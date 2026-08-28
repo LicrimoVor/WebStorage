@@ -2,7 +2,7 @@
 
 ## Границы реализованных срезов
 
-Первый vertical slice реализует справочник материалов и складской ledger. Второй добавляет производимые складские позиции: полуфабрикаты и продукты. Производственные потребности пока не рассчитываются: `required_quantity`, `deficit_quantity` и `to_produce_quantity` являются вычисляемыми полями API и возвращают `0`. Контракт и модульные границы позволяют подключить production calculation engine без изменения каталогов и складских CRUD.
+Первый vertical slice реализует справочник материалов и складской ledger. Второй добавляет производимые складские позиции: полуфабрикаты и продукты. Третий реализует справочники производственных операций и сотрудников. Производственные потребности и выполненные работы пока не рассчитываются: соответствующие агрегаты API возвращают `0`. Контракт и модульные границы позволяют подключить planning, work и payroll engines без изменения каталогов.
 
 ## Backend
 
@@ -15,7 +15,9 @@ backend/app/
 └── modules/
     ├── materials/          # модель, DTO, запросы, use cases, HTTP
     ├── inventory/          # общие типы/правила и ledger материалов
-    └── manufactured_items/ # каталог, строгий ledger, use cases, HTTP
+    ├── manufactured_items/ # каталог, строгий ledger, use cases, HTTP
+    ├── operations/         # нормы времени и ставки операций
+    └── employees/          # активный персонал и комментарии
 ```
 
 Направление зависимостей: `router -> service -> repository/model -> core`. Repository выполняет запросы и `flush`, service владеет commit/rollback, router отвечает только за HTTP. ORM-модели не выходят через API.
@@ -30,6 +32,8 @@ backend/app/
 - `inventory_movements`: UUID, материал, тип, signed decimal delta, остаток до/после, комментарий, источник, UTC timestamp.
 - `manufactured_items`: UUID, название, признак продукта, единица, nullable изображение/active process, архивный флаг, UTC timestamps;
 - `manufactured_item_movements`: UUID, производимая позиция, тип, signed decimal delta, остаток до/после, комментарий, источник, UTC timestamp.
+- `operations`: UUID, уникальное название, nullable норма времени в минутах, nullable ставка, архивный флаг, UTC timestamps;
+- `employees`: UUID, ФИО, active-флаг, nullable комментарий, UTC timestamps.
 
 Количества хранятся как `NUMERIC(20, 6)`, деньги — `NUMERIC(20, 2)`. API сериализует decimal как строки, поэтому JavaScript не теряет точность.
 
@@ -37,7 +41,9 @@ backend/app/
 
 Для этапа 2 выбран отдельный `manufactured_item_movements` со строгим FK вместо полиморфной ссылки без ссылочной целостности. Типы движений и функция преобразования ручной операции в signed delta общие. Обобщать repositories до сложной универсальной иерархии пока не требуется.
 
-Физическое удаление не используется: материалы и производимые позиции архивируются. Архивные записи остаются в истории и не принимают новые движения.
+Физическое удаление не используется: материалы, производимые позиции и операции архивируются, сотрудники деактивируются. Архивные записи сохраняются для будущих исторических связей.
+
+Поля операций `required_quantity`, `completed_quantity`, `required_time_minutes` и агрегаты сотрудника `accrued_total`, `paid_total`, `payable_total`, `completed_operations` являются read-only projections. До появления планирования, учёта работ и payroll они равны нулю и не сохраняются как изменяемые поля каталогов.
 
 ## API boundary
 
@@ -52,14 +58,14 @@ React 19 + TypeScript strict + Vite + Gravity UI + React Router + SCSS Modules. 
 ```text
 frontend/src/
 ├── app/                    # providers, router, theme, globals
-├── pages/WarehousePage/
-├── widgets/                # MaterialsTable, ManufacturedItemsTable
+├── pages/                  # WarehousePage, OperationsPage, PersonnelPage
+├── widgets/                # таблицы четырёх каталогов
 ├── features/               # отдельные Create/Edit/Archive/Adjust/History slices
-├── entities/               # Material, ManufacturedItem
+├── entities/               # Material, ManufacturedItem, Operation, Employee
 └── shared/                 # generated API, fetch client, config/routes
 ```
 
-Каждый slice экспортирует public API через `index.ts`; межслойных deep imports нет. Страница `/warehouse` лениво загружается. Gravity UI предоставляет controls/dialog/pagination/table primitives, SCSS использует semantic `--g-*` variables.
+Каждый slice экспортирует public API через `index.ts`; межслойных deep imports нет. Страницы `/warehouse`, `/operations` и `/personnel` лениво загружаются. Gravity UI предоставляет controls/dialog/pagination/table primitives, SCSS использует semantic `--g-*` variables.
 
 ## Изображения
 
@@ -71,4 +77,4 @@ HTTP boundary уже централизован. `AUTH_DISABLED=true` допус
 
 ## Миграции и эксплуатация
 
-Любая схема изменяется только Alembic. Миграция `20260828_0001` создаёт материалы и их ledger, `20260828_0002` — производимые позиции и отдельный строгий ledger. PostgreSQL запускается Docker Compose; backend/frontend работают на host для быстрого reload/HMR. Production предполагает same-origin reverse proxy и отдельное object storage.
+Любая схема изменяется только Alembic. Миграция `20260828_0001` создаёт материалы и их ledger, `20260828_0002` — производимые позиции и отдельный строгий ledger, `20260828_0003` — операции и сотрудников. PostgreSQL запускается Docker Compose; backend/frontend работают на host для быстрого reload/HMR. Production предполагает same-origin reverse proxy и отдельное object storage.

@@ -36,6 +36,8 @@
 }
 
 .nav {
+  display: flex;
+  gap: var(--g-spacing-1);
   margin-left: auto;
 }
 
@@ -53,5 +55,9 @@
 
   .brandText > :last-child {
     display: none;
+  }
+
+  .nav {
+    overflow-x: auto;
   }
 }

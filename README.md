@@ -1,6 +1,6 @@
 # Веб-склад
 
-Два законченных vertical slice внутренней производственной системы: материалы, полуфабрикаты и продукты с транзакционным складским учётом. Пользователь может создать, найти, отфильтровать, отсортировать, отредактировать и архивировать позицию, провести приход/расход/корректировку/списание и открыть полную историю движений.
+Три законченных vertical slice внутренней производственной системы: склад материалов/полуфабрикатов/продуктов, справочник операций и персонал. Каталоги поддерживают создание, поиск, сортировку, редактирование и архивирование; складские сущности дополнительно имеют транзакционные движения и историю.
 
 ## Стек
 
@@ -48,7 +48,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-API: <http://localhost:8000/api/v1/materials> и <http://localhost:8000/api/v1/manufactured-items>. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
+API-каталоги: `/api/v1/materials`, `/api/v1/manufactured-items`, `/api/v1/operations`, `/api/v1/employees`. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
 
 ### 3. Frontend
 
@@ -60,7 +60,7 @@ npm ci
 npm run dev
 ```
 
-Откройте <http://localhost:5173/warehouse>.
+Откройте <http://localhost:5173/warehouse>, <http://localhost:5173/operations> или <http://localhost:5173/personnel>.
 
 Локально `AUTH_DISABLED=true`, поэтому UI работает без экрана входа. Перед любым внешним развёртыванием отключите этот режим и задайте секретный `DEVELOPMENT_TOKEN`; полноценные пользователи, cookie-сессии и RBAC являются отдельным следующим security slice.
 
@@ -122,8 +122,16 @@ npm run build
 | `POST` | `/api/v1/manufactured-items/{id}/archive` | архивировать |
 | `POST` | `/api/v1/manufactured-items/{id}/movements` | провести складское движение |
 | `GET` | `/api/v1/manufactured-items/{id}/movements` | пагинированная история |
+| `POST/GET` | `/api/v1/operations` | создать или получить список операций |
+| `GET/PATCH` | `/api/v1/operations/{id}` | получить или изменить операцию |
+| `POST` | `/api/v1/operations/{id}/archive` | архивировать операцию |
+| `POST/GET` | `/api/v1/employees` | добавить сотрудника или получить список |
+| `GET/PATCH` | `/api/v1/employees/{id}` | получить или изменить сотрудника |
+| `POST` | `/api/v1/employees/{id}/archive` | деактивировать сотрудника |
 
 Количество передаётся decimal-строкой. Для `receipt`, `consumption` и `write_off` клиент отправляет положительное количество; backend сохраняет расход как отрицательную ledger-дельту. `adjustment` принимает положительную или отрицательную ненулевую дельту. Отрицательный итоговый остаток запрещён.
+
+`time_norm` хранится как decimal-число минут на одну операцию, `price_per_operation` — как денежное decimal-значение. Агрегаты потребности, выполненных работ и оплаты пока равны нулю: они будут вычисляться планированием и payroll, а не изменяться через CRUD справочников.
 
 ## Остановка
 

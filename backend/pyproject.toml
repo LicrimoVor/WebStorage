@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "webstorage-backend"
 version = "0.1.0"
-description = "Materials, manufactured items and inventory API for WebStorage"
+description = "Inventory, operations and employees API for WebStorage"
 requires-python = ">=3.12"
 dependencies = [
   "alembic==1.19.1",

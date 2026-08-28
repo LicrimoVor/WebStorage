@@ -18,13 +18,13 @@
 - Tests: PostgreSQL CRUD/движения/фильтры/отрицательный остаток и React component/user flows.
 - Dependencies: этап 1.
 
-## 3. Operations + Employees
+## 3. Operations + Employees — реализовано
 
 - Scope: справочники операций/сотрудников без расчёта производства и payroll.
-- Backend: CRUD/archive, нормы времени и ставки decimal.
-- Frontend: страницы операций и персонала, формы/таблицы.
-- Migrations: `operations`, `employees`.
-- Tests: validation, archive, search/pagination.
+- Backend: модули `operations` и `employees`, CRUD/archive, nullable decimal-нормы времени и ставки, read-only placeholders будущих агрегатов.
+- Frontend: `/operations` и `/personnel`, entity/table и Create/Edit/Archive features, URL search/sort/pagination.
+- Migrations: `operations`, `employees`, constraints/indexes.
+- Tests: PostgreSQL validation/archive/search/pagination и React component/user flows.
 - Dependencies: foundation этапа 1.
 
 ## 4. Tech Process domain model
