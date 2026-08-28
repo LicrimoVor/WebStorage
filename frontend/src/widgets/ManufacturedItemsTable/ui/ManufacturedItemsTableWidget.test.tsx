@@ -19,7 +19,7 @@ describe('ManufacturedItemsTableWidget states', () => {
       isError: false,
     } as unknown as ReturnType<typeof useManufacturedItemsQuery>);
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(screen.getByLabelText('Загрузка производимых позиций')).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/^Загрузка:/)).toHaveLength(2);
   });
 
   it('renders empty state', () => {
@@ -29,7 +29,8 @@ describe('ManufacturedItemsTableWidget states', () => {
       data: {items: [], page: 1, page_size: 20, total: 0, pages: 0},
     } as unknown as ReturnType<typeof useManufacturedItemsQuery>);
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(screen.getByText('Производимых позиций пока нет')).toBeInTheDocument();
+    expect(screen.getByText('Полуфабрикаты пока не добавлены')).toBeInTheDocument();
+    expect(screen.getByText('Продукты пока не добавлены')).toBeInTheDocument();
   });
 
   it('renders recoverable error state', () => {
@@ -40,9 +41,8 @@ describe('ManufacturedItemsTableWidget states', () => {
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useManufacturedItemsQuery>);
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(
-      screen.getByText('Не удалось загрузить производимые позиции'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Повторить'})).toBeInTheDocument();
+    expect(screen.getByText('Не удалось загрузить: полуфабрикаты')).toBeInTheDocument();
+    expect(screen.getByText('Не удалось загрузить: продукты')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', {name: 'Повторить'})).toHaveLength(2);
   });
 });

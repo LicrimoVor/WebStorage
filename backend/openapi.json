@@ -434,6 +434,65 @@
         }
       }
     },
+    "/api/v1/media/images": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Upload Image",
+        "operationId": "uploadImage",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/v1/materials/{material_id}/movements": {
       "post": {
         "tags": [
@@ -2908,6 +2967,105 @@
         }
       }
     },
+    "/api/v1/technological-processes/{process_id}/versions/{version_id}/draft": {
+      "put": {
+        "tags": [
+          "technological processes"
+        ],
+        "summary": "Save Technological Process Draft",
+        "operationId": "saveTechnologicalProcessDraft",
+        "parameters": [
+          {
+            "name": "process_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Process Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessDraftSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessVersionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/api/v1/technological-processes/{process_id}/versions/{version_id}/activate": {
       "post": {
         "tags": [
@@ -3393,6 +3551,58 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImageUploadRead": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "content_type",
+          "size"
+        ],
+        "title": "ImageUploadRead"
+      },
+      "ImageUploadRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Content Type"
+          },
+          "content_base64": {
+            "type": "string",
+            "maxLength": 7100000,
+            "minLength": 1,
+            "title": "Content Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content_type",
+          "content_base64"
+        ],
+        "title": "ImageUploadRequest"
       },
       "InventoryMovementCreate": {
         "properties": {
@@ -4521,6 +4731,24 @@
         ],
         "title": "ProcessCreate"
       },
+      "ProcessDraftSave": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/ProcessGraphDocument-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "graph"
+        ],
+        "title": "ProcessDraftSave"
+      },
       "ProcessGraphDocument-Input": {
         "properties": {
           "schemaVersion": {
@@ -4858,6 +5086,10 @@
             "type": "integer",
             "title": "Schema Version"
           },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
           "created_by": {
             "type": "string",
             "title": "Created By"
@@ -4899,6 +5131,7 @@
           "version_number",
           "status",
           "schema_version",
+          "revision",
           "created_by",
           "activated_at",
           "created_at",
@@ -4925,6 +5158,10 @@
           "schema_version": {
             "type": "integer",
             "title": "Schema Version"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
           },
           "created_by": {
             "type": "string",
@@ -4959,6 +5196,7 @@
           "version_number",
           "status",
           "schema_version",
+          "revision",
           "created_by",
           "activated_at",
           "created_at",

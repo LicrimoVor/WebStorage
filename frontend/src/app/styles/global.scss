@@ -1,9 +1,13 @@
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--g-color-base-brand) var(--g-color-base-generic);
 }
 
 html {
   min-width: 320px;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
   background: var(--g-color-base-background);
 }
 
@@ -24,3 +28,27 @@ a {
   color: inherit;
 }
 
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--g-color-base-generic);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  background: color-mix(
+    in srgb,
+    var(--g-color-base-brand) 72%,
+    var(--g-color-base-background)
+  );
+  border: 3px solid var(--g-color-base-generic);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--g-color-base-brand-hover);
+}

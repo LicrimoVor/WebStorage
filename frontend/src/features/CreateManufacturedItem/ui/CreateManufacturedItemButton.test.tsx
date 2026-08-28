@@ -26,13 +26,6 @@ describe('CreateManufacturedItemButton', () => {
       'Корпус редуктора',
     );
     await user.clear(
-      screen.getByLabelText('Единица измерения производимой позиции'),
-    );
-    await user.type(
-      screen.getByLabelText('Единица измерения производимой позиции'),
-      'шт.',
-    );
-    await user.clear(
       screen.getByLabelText('Начальный остаток производимой позиции'),
     );
     await user.type(

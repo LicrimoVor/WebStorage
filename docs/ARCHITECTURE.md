@@ -17,7 +17,9 @@ backend/app/
     ├── inventory/          # общие типы/правила и ledger материалов
     ├── manufactured_items/ # каталог, строгий ledger, use cases, HTTP
     ├── operations/         # нормы времени и ставки операций
-    └── employees/          # активный персонал и комментарии
+    ├── employees/          # активный персонал и комментарии
+    ├── media/              # проверенная загрузка растровых изображений
+    └── technological_processes/ # versioned DAG и optimistic drafts
 ```
 
 Направление зависимостей: `router -> service -> repository/model -> core`. Repository выполняет запросы и `flush`, service владеет commit/rollback, router отвечает только за HTTP. ORM-модели не выходят через API.
@@ -61,6 +63,10 @@ backend/app/
 
 Рёбра с направлением `source → target` означают, что source необходим для получения target. Количество относится к зависимости, а не к узлу. Полиморфный `reference_id` узла проверяется сервисом при активации; физический FK невозможен, поскольку ссылка выбирает одну из трёх таблиц справочников.
 
+Черновая версия содержит монотонную `revision`. Canvas сохраняет весь нормализованный граф через отдельный autosave endpoint и передаёт `expected_revision`; service блокирует версию, сравнивает номер и атомарно заменяет узлы/рёбра с увеличением ревизии. Это optimistic concurrency boundary для нескольких вкладок. Активация не совмещена с autosave и остаётся явной доменной командой.
+
+Frontend Canvas хранит краткую историю графа локально для Undo/Redo, а server state — в TanStack Query. Позиции входят в переносимый graph document. Адаптер Excalidraw добавляет namespaced `customData.webStorage`, благодаря чему собственный экспорт восстанавливает ссылки и decimal-количества, а сторонние прямоугольники/стрелки импортируются частично и проходят обычное сопоставление до активации.
+
 ## API boundary
 
 REST API находится под `/api/v1`. Списки имеют offset pagination, детерминированную сортировку, поиск и явные фильтры. Ошибки имеют стабильный Problem Details-подобный DTO (`status`, `code`, `detail`, `fields`). OpenAPI FastAPI — единственный transport source of truth.
@@ -74,10 +80,10 @@ React 19 + TypeScript strict + Vite + Gravity UI + React Router + SCSS Modules. 
 ```text
 frontend/src/
 ├── app/                    # providers, router, theme, globals
-├── pages/                  # WarehousePage, OperationsPage, PersonnelPage
-├── widgets/                # таблицы четырёх каталогов
-├── features/               # отдельные Create/Edit/Archive/Adjust/History slices
-├── entities/               # Material, ManufacturedItem, Operation, Employee
+├── pages/                  # warehouse, catalogs, process list/editor
+├── widgets/                # таблицы каталогов и процессов
+├── features/               # CRUD/ledger actions и EditProcessGraph
+├── entities/               # каталоги и TechnologicalProcess
 └── shared/                 # generated API, fetch client, config/routes
 ```
 
@@ -85,7 +91,7 @@ frontend/src/
 
 ## Изображения
 
-В реализованных срезах `image` — nullable HTTPS/HTTP URL. Frontend показывает preview и позволяет создать, заменить или удалить URL. Бинарные загрузки будут добавлены отдельным media-модулем с object storage, проверкой MIME/размера и signed URLs; текущие схемы не связывают transport хранения с доменной моделью.
+Доменное поле `image` остаётся nullable URL и не зависит от способа хранения. Frontend принимает как ручную ссылку, так и файл, показывает preview/увеличенный просмотр и позволяет заменить или убрать изображение из сущности. `POST /api/v1/media/images` принимает base64 transport, ограничивает размер 5 МБ, определяет фактический PNG/JPEG/GIF/WebP по сигнатуре и сохраняет файл под случайным UUID. В локальной конфигурации файлы обслуживаются из `backend/media` по `/media`; production deployment может заменить этот service на object storage без изменения DTO материалов и производимых позиций.
 
 ## Авторизация
 
@@ -93,4 +99,4 @@ HTTP boundary уже централизован. `AUTH_DISABLED=true` допус
 
 ## Миграции и эксплуатация
 
-Любая схема изменяется только Alembic. Миграция `20260828_0001` создаёт материалы и их ledger, `20260828_0002` — производимые позиции и отдельный строгий ledger, `20260828_0003` — операции и сотрудников. PostgreSQL запускается Docker Compose; backend/frontend работают на host для быстрого reload/HMR. Production предполагает same-origin reverse proxy и отдельное object storage.
+Любая схема изменяется только Alembic. Миграция `20260828_0001` создаёт материалы и их ledger, `20260828_0002` — производимые позиции и отдельный строгий ledger, `20260828_0003` — операции и сотрудников, `20260828_0004` — versioned технологические процессы, `20260828_0005` — optimistic revision черновиков. PostgreSQL запускается Docker Compose; backend/frontend работают на host для быстрого reload/HMR. Production предполагает same-origin reverse proxy и отдельное object storage.

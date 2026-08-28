@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -22,6 +23,11 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
+    application.mount(
+        "/media",
+        StaticFiles(directory=settings.media_root, check_dir=False),
+        name="media",
+    )
 
     @application.get("/health/live", tags=["health"], include_in_schema=False)
     async def liveness() -> dict[str, str]:

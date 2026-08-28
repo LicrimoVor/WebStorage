@@ -1,0 +1,16 @@
+export const measurementUnitOptions = [
+  {value: 'шт.', content: 'шт. — штука'},
+  {value: 'ед.', content: 'ед. — единица'},
+  {value: 'компл.', content: 'компл. — комплект'},
+  {value: 'упак.', content: 'упак. — упаковка'},
+  {value: 'кг', content: 'кг — килограмм'},
+  {value: 'г', content: 'г — грамм'},
+  {value: 'т', content: 'т — тонна'},
+  {value: 'м', content: 'м — метр'},
+  {value: 'см', content: 'см — сантиметр'},
+  {value: 'мм', content: 'мм — миллиметр'},
+  {value: 'м²', content: 'м² — квадратный метр'},
+  {value: 'м³', content: 'м³ — кубический метр'},
+  {value: 'л', content: 'л — литр'},
+  {value: 'мл', content: 'мл — миллилитр'},
+];

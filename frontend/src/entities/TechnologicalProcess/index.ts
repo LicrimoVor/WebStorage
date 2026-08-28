@@ -6,6 +6,7 @@ export {
   exportTechnologicalProcessVersion,
   importTechnologicalProcess,
   replaceTechnologicalProcessGraph,
+  saveTechnologicalProcessDraft,
   technologicalProcessKeys,
   useTechnologicalProcessQuery,
   useTechnologicalProcessesQuery,
@@ -14,6 +15,8 @@ export {
 } from './api/technologicalProcessApi';
 export type {
   ProcessEdge,
+  ProcessEdgeInput,
+  ProcessDraftSave,
   ProcessGraphInput,
   ProcessGraphOutput,
   ProcessNode,

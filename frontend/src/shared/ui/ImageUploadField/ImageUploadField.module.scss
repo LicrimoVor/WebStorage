@@ -1,0 +1,63 @@
+.root {
+  display: grid;
+  gap: var(--g-spacing-3);
+}
+
+.heading,
+.actions,
+.state {
+  display: flex;
+  align-items: center;
+  gap: var(--g-spacing-2);
+}
+
+.heading {
+  justify-content: space-between;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.state {
+  color: var(--g-color-text-secondary);
+}
+
+.previewButton {
+  display: block;
+  width: 100%;
+  padding: 0;
+  cursor: zoom-in;
+  background: transparent;
+  border: 0;
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  background: var(--g-color-base-generic);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-l);
+}
+
+.fullImage {
+  display: block;
+  max-width: 100%;
+  max-height: 75vh;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+@media (width <= 520px) {
+  .heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -1,4 +1,7 @@
-import {Alert, Switch, TextInput} from '@gravity-ui/uikit';
+import {Alert, Select, Switch, TextInput} from '@gravity-ui/uikit';
+
+import {measurementUnitOptions} from '@/shared/lib';
+import {ImageUploadField} from '@/shared/ui';
 
 import type {ManufacturedItemFormValue} from '../model/types';
 import styles from './ManufacturedItemForm.module.scss';
@@ -39,12 +42,13 @@ export function ManufacturedItemForm({
       >
         Готовый продукт
       </Switch>
-      <TextInput
+      <Select
         label="Единица"
-        value={value.unit}
-        onUpdate={(next) => update('unit', next)}
-        controlProps={{'aria-label': 'Единица измерения производимой позиции'}}
-        placeholder="шт., кг, м"
+        options={measurementUnitOptions}
+        value={value.unit ? [value.unit] : []}
+        onUpdate={(next) => update('unit', next[0] ?? '')}
+        aria-label="Единица измерения производимой позиции"
+        width="max"
         size="l"
       />
       {includeInitialQuantity ? (
@@ -59,17 +63,11 @@ export function ManufacturedItemForm({
           size="l"
         />
       ) : null}
-      <TextInput
-        label="Изображение"
+      <ImageUploadField
         value={value.image}
         onUpdate={(next) => update('image', next)}
-        controlProps={{'aria-label': 'Ссылка на изображение производимой позиции'}}
-        placeholder="https://…"
-        size="l"
+        alt="Предпросмотр производимой позиции"
       />
-      {value.image ? (
-        <img className={styles.preview} src={value.image} alt="Предпросмотр" />
-      ) : null}
     </div>
   );
 }

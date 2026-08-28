@@ -1,0 +1,268 @@
+.root {
+  display: grid;
+  gap: var(--g-spacing-4);
+  margin-top: var(--g-spacing-5);
+  padding: var(--g-spacing-5);
+  background: var(--g-color-base-background);
+}
+
+.toolbar,
+.toolbarGroup,
+.nodeHeading,
+.nodeActions,
+.edgeEditorControls {
+  display: flex;
+  align-items: center;
+  gap: var(--g-spacing-2);
+}
+
+.toolbar {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.toolbarGroup {
+  flex-wrap: wrap;
+}
+
+.workspace {
+  // display: grid;
+  // grid-template-columns: minmax(0, 1fr) 300px;
+  // gap: var(--g-spacing-4);
+  min-height: 620px;
+}
+
+.canvas {
+  position: relative;
+  min-width: 0;
+  height: 620px;
+  overflow: hidden;
+  cursor: grab;
+  background-color: var(--g-color-base-generic-ultralight);
+  background-image:
+    linear-gradient(var(--g-color-line-generic-accent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      var(--g-color-line-generic-accent) 1px,
+      transparent 1px
+    );
+  background-size: 24px 24px;
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-xl);
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.panning {
+  cursor: grabbing;
+}
+
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.edges marker path {
+  fill: var(--g-color-text-brand);
+}
+
+.edgePath {
+  fill: none;
+  stroke: var(--g-color-text-brand);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.edgeHitArea {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.draftEdge {
+  stroke-dasharray: 8 6;
+  opacity: 0.8;
+}
+
+.edgeLabel {
+  fill: var(--g-color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--g-color-base-background);
+  stroke-width: 5px;
+}
+
+.node {
+  position: absolute;
+  display: grid;
+  gap: var(--g-spacing-2);
+  width: 220px;
+  min-height: 116px;
+  padding: var(--g-spacing-3);
+  cursor: move;
+  user-select: none;
+  background: var(--g-color-base-background);
+  border: 2px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-xl);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 10%);
+}
+
+.material {
+  border-color: var(--g-color-line-warning);
+}
+
+.manufactured_item {
+  border-color: var(--g-color-line-info);
+}
+
+.operation {
+  border-color: var(--g-color-line-utility);
+}
+
+.output {
+  border-color: var(--g-color-line-positive);
+}
+
+.connecting {
+  outline: 4px solid
+    color-mix(in srgb, var(--g-color-base-brand) 30%, transparent);
+}
+
+.connectionTarget {
+  outline: 4px solid
+    color-mix(in srgb, var(--g-color-base-positive) 38%, transparent);
+}
+
+.nodeHeading {
+  justify-content: space-between;
+}
+
+.nodeLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeActions {
+  align-self: end;
+}
+
+.connector {
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  cursor: crosshair;
+  background: var(--g-color-base-brand);
+  border: 3px solid var(--g-color-base-background);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--g-color-line-brand);
+  transform: translateY(-50%);
+  touch-action: none;
+}
+
+.connector:hover,
+.connector:focus-visible {
+  background: var(--g-color-base-brand-hover);
+  box-shadow: 0 0 0 4px
+    color-mix(in srgb, var(--g-color-base-brand) 28%, transparent);
+  outline: none;
+}
+
+.zoom {
+  position: absolute;
+  right: var(--g-spacing-3);
+  bottom: var(--g-spacing-3);
+  padding: var(--g-spacing-1) var(--g-spacing-2);
+  color: var(--g-color-text-secondary);
+  background: color-mix(
+    in srgb,
+    var(--g-color-base-background) 88%,
+    transparent
+  );
+  border-radius: var(--g-border-radius-m);
+}
+
+.connections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-spacing-3);
+  max-height: 620px;
+  padding: var(--g-spacing-4);
+  overflow-y: auto;
+  background: var(--g-color-base-generic-ultralight);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-xl);
+}
+
+.connections p {
+  margin: var(--g-spacing-1) 0 0;
+}
+
+.edgeEditor {
+  display: grid;
+  gap: var(--g-spacing-2);
+  padding: var(--g-spacing-3);
+  background: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-l);
+}
+
+.edgeQuantity {
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialogForm {
+  display: grid;
+  gap: var(--g-spacing-4);
+  min-width: min(480px, 80vw);
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (width <= 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .connections {
+    max-height: 320px;
+  }
+}
+
+@media (width <= 680px) {
+  .root {
+    padding: var(--g-spacing-3);
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .canvas {
+    height: 520px;
+  }
+}

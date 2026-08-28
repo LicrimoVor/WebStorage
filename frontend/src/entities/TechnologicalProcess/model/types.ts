@@ -10,11 +10,12 @@ export type ProcessVersionSummary = components['schemas']['ProcessVersionSummary
 export type ProcessVersionList = components['schemas']['ProcessVersionList'];
 export type ProcessGraphInput = components['schemas']['ProcessGraphDocument-Input'];
 export type ProcessGraphOutput = components['schemas']['ProcessGraphDocument-Output'];
+export type ProcessDraftSave = components['schemas']['ProcessDraftSave'];
 export type ProcessNode = components['schemas']['GraphNode'];
+export type ProcessEdgeInput = components['schemas']['GraphEdge-Input'];
 export type ProcessEdge = components['schemas']['GraphEdge-Output'];
 export type ProcessStatus = components['schemas']['ProcessStatus'];
 export type ProcessSortField = components['schemas']['ProcessSortField'];
 export type TechnologicalProcessListParams = NonNullable<
   operations['listTechnologicalProcesses']['parameters']['query']
 >;
-

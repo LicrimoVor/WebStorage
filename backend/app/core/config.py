@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     auth_disabled: bool = True
     development_token: SecretStr = SecretStr("change-me-outside-local-development")
+    media_root: Path = Path(__file__).resolve().parents[2] / "media"
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),

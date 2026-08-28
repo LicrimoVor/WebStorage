@@ -1,0 +1,2 @@
+"""Validated image upload boundary."""
+

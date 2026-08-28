@@ -60,6 +60,7 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("version_number > 0", name="version_number_positive"),
         CheckConstraint("schema_version > 0", name="schema_version_positive"),
+        CheckConstraint("revision >= 0", name="revision_non_negative"),
         CheckConstraint(
             "status IN ('draft', 'active', 'archived')", name="status_valid"
         ),
@@ -91,6 +92,9 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     schema_version: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("1"), default=1
+    )
+    revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0"), default=0
     )
     created_by: Mapped[str] = mapped_column(String(200), nullable=False)
     activated_at: Mapped[datetime | None] = mapped_column(

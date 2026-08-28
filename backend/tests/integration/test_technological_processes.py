@@ -135,6 +135,7 @@ async def test_create_list_and_partial_json_round_trip(client: AsyncClient) -> N
     version = created["version"]
     assert process["active_version"] is None
     assert process["latest_version"]["status"] == "draft"
+    assert version["revision"] == 0
     assert version["graph"]["nodes"][0]["type"] == "output"
 
     listed = await client.get(
@@ -201,6 +202,7 @@ async def test_activation_versions_and_active_immutability(client: AsyncClient) 
         json=document,
     )
     assert saved.status_code == 200, saved.text
+    assert saved.json()["revision"] == 1
     assert Decimal(saved.json()["graph"]["edges"][0]["quantity"]) > 0
 
     activated = await client.post(
@@ -222,6 +224,7 @@ async def test_activation_versions_and_active_immutability(client: AsyncClient) 
     )
     assert next_version.status_code == 201, next_version.text
     assert next_version.json()["version_number"] == 2
+    assert next_version.json()["revision"] == 0
     assert next_version.json()["status"] == "draft"
     assert next_version.json()["graph"] == activated.json()["graph"]
 
@@ -358,3 +361,27 @@ async def test_activation_rejects_local_and_interprocess_cycles(
     )
     assert cross_activation.status_code == 422
     assert "dependency cycle" in cross_activation.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_draft_autosave_uses_optimistic_revision(client: AsyncClient) -> None:
+    output = await create_item(client, name="Автосохраняемая деталь")
+    created = await create_process(
+        client, name="Автосохранение", output_item_id=output["id"]
+    )
+    process_id = created["process"]["id"]
+    version_id = created["version"]["id"]
+    document = created["version"]["graph"]
+    first = await client.put(
+        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["revision"] == 1
+
+    stale = await client.put(
+        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert stale.status_code == 409
+    assert "another session" in stale.json()["detail"]

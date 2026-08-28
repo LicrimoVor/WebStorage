@@ -4,12 +4,3 @@
   min-width: min(520px, 80vw);
 }
 
-.preview {
-  width: 100%;
-  max-height: 220px;
-  object-fit: contain;
-  background: var(--g-color-base-generic);
-  border: 1px solid var(--g-color-line-generic);
-  border-radius: var(--g-border-radius-l);
-}
-

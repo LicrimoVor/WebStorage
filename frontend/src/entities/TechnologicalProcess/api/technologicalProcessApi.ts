@@ -5,6 +5,7 @@ import {apiRequest} from '@/shared/api';
 import type {
   ProcessGraphInput,
   ProcessGraphOutput,
+  ProcessDraftSave,
   ProcessVersion,
   ProcessVersionList,
   TechnologicalProcess,
@@ -167,6 +168,17 @@ export async function replaceTechnologicalProcessGraph(
   );
 }
 
+export async function saveTechnologicalProcessDraft(
+  processId: string,
+  versionId: string,
+  payload: ProcessDraftSave,
+): Promise<ProcessVersion> {
+  return apiRequest<ProcessVersion>(
+    `/technological-processes/${processId}/versions/${versionId}/draft`,
+    {method: 'PUT', body: JSON.stringify(payload)},
+  );
+}
+
 export async function activateTechnologicalProcessVersion(
   processId: string,
   versionId: string,
@@ -185,4 +197,3 @@ export async function exportTechnologicalProcessVersion(
     `/technological-processes/${processId}/versions/${versionId}/export`,
   );
 }
-

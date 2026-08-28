@@ -83,11 +83,17 @@ class ProcessVersionCreate(BaseModel):
     source_version_id: uuid.UUID | None = None
 
 
+class ProcessDraftSave(BaseModel):
+    expected_revision: int = Field(ge=0)
+    graph: ProcessGraphDocument
+
+
 class ProcessVersionSummary(BaseModel):
     id: uuid.UUID
     version_number: int
     status: ProcessStatus
     schema_version: int
+    revision: int
     created_by: str
     activated_at: datetime | None
     created_at: datetime

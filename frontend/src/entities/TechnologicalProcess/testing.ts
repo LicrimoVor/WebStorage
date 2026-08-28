@@ -12,6 +12,7 @@ export const technologicalProcessFixture: TechnologicalProcess = {
     version_number: 2,
     status: 'draft',
     schema_version: 1,
+    revision: 0,
     created_by: 'local-development',
     activated_at: null,
     created_at: '2026-08-28T05:00:00Z',
@@ -20,4 +21,3 @@ export const technologicalProcessFixture: TechnologicalProcess = {
   created_at: '2026-08-28T05:00:00Z',
   updated_at: '2026-08-28T06:00:00Z',
 };
-

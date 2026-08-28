@@ -21,6 +21,7 @@ from app.modules.technological_processes.schemas import (
     GraphNode,
     GraphPosition,
     ProcessCreate,
+    ProcessDraftSave,
     ProcessGraphDocument,
     ProcessImportResult,
     ProcessList,
@@ -49,6 +50,7 @@ def _version_summary(version: TechnologicalProcessVersion) -> ProcessVersionSumm
         version_number=version.version_number,
         status=ProcessStatus(version.status),
         schema_version=version.schema_version,
+        revision=version.revision,
         created_by=version.created_by,
         activated_at=version.activated_at,
         created_at=version.created_at,
@@ -396,6 +398,38 @@ async def replace_graph(
     version_id: uuid.UUID,
     document: ProcessGraphDocument,
 ) -> ProcessVersionRead:
+    return await _replace_draft_graph(
+        session,
+        process_id,
+        version_id,
+        document,
+        expected_revision=None,
+    )
+
+
+async def save_draft(
+    session: AsyncSession,
+    process_id: uuid.UUID,
+    version_id: uuid.UUID,
+    payload: ProcessDraftSave,
+) -> ProcessVersionRead:
+    return await _replace_draft_graph(
+        session,
+        process_id,
+        version_id,
+        payload.graph,
+        expected_revision=payload.expected_revision,
+    )
+
+
+async def _replace_draft_graph(
+    session: AsyncSession,
+    process_id: uuid.UUID,
+    version_id: uuid.UUID,
+    document: ProcessGraphDocument,
+    *,
+    expected_revision: int | None,
+) -> ProcessVersionRead:
     process = await _get_process(session, process_id, for_update=True)
     version = await _get_version(session, process_id, version_id, for_update=True)
     if process.archived or version.status != ProcessStatus.DRAFT.value:
@@ -404,11 +438,17 @@ async def replace_graph(
         raise DomainValidationError("Document name must match the process name")
     if document.output_item_id != process.output_item_id:
         raise DomainValidationError("Document outputItemId must match the process output")
+    if expected_revision is not None and version.revision != expected_revision:
+        raise ConflictError(
+            "Draft was changed in another session; reload it before saving"
+        )
     nodes, edges = _graph_entities(version.id, document)
     await repository.replace_graph(
         session, version_id=version.id, nodes=nodes, edges=edges
     )
+    version.revision += 1
     await session.commit()
+    await session.refresh(version)
     return await _version_read(session, process, version)
 
 

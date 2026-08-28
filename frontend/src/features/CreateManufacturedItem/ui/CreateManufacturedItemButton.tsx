@@ -16,11 +16,21 @@ import {normalizeDecimal} from '@/shared/lib';
 
 const titleId = 'create-manufactured-item-title';
 
-export function CreateManufacturedItemButton() {
+interface CreateManufacturedItemButtonProps {
+  defaultIsProduct?: boolean;
+  buttonLabel?: string;
+}
+
+export function CreateManufacturedItemButton({
+  defaultIsProduct = false,
+  buttonLabel = 'Создать позицию',
+}: CreateManufacturedItemButtonProps) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<ManufacturedItemFormValue>(
-    emptyManufacturedItemForm,
-  );
+  const initialForm = (): ManufacturedItemFormValue => ({
+    ...emptyManufacturedItemForm,
+    isProduct: defaultIsProduct,
+  });
+  const [form, setForm] = useState<ManufacturedItemFormValue>(initialForm);
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -29,7 +39,7 @@ export function CreateManufacturedItemButton() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
       setOpen(false);
-      setForm(emptyManufacturedItemForm);
+      setForm(initialForm());
       setValidationError(undefined);
     },
   });
@@ -61,7 +71,7 @@ export function CreateManufacturedItemButton() {
   return (
     <>
       <Button view="action" size="l" onClick={() => setOpen(true)}>
-        Создать позицию
+        {buttonLabel}
       </Button>
       <Dialog
         open={open}
@@ -71,7 +81,10 @@ export function CreateManufacturedItemButton() {
         maxWidth="m"
         fullWidth
       >
-        <Dialog.Header caption="Новая производимая позиция" id={titleId} />
+        <Dialog.Header
+          caption={defaultIsProduct ? 'Новый продукт' : 'Новый полуфабрикат'}
+          id={titleId}
+        />
         <Dialog.Body>
           <ManufacturedItemForm
             value={form}

@@ -57,6 +57,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/media/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Image */
+        post: operations["uploadImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/materials/{material_id}/movements": {
         parameters: {
             query?: never;
@@ -391,6 +408,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/technological-processes/{process_id}/versions/{version_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Technological Process Draft */
+        put: operations["saveTechnologicalProcessDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/technological-processes/{process_id}/versions/{version_id}/activate": {
         parameters: {
             query?: never;
@@ -560,6 +594,24 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ImageUploadRead */
+        ImageUploadRead: {
+            /** Url */
+            url: string;
+            /** Content Type */
+            content_type: string;
+            /** Size */
+            size: number;
+        };
+        /** ImageUploadRequest */
+        ImageUploadRequest: {
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Content Base64 */
+            content_base64: string;
         };
         /** InventoryMovementCreate */
         InventoryMovementCreate: {
@@ -947,6 +999,12 @@ export interface components {
              */
             output_item_id: string;
         };
+        /** ProcessDraftSave */
+        ProcessDraftSave: {
+            /** Expected Revision */
+            expected_revision: number;
+            graph: components["schemas"]["ProcessGraphDocument-Input"];
+        };
         /** ProcessGraphDocument */
         "ProcessGraphDocument-Input": {
             /**
@@ -1071,6 +1129,8 @@ export interface components {
             status: components["schemas"]["ProcessStatus"];
             /** Schema Version */
             schema_version: number;
+            /** Revision */
+            revision: number;
             /** Created By */
             created_by: string;
             /** Activated At */
@@ -1104,6 +1164,8 @@ export interface components {
             status: components["schemas"]["ProcessStatus"];
             /** Schema Version */
             schema_version: number;
+            /** Revision */
+            revision: number;
             /** Created By */
             created_by: string;
             /** Activated At */
@@ -1356,6 +1418,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    uploadImage: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImageUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageUploadRead"];
                 };
             };
             /** @description Unprocessable Content */
@@ -2679,6 +2776,62 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ProcessGraphDocument-Input"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessVersionRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    saveTechnologicalProcessDraft: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                process_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessDraftSave"];
             };
         };
         responses: {

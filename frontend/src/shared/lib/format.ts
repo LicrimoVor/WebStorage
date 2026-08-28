@@ -10,6 +10,28 @@ export function formatDecimal(value: string): string {
   return trimmedFraction ? `${groupedInteger},${trimmedFraction}` : groupedInteger;
 }
 
+export function formatFixedDecimal(
+  value: string | number,
+  fractionDigits = 2,
+): string {
+  const source = String(value).trim().replace(',', '.');
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(source);
+  if (!match || fractionDigits < 0 || !Number.isInteger(fractionDigits)) {
+    return source;
+  }
+  const [, sign = '', integer = '0', fraction = ''] = match;
+  const scale = 10n ** BigInt(fractionDigits);
+  const keptFraction = fraction.slice(0, fractionDigits).padEnd(fractionDigits, '0');
+  let scaled = BigInt(integer) * scale + BigInt(keptFraction || '0');
+  if ((fraction[fractionDigits] ?? '0') >= '5') scaled += 1n;
+  const whole = scaled / scale;
+  const remainder = (scaled % scale).toString().padStart(fractionDigits, '0');
+  const prefix = sign && scaled !== 0n ? '-' : '';
+  return fractionDigits === 0
+    ? `${prefix}${whole}`
+    : `${prefix}${whole}.${remainder}`;
+}
+
 export function formatMoney(value: string | null): string {
   return value === null ? '—' : `${formatDecimal(value)} ₽`;
 }
@@ -43,4 +65,3 @@ export function isHttpUrl(value: string): boolean {
     return false;
   }
 }
-

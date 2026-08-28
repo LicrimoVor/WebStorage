@@ -1,4 +1,7 @@
-import {Alert, TextInput} from '@gravity-ui/uikit';
+import {Alert, Select, TextInput} from '@gravity-ui/uikit';
+
+import {measurementUnitOptions} from '@/shared/lib';
+import {ImageUploadField} from '@/shared/ui';
 
 import type {MaterialFormValue} from '../model/types';
 import styles from './MaterialForm.module.scss';
@@ -31,12 +34,13 @@ export function MaterialForm({
         autoFocus
         size="l"
       />
-      <TextInput
+      <Select
         label="Единица"
-        value={value.unit}
-        onUpdate={(next) => update('unit', next)}
-        controlProps={{'aria-label': 'Единица измерения'}}
-        placeholder="шт., кг, м"
+        options={measurementUnitOptions}
+        value={value.unit ? [value.unit] : []}
+        onUpdate={(next) => update('unit', next[0] ?? '')}
+        aria-label="Единица измерения"
+        width="max"
         size="l"
       />
       {includeInitialQuantity ? (
@@ -64,17 +68,11 @@ export function MaterialForm({
         placeholder="https://…"
         size="l"
       />
-      <TextInput
-        label="Изображение"
+      <ImageUploadField
         value={value.image}
         onUpdate={(next) => update('image', next)}
-        controlProps={{'aria-label': 'Ссылка на изображение'}}
-        placeholder="https://…"
-        size="l"
+        alt="Предпросмотр материала"
       />
-      {value.image ? (
-        <img className={styles.preview} src={value.image} alt="Предпросмотр материала" />
-      ) : null}
     </div>
   );
 }

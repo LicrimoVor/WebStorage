@@ -22,8 +22,8 @@ describe('CreateMaterialButton', () => {
 
     await user.click(screen.getByRole('button', {name: 'Создать материал'}));
     await user.type(screen.getByLabelText('Название материала'), 'Лист стали');
-    await user.clear(screen.getByLabelText('Единица измерения'));
-    await user.type(screen.getByLabelText('Единица измерения'), 'кг');
+    await user.click(screen.getByLabelText('Единица измерения'));
+    await user.click(screen.getByRole('option', {name: 'кг — килограмм'}));
     await user.clear(screen.getByLabelText('Начальный остаток'));
     await user.type(screen.getByLabelText('Начальный остаток'), '10,5');
     await user.type(screen.getByLabelText('Цена'), '125,40');

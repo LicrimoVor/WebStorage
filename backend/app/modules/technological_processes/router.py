@@ -11,6 +11,7 @@ from app.core.security import Actor, get_current_actor
 from app.modules.technological_processes import service
 from app.modules.technological_processes.schemas import (
     ProcessCreate,
+    ProcessDraftSave,
     ProcessGraphDocument,
     ProcessImportResult,
     ProcessList,
@@ -183,6 +184,21 @@ async def replace_technological_process_graph(
     session: Session,
 ) -> ProcessVersionRead:
     return await service.replace_graph(session, process_id, version_id, payload)
+
+
+@router.put(
+    "/{process_id}/versions/{version_id}/draft",
+    response_model=ProcessVersionRead,
+    operation_id="saveTechnologicalProcessDraft",
+    responses={404: {"model": ProblemDetail}, 409: {"model": ProblemDetail}},
+)
+async def save_technological_process_draft(
+    process_id: uuid.UUID,
+    version_id: uuid.UUID,
+    payload: ProcessDraftSave,
+    session: Session,
+) -> ProcessVersionRead:
+    return await service.save_draft(session, process_id, version_id, payload)
 
 
 @router.post(
