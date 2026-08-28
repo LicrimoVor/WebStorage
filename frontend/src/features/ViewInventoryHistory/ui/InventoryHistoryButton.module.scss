@@ -1,0 +1,17 @@
+.center {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+.content {
+  display: grid;
+  gap: var(--g-spacing-5);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-l);
+}
+

@@ -1,0 +1,21 @@
+.image,
+.placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--g-border-radius-m);
+}
+
+.image {
+  display: block;
+  object-fit: cover;
+  background: var(--g-color-base-generic);
+}
+
+.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--g-color-text-hint);
+  background: var(--g-color-base-generic);
+  border: 1px solid var(--g-color-line-generic);
+}
+

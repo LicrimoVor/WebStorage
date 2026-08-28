@@ -1,0 +1,2 @@
+"""Materials catalog module."""
+

@@ -1,0 +1,57 @@
+.app {
+  min-height: 100vh;
+  color: var(--g-color-text-primary);
+  background:
+    radial-gradient(circle at 85% -20%, var(--g-color-base-brand) 0, transparent 28%),
+    var(--g-color-base-generic-ultralight);
+}
+
+.topbar {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--g-spacing-3);
+  min-height: 68px;
+  padding: 0 var(--g-spacing-7);
+  background: color-mix(in srgb, var(--g-color-base-background) 88%, transparent);
+  border-bottom: 1px solid var(--g-color-line-generic);
+  backdrop-filter: blur(16px);
+}
+
+.brandMark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--g-color-text-brand-contrast);
+  font-weight: 700;
+  background: var(--g-color-base-brand);
+  border-radius: var(--g-border-radius-l);
+}
+
+.brandText {
+  display: grid;
+}
+
+.nav {
+  margin-left: auto;
+}
+
+.routeLoader,
+.notFound {
+  display: grid;
+  min-height: calc(100vh - 68px);
+  place-items: center;
+}
+
+@media (width <= 680px) {
+  .topbar {
+    padding: 0 var(--g-spacing-4);
+  }
+
+  .brandText > :last-child {
+    display: none;
+  }
+}

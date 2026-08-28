@@ -1,0 +1,17 @@
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
+
+from app.core.security import Actor, get_current_actor
+from app.modules.inventory.router import router as inventory_router
+from app.modules.materials.router import router as materials_router
+
+api_router = APIRouter(dependencies=[Depends(get_current_actor)])
+api_router.include_router(materials_router)
+api_router.include_router(inventory_router)
+ActorDependency = Annotated[Actor, Depends(get_current_actor)]
+
+
+@api_router.get("/me", tags=["system"], operation_id="getCurrentActor")
+async def get_me(actor: ActorDependency) -> dict[str, object]:
+    return {"subject": actor.subject, "roles": sorted(actor.roles)}

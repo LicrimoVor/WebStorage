@@ -1,0 +1,2 @@
+"""WebStorage backend application."""
+
