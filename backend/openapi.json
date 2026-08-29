@@ -5203,6 +5203,84 @@
         }
       }
     },
+    "/api/v1/analytics/dashboard": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Get Analytics Dashboard",
+        "operationId": "getAnalyticsDashboard",
+        "parameters": [
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Date To"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/AnalyticsBucket",
+              "default": "day"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsDashboardRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -5257,6 +5335,67 @@
   },
   "components": {
     "schemas": {
+      "AnalyticsBucket": {
+        "type": "string",
+        "enum": [
+          "day",
+          "week",
+          "month"
+        ],
+        "title": "AnalyticsBucket"
+      },
+      "AnalyticsDashboardRead": {
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/AnalyticsPeriodRead"
+          },
+          "production": {
+            "$ref": "#/components/schemas/ProductionAnalytics"
+          },
+          "sales": {
+            "$ref": "#/components/schemas/SalesAnalytics"
+          },
+          "warehouse": {
+            "$ref": "#/components/schemas/WarehouseAnalytics"
+          },
+          "personnel": {
+            "$ref": "#/components/schemas/PersonnelAnalytics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "production",
+          "sales",
+          "warehouse",
+          "personnel"
+        ],
+        "title": "AnalyticsDashboardRead"
+      },
+      "AnalyticsPeriodRead": {
+        "properties": {
+          "date_from": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date From"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date To"
+          },
+          "bucket": {
+            "$ref": "#/components/schemas/AnalyticsBucket"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date_from",
+          "date_to",
+          "bucket"
+        ],
+        "title": "AnalyticsPeriodRead"
+      },
       "AvailabilityFilter": {
         "type": "string",
         "enum": [
@@ -5265,6 +5404,85 @@
           "out_of_stock"
         ],
         "title": "AvailabilityFilter"
+      },
+      "DemandedMaterialRow": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "consumed_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Consumed Quantity",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "name",
+          "unit"
+        ],
+        "title": "DemandedMaterialRow"
+      },
+      "EmployeeAnalyticsRow": {
+        "properties": {
+          "employee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Employee Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "accrued": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Accrued",
+            "default": "0"
+          },
+          "paid": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Paid",
+            "default": "0"
+          },
+          "payable_current": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Payable Current",
+            "default": "0"
+          },
+          "completed_operations": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Completed Operations",
+            "default": "0"
+          },
+          "person_hours": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Person Hours",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "employee_id",
+          "full_name"
+        ],
+        "title": "EmployeeAnalyticsRow"
       },
       "EmployeeCreate": {
         "properties": {
@@ -6953,6 +7171,43 @@
         "type": "object",
         "title": "MaterialUpdate"
       },
+      "OperationAnalyticsRow": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "completed_operations": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Completed Operations",
+            "default": "0"
+          },
+          "person_hours": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Person Hours",
+            "default": "0"
+          },
+          "accrued": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Accrued",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "name"
+        ],
+        "title": "OperationAnalyticsRow"
+      },
       "OperationCreate": {
         "properties": {
           "name": {
@@ -7412,6 +7667,60 @@
           "allocations"
         ],
         "title": "PaymentRead"
+      },
+      "PersonnelAnalytics": {
+        "properties": {
+          "accrued": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Accrued",
+            "default": "0"
+          },
+          "paid": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Paid",
+            "default": "0"
+          },
+          "payable_current": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Payable Current",
+            "default": "0"
+          },
+          "completed_operations": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Completed Operations",
+            "default": "0"
+          },
+          "person_hours": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Person Hours",
+            "default": "0"
+          },
+          "by_employee": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeeAnalyticsRow"
+            },
+            "type": "array",
+            "title": "By Employee"
+          },
+          "by_operation": {
+            "items": {
+              "$ref": "#/components/schemas/OperationAnalyticsRow"
+            },
+            "type": "array",
+            "title": "By Operation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "by_employee",
+          "by_operation"
+        ],
+        "title": "PersonnelAnalytics"
       },
       "PlanItemRequirementRead": {
         "properties": {
@@ -8150,6 +8459,109 @@
         ],
         "title": "ProcessVersionSummary"
       },
+      "ProductSalesRow": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity",
+            "default": "0"
+          },
+          "revenue": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Revenue",
+            "default": "0"
+          },
+          "current_stock": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Current Stock",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "name",
+          "unit"
+        ],
+        "title": "ProductSalesRow"
+      },
+      "ProductionAnalytics": {
+        "properties": {
+          "produced_products": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Produced Products",
+            "default": "0"
+          },
+          "produced_semi_finished": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Produced Semi Finished",
+            "default": "0"
+          },
+          "production_records": {
+            "type": "integer",
+            "title": "Production Records",
+            "default": 0
+          },
+          "plans": {
+            "type": "integer",
+            "title": "Plans",
+            "default": 0
+          },
+          "completed_plans": {
+            "type": "integer",
+            "title": "Completed Plans",
+            "default": 0
+          },
+          "plan_completion_percent": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Plan Completion Percent",
+            "default": "0"
+          },
+          "completed_operations": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Completed Operations",
+            "default": "0"
+          },
+          "person_hours": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Person Hours",
+            "default": "0"
+          },
+          "dynamics": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionPoint"
+            },
+            "type": "array",
+            "title": "Dynamics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dynamics"
+        ],
+        "title": "ProductionAnalytics"
+      },
       "ProductionComponentKind": {
         "type": "string",
         "enum": [
@@ -8588,6 +9000,32 @@
         "type": "object",
         "title": "ProductionPlanUpdate"
       },
+      "ProductionPoint": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "products_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Products Quantity",
+            "default": "0"
+          },
+          "semi_finished_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Semi Finished Quantity",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start"
+        ],
+        "title": "ProductionPoint"
+      },
       "ProductionRecordCreate": {
         "properties": {
           "item_id": {
@@ -9014,6 +9452,80 @@
         ],
         "title": "SaleSummary"
       },
+      "SalesAnalytics": {
+        "properties": {
+          "sold_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Sold Quantity",
+            "default": "0"
+          },
+          "revenue": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Revenue",
+            "default": "0"
+          },
+          "average_unit_price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Average Unit Price",
+            "default": "0"
+          },
+          "current_product_stock": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Current Product Stock",
+            "default": "0"
+          },
+          "dynamics": {
+            "items": {
+              "$ref": "#/components/schemas/SalesPoint"
+            },
+            "type": "array",
+            "title": "Dynamics"
+          },
+          "by_product": {
+            "items": {
+              "$ref": "#/components/schemas/ProductSalesRow"
+            },
+            "type": "array",
+            "title": "By Product"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dynamics",
+          "by_product"
+        ],
+        "title": "SalesAnalytics"
+      },
+      "SalesPoint": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity",
+            "default": "0"
+          },
+          "revenue": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Revenue",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start"
+        ],
+        "title": "SalesPoint"
+      },
       "SortOrder": {
         "type": "string",
         "enum": [
@@ -9021,6 +9533,38 @@
           "desc"
         ],
         "title": "SortOrder"
+      },
+      "StockPoint": {
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Period Start"
+          },
+          "materials_delta": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Materials Delta",
+            "default": "0"
+          },
+          "semi_finished_delta": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Semi Finished Delta",
+            "default": "0"
+          },
+          "products_delta": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Products Delta",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period_start"
+        ],
+        "title": "StockPoint"
       },
       "ValidationError": {
         "properties": {
@@ -9061,6 +9605,86 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WarehouseAnalytics": {
+        "properties": {
+          "current_material_stock_value": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Current Material Stock Value",
+            "default": "0"
+          },
+          "unpriced_material_positions": {
+            "type": "integer",
+            "title": "Unpriced Material Positions",
+            "default": 0
+          },
+          "material_deficit_positions": {
+            "type": "integer",
+            "title": "Material Deficit Positions",
+            "default": 0
+          },
+          "material_deficit_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Material Deficit Quantity",
+            "default": "0"
+          },
+          "material_movements": {
+            "type": "integer",
+            "title": "Material Movements",
+            "default": 0
+          },
+          "material_inflow": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Material Inflow",
+            "default": "0"
+          },
+          "material_outflow": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Material Outflow",
+            "default": "0"
+          },
+          "semi_finished_movements": {
+            "type": "integer",
+            "title": "Semi Finished Movements",
+            "default": 0
+          },
+          "semi_finished_inflow": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Semi Finished Inflow",
+            "default": "0"
+          },
+          "semi_finished_outflow": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Semi Finished Outflow",
+            "default": "0"
+          },
+          "demanded_materials": {
+            "items": {
+              "$ref": "#/components/schemas/DemandedMaterialRow"
+            },
+            "type": "array",
+            "title": "Demanded Materials"
+          },
+          "dynamics": {
+            "items": {
+              "$ref": "#/components/schemas/StockPoint"
+            },
+            "type": "array",
+            "title": "Dynamics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demanded_materials",
+          "dynamics"
+        ],
+        "title": "WarehouseAnalytics"
       },
       "WorkEntryCreate": {
         "properties": {

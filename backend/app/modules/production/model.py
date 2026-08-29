@@ -16,6 +16,7 @@ class ProductionRecord(UUIDPrimaryKeyMixin, Base):
         Index("ux_production_records_idempotency_key", "idempotency_key", unique=True),
         Index("ix_production_records_plan_created", "production_plan_id", "created_at"),
         Index("ix_production_records_item_created", "item_id", "created_at"),
+        Index("ix_production_records_created_at", "created_at"),
     )
 
     id: Mapped[uuid.UUID]

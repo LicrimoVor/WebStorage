@@ -48,6 +48,7 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_work_entries_employee_performed", "employee_id", "performed_at"),
         Index("ix_work_entries_operation_performed", "operation_id", "performed_at"),
         Index("ix_work_entries_voided_at", "voided_at"),
+        Index("ix_work_entries_performed_at", "performed_at"),
     )
 
     id: Mapped[uuid.UUID]
@@ -90,6 +91,7 @@ class EmployeePayment(UUIDPrimaryKeyMixin, Base):
             "allocation_mode IN ('fifo', 'manual')", name="allocation_mode_valid"
         ),
         Index("ix_employee_payments_employee_paid", "employee_id", "paid_at"),
+        Index("ix_employee_payments_paid_at", "paid_at"),
     )
 
     id: Mapped[uuid.UUID]

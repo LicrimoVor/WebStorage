@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.core.security import Actor, get_current_actor
+from app.modules.analytics.router import router as analytics_router
 from app.modules.employees.router import router as employees_router
 from app.modules.finance.router import router as finance_router
 from app.modules.inventory.router import router as inventory_router
@@ -31,6 +32,7 @@ api_router.include_router(production_router)
 api_router.include_router(payroll_router)
 api_router.include_router(sales_router)
 api_router.include_router(finance_router)
+api_router.include_router(analytics_router)
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 

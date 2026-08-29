@@ -721,6 +721,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Analytics Dashboard */
+        get: operations["getAnalyticsDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -743,10 +760,89 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AnalyticsBucket
+         * @enum {string}
+         */
+        AnalyticsBucket: "day" | "week" | "month";
+        /** AnalyticsDashboardRead */
+        AnalyticsDashboardRead: {
+            period: components["schemas"]["AnalyticsPeriodRead"];
+            production: components["schemas"]["ProductionAnalytics"];
+            sales: components["schemas"]["SalesAnalytics"];
+            warehouse: components["schemas"]["WarehouseAnalytics"];
+            personnel: components["schemas"]["PersonnelAnalytics"];
+        };
+        /** AnalyticsPeriodRead */
+        AnalyticsPeriodRead: {
+            /**
+             * Date From
+             * Format: date-time
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date-time
+             */
+            date_to: string;
+            bucket: components["schemas"]["AnalyticsBucket"];
+        };
+        /**
          * AvailabilityFilter
          * @enum {string}
          */
         AvailabilityFilter: "all" | "in_stock" | "out_of_stock";
+        /** DemandedMaterialRow */
+        DemandedMaterialRow: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Consumed Quantity
+             * @default 0
+             */
+            consumed_quantity: string;
+        };
+        /** EmployeeAnalyticsRow */
+        EmployeeAnalyticsRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Accrued
+             * @default 0
+             */
+            accrued: string;
+            /**
+             * Paid
+             * @default 0
+             */
+            paid: string;
+            /**
+             * Payable Current
+             * @default 0
+             */
+            payable_current: string;
+            /**
+             * Completed Operations
+             * @default 0
+             */
+            completed_operations: string;
+            /**
+             * Person Hours
+             * @default 0
+             */
+            person_hours: string;
+        };
         /** EmployeeCreate */
         EmployeeCreate: {
             /** Full Name */
@@ -1366,6 +1462,31 @@ export interface components {
             /** Image */
             image?: string | null;
         };
+        /** OperationAnalyticsRow */
+        OperationAnalyticsRow: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Completed Operations
+             * @default 0
+             */
+            completed_operations: string;
+            /**
+             * Person Hours
+             * @default 0
+             */
+            person_hours: string;
+            /**
+             * Accrued
+             * @default 0
+             */
+            accrued: string;
+        };
         /** OperationCreate */
         OperationCreate: {
             /** Name */
@@ -1533,6 +1654,38 @@ export interface components {
             allocation_mode: string;
             /** Allocations */
             allocations: components["schemas"]["PaymentAllocationRead"][];
+        };
+        /** PersonnelAnalytics */
+        PersonnelAnalytics: {
+            /**
+             * Accrued
+             * @default 0
+             */
+            accrued: string;
+            /**
+             * Paid
+             * @default 0
+             */
+            paid: string;
+            /**
+             * Payable Current
+             * @default 0
+             */
+            payable_current: string;
+            /**
+             * Completed Operations
+             * @default 0
+             */
+            completed_operations: string;
+            /**
+             * Person Hours
+             * @default 0
+             */
+            person_hours: string;
+            /** By Employee */
+            by_employee: components["schemas"]["EmployeeAnalyticsRow"][];
+            /** By Operation */
+            by_operation: components["schemas"]["OperationAnalyticsRow"][];
         };
         /** PlanItemRequirementRead */
         PlanItemRequirementRead: {
@@ -1803,6 +1956,78 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ProductSalesRow */
+        ProductSalesRow: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Quantity
+             * @default 0
+             */
+            quantity: string;
+            /**
+             * Revenue
+             * @default 0
+             */
+            revenue: string;
+            /**
+             * Current Stock
+             * @default 0
+             */
+            current_stock: string;
+        };
+        /** ProductionAnalytics */
+        ProductionAnalytics: {
+            /**
+             * Produced Products
+             * @default 0
+             */
+            produced_products: string;
+            /**
+             * Produced Semi Finished
+             * @default 0
+             */
+            produced_semi_finished: string;
+            /**
+             * Production Records
+             * @default 0
+             */
+            production_records: number;
+            /**
+             * Plans
+             * @default 0
+             */
+            plans: number;
+            /**
+             * Completed Plans
+             * @default 0
+             */
+            completed_plans: number;
+            /**
+             * Plan Completion Percent
+             * @default 0
+             */
+            plan_completion_percent: string;
+            /**
+             * Completed Operations
+             * @default 0
+             */
+            completed_operations: string;
+            /**
+             * Person Hours
+             * @default 0
+             */
+            person_hours: string;
+            /** Dynamics */
+            dynamics: components["schemas"]["ProductionPoint"][];
+        };
         /**
          * ProductionComponentKind
          * @enum {string}
@@ -1958,6 +2183,24 @@ export interface components {
             /** Target Date */
             target_date?: string | null;
             status?: components["schemas"]["ProductionPlanStatus"] | null;
+        };
+        /** ProductionPoint */
+        ProductionPoint: {
+            /**
+             * Period Start
+             * Format: date-time
+             */
+            period_start: string;
+            /**
+             * Products Quantity
+             * @default 0
+             */
+            products_quantity: string;
+            /**
+             * Semi Finished Quantity
+             * @default 0
+             */
+            semi_finished_quantity: string;
         };
         /** ProductionRecordCreate */
         ProductionRecordCreate: {
@@ -2139,11 +2382,79 @@ export interface components {
              */
             average_unit_price: string;
         };
+        /** SalesAnalytics */
+        SalesAnalytics: {
+            /**
+             * Sold Quantity
+             * @default 0
+             */
+            sold_quantity: string;
+            /**
+             * Revenue
+             * @default 0
+             */
+            revenue: string;
+            /**
+             * Average Unit Price
+             * @default 0
+             */
+            average_unit_price: string;
+            /**
+             * Current Product Stock
+             * @default 0
+             */
+            current_product_stock: string;
+            /** Dynamics */
+            dynamics: components["schemas"]["SalesPoint"][];
+            /** By Product */
+            by_product: components["schemas"]["ProductSalesRow"][];
+        };
+        /** SalesPoint */
+        SalesPoint: {
+            /**
+             * Period Start
+             * Format: date-time
+             */
+            period_start: string;
+            /**
+             * Quantity
+             * @default 0
+             */
+            quantity: string;
+            /**
+             * Revenue
+             * @default 0
+             */
+            revenue: string;
+        };
         /**
          * SortOrder
          * @enum {string}
          */
         SortOrder: "asc" | "desc";
+        /** StockPoint */
+        StockPoint: {
+            /**
+             * Period Start
+             * Format: date-time
+             */
+            period_start: string;
+            /**
+             * Materials Delta
+             * @default 0
+             */
+            materials_delta: string;
+            /**
+             * Semi Finished Delta
+             * @default 0
+             */
+            semi_finished_delta: string;
+            /**
+             * Products Delta
+             * @default 0
+             */
+            products_delta: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2156,6 +2467,63 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WarehouseAnalytics */
+        WarehouseAnalytics: {
+            /**
+             * Current Material Stock Value
+             * @default 0
+             */
+            current_material_stock_value: string;
+            /**
+             * Unpriced Material Positions
+             * @default 0
+             */
+            unpriced_material_positions: number;
+            /**
+             * Material Deficit Positions
+             * @default 0
+             */
+            material_deficit_positions: number;
+            /**
+             * Material Deficit Quantity
+             * @default 0
+             */
+            material_deficit_quantity: string;
+            /**
+             * Material Movements
+             * @default 0
+             */
+            material_movements: number;
+            /**
+             * Material Inflow
+             * @default 0
+             */
+            material_inflow: string;
+            /**
+             * Material Outflow
+             * @default 0
+             */
+            material_outflow: string;
+            /**
+             * Semi Finished Movements
+             * @default 0
+             */
+            semi_finished_movements: number;
+            /**
+             * Semi Finished Inflow
+             * @default 0
+             */
+            semi_finished_inflow: string;
+            /**
+             * Semi Finished Outflow
+             * @default 0
+             */
+            semi_finished_outflow: string;
+            /** Demanded Materials */
+            demanded_materials: components["schemas"]["DemandedMaterialRow"][];
+            /** Dynamics */
+            dynamics: components["schemas"]["StockPoint"][];
         };
         /** WorkEntryCreate */
         WorkEntryCreate: {
@@ -5043,6 +5411,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinanceSummary"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getAnalyticsDashboard: {
+        parameters: {
+            query: {
+                date_from: string;
+                date_to: string;
+                bucket?: components["schemas"]["AnalyticsBucket"];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsDashboardRead"];
                 };
             };
             /** @description Unprocessable Content */

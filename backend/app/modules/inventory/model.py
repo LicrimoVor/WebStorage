@@ -40,6 +40,7 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         Index("ix_inventory_movements_material_created", "material_id", "created_at"),
         Index("ix_inventory_movements_type", "movement_type"),
         Index("ix_inventory_movements_production_record", "production_record_id"),
+        Index("ix_inventory_movements_created_at", "created_at"),
     )
 
     id: Mapped[uuid.UUID]

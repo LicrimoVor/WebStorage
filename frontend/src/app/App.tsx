@@ -39,6 +39,10 @@ const FinancePage = lazy(async () => {
   const module = await import("@/pages/FinancePage");
   return { default: module.FinancePage };
 });
+const AnalyticsPage = lazy(async () => {
+  const module = await import("@/pages/AnalyticsPage");
+  return { default: module.AnalyticsPage };
+});
 const TechnologicalProcessesPage = lazy(async () => {
   const module = await import("@/pages/TechnologicalProcessesPage");
   return { default: module.TechnologicalProcessesPage };
@@ -94,20 +98,27 @@ function AppLayout() {
           >
             Персонал
           </Button>
-          <Button
+          {/* <Button
             view="flat-action"
             onClick={() => navigate(routes.sales)}
             selected={location.pathname === routes.sales}
           >
             Продажи
-          </Button>
-          <Button
+          </Button> */}
+          {/* <Button
             view="flat-action"
             onClick={() => navigate(routes.finance)}
             selected={location.pathname === routes.finance}
           >
             Финансы
           </Button>
+          <Button
+            view="flat-action"
+            onClick={() => navigate(routes.analytics)}
+            selected={location.pathname === routes.analytics}
+          >
+            Аналитика
+          </Button> */}
         </nav>
       </header>
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
@@ -116,7 +127,10 @@ function AppLayout() {
             path="/"
             element={<Navigate to={routes.productionPlans} replace />}
           />
-          <Route path={routes.productionPlans} element={<ProductionPlansPage />} />
+          <Route
+            path={routes.productionPlans}
+            element={<ProductionPlansPage />}
+          />
           <Route path={routes.warehouse} element={<WarehousePage />} />
           <Route path={routes.operations} element={<OperationsPage />} />
           <Route
@@ -130,6 +144,7 @@ function AppLayout() {
           <Route path={routes.personnel} element={<PersonnelPage />} />
           <Route path={routes.sales} element={<SalesPage />} />
           <Route path={routes.finance} element={<FinancePage />} />
+          <Route path={routes.analytics} element={<AnalyticsPage />} />
           <Route
             path="*"
             element={

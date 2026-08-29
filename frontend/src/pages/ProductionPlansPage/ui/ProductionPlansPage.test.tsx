@@ -117,7 +117,9 @@ describe('ProductionPlansPage production execution', () => {
       screen.getByRole('textbox', {name: 'Количество произведённой позиции'}),
       '2',
     );
-    await user.click(screen.getByRole('button', {name: 'Провести'}));
+    const submit = screen.getByRole('button', {name: 'Провести'});
+    await waitFor(() => expect(submit).toBeEnabled());
+    await user.click(submit);
 
     await waitFor(() => expect(registerProduction).toHaveBeenCalledTimes(1));
     expect(registerProduction).toHaveBeenCalledWith(

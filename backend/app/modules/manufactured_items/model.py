@@ -70,6 +70,7 @@ class ManufacturedItemMovement(UUIDPrimaryKeyMixin, Base):
             "production_record_id",
         ),
         Index("ux_manufactured_item_movements_sale", "sale_id", unique=True),
+        Index("ix_manufactured_item_movements_created_at", "created_at"),
     )
 
     id: Mapped[uuid.UUID]
