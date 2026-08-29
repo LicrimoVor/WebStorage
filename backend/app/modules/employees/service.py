@@ -15,18 +15,27 @@ from app.modules.employees.schemas import (
     EmployeeSortField,
     EmployeeUpdate,
 )
+from app.modules.payroll import repository as payroll_repository
 
 
-def to_read_model(employee: Employee) -> EmployeeRead:
+def to_read_model(
+    employee: Employee,
+    totals: tuple[Decimal, Decimal, Decimal] = (
+        Decimal("0"),
+        Decimal("0"),
+        Decimal("0"),
+    ),
+) -> EmployeeRead:
+    accrued, paid, completed = totals
     return EmployeeRead(
         id=employee.id,
         full_name=employee.full_name,
         active=employee.active,
         comment=employee.comment,
-        accrued_total=Decimal("0"),
-        paid_total=Decimal("0"),
-        payable_total=Decimal("0"),
-        completed_operations=Decimal("0"),
+        accrued_total=accrued,
+        paid_total=paid,
+        payable_total=max(accrued - paid, Decimal("0")),
+        completed_operations=completed,
         created_at=employee.created_at,
         updated_at=employee.updated_at,
     )
@@ -59,8 +68,14 @@ async def list_all(
         sort_by=sort_by,
         sort_order=sort_order,
     )
+    totals = await payroll_repository.employee_totals(
+        session, [employee.id for employee in items]
+    )
     return EmployeeList(
-        items=[to_read_model(item) for item in items],
+        items=[
+            to_read_model(item, totals.get(item.id, (Decimal("0"),) * 3))
+            for item in items
+        ],
         page=page,
         page_size=page_size,
         total=total,
@@ -72,7 +87,8 @@ async def get(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead:
     employee = await repository.get_employee(session, employee_id)
     if employee is None:
         raise NotFoundError("Employee was not found")
-    return to_read_model(employee)
+    totals = await payroll_repository.employee_totals(session, [employee.id])
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))
 
 
 async def update(
@@ -85,7 +101,8 @@ async def update(
         setattr(employee, field, value)
     await session.commit()
     await session.refresh(employee)
-    return to_read_model(employee)
+    totals = await payroll_repository.employee_totals(session, [employee.id])
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))
 
 
 async def archive(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead:
@@ -95,4 +112,5 @@ async def archive(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead
     employee.active = False
     await session.commit()
     await session.refresh(employee)
-    return to_read_model(employee)
+    totals = await payroll_repository.employee_totals(session, [employee.id])
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))

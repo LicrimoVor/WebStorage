@@ -1,0 +1,33 @@
+.form {
+  display: grid;
+  gap: var(--g-spacing-4);
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--g-spacing-2);
+}
+
+.nativeField {
+  display: grid;
+  gap: var(--g-spacing-1);
+  color: var(--g-color-text-secondary);
+  font-size: var(--g-text-body-1-font-size);
+}
+
+.nativeInput {
+  min-height: 40px;
+  padding: 0 var(--g-spacing-3);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-m);
+  color: var(--g-color-text-primary);
+  background: var(--g-color-base-background);
+  font: inherit;
+}
+
+@media (width <= 520px) {
+  .preview {
+    grid-template-columns: 1fr;
+  }
+}

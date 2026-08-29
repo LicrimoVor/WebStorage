@@ -530,6 +530,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operations/{operation_id}/work-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Operation Work Entries */
+        get: operations["listOperationWorkEntries"];
+        put?: never;
+        /** Create Work Entry */
+        post: operations["createWorkEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/work-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Employee Work Entries */
+        get: operations["listEmployeeWorkEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-entries/{work_entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Work Entry */
+        get: operations["getWorkEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Work Entry */
+        patch: operations["updateWorkEntry"];
+        trace?: never;
+    };
+    "/api/v1/work-entries/{work_entry_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Work Entry */
+        post: operations["voidWorkEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Employee Payments */
+        get: operations["listEmployeePayments"];
+        put?: never;
+        /** Create Employee Payment */
+        post: operations["createEmployeePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/payroll-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Employee Payroll Summary */
+        get: operations["getEmployeePayrollSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -575,6 +680,44 @@ export interface components {
             total: number;
             /** Pages */
             pages: number;
+        };
+        /** EmployeeOperationSummary */
+        EmployeeOperationSummary: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Operation Name */
+            operation_name: string;
+            /** Completed Quantity */
+            completed_quantity: string;
+            /** Time Minutes */
+            time_minutes: string;
+            /** Accrued Amount */
+            accrued_amount: string;
+            /** Paid Amount */
+            paid_amount: string;
+            /** Payable Amount */
+            payable_amount: string;
+        };
+        /** EmployeePayrollSummary */
+        EmployeePayrollSummary: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Accrued Total */
+            accrued_total: string;
+            /** Paid Total */
+            paid_total: string;
+            /** Payable Total */
+            payable_total: string;
+            /** Completed Operations */
+            completed_operations: string;
+            /** Operations */
+            operations: components["schemas"]["EmployeeOperationSummary"][];
         };
         /** EmployeeRead */
         EmployeeRead: {
@@ -1067,6 +1210,97 @@ export interface components {
             time_norm?: number | string | null;
             /** Price Per Operation */
             price_per_operation?: number | string | null;
+        };
+        /** PaymentAllocationCreate */
+        PaymentAllocationCreate: {
+            /**
+             * Work Entry Id
+             * Format: uuid
+             */
+            work_entry_id: string;
+            /** Amount */
+            amount: number | string;
+        };
+        /** PaymentAllocationRead */
+        PaymentAllocationRead: {
+            /**
+             * Work Entry Id
+             * Format: uuid
+             */
+            work_entry_id: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Operation Name */
+            operation_name: string;
+            /**
+             * Performed At
+             * Format: date-time
+             */
+            performed_at: string;
+            /** Amount */
+            amount: string;
+        };
+        /** PaymentCreate */
+        PaymentCreate: {
+            /** Amount */
+            amount: number | string;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Comment */
+            comment?: string | null;
+            /** Allocations */
+            allocations?: components["schemas"]["PaymentAllocationCreate"][] | null;
+        };
+        /** PaymentList */
+        PaymentList: {
+            /** Items */
+            items: components["schemas"]["PaymentRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** PaymentRead */
+        PaymentRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Amount */
+            amount: string;
+            /**
+             * Paid At
+             * Format: date-time
+             */
+            paid_at: string;
+            /** Comment */
+            comment: string | null;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Allocation Mode */
+            allocation_mode: string;
+            /** Allocations */
+            allocations: components["schemas"]["PaymentAllocationRead"][];
         };
         /** PlanItemRequirementRead */
         PlanItemRequirementRead: {
@@ -1587,6 +1821,128 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WorkEntryCreate */
+        WorkEntryCreate: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            input_mode: components["schemas"]["WorkInputMode"];
+            /** Input Value */
+            input_value: number | string;
+            /** Performed At */
+            performed_at?: string | null;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** WorkEntryList */
+        WorkEntryList: {
+            /** Items */
+            items: components["schemas"]["WorkEntryRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** WorkEntryRead */
+        WorkEntryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Operation Name */
+            operation_name: string;
+            input_mode: components["schemas"]["WorkInputMode"];
+            /** Input Value */
+            input_value: string;
+            /** Equivalent Quantity */
+            equivalent_quantity: string | null;
+            /** Time Minutes */
+            time_minutes: string | null;
+            /** Time Norm Snapshot */
+            time_norm_snapshot: string | null;
+            /** Rate Snapshot */
+            rate_snapshot: string | null;
+            /** Accrued Amount */
+            accrued_amount: string | null;
+            /**
+             * Paid Amount
+             * @default 0
+             */
+            paid_amount: string;
+            /**
+             * Payable Amount
+             * @default 0
+             */
+            payable_amount: string;
+            /** Calculation Message */
+            calculation_message?: string | null;
+            /**
+             * Performed At
+             * Format: date-time
+             */
+            performed_at: string;
+            /** Comment */
+            comment: string | null;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Voided At */
+            voided_at: string | null;
+            /** Voided By */
+            voided_by: string | null;
+            /** Void Reason */
+            void_reason: string | null;
+        };
+        /** WorkEntryUpdate */
+        WorkEntryUpdate: {
+            /** Employee Id */
+            employee_id?: string | null;
+            input_mode?: components["schemas"]["WorkInputMode"] | null;
+            /** Input Value */
+            input_value?: number | string | null;
+            /** Performed At */
+            performed_at?: string | null;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** WorkEntryVoid */
+        WorkEntryVoid: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * WorkInputMode
+         * @enum {string}
+         */
+        WorkInputMode: "quantity" | "time";
     };
     responses: never;
     parameters: never;
@@ -3668,6 +4024,447 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listOperationWorkEntries: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                include_voided?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryList"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createWorkEntry: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listEmployeeWorkEntries: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                include_voided?: boolean;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryList"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getWorkEntry: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                work_entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    updateWorkEntry: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                work_entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkEntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    voidWorkEntry: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                work_entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkEntryVoid"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkEntryRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listEmployeePayments: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentList"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createEmployeePayment: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getEmployeePayrollSummary: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeePayrollSummary"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -24,6 +24,8 @@ import {
 import { ArchiveEmployeeButton } from "@/features/ArchiveEmployee";
 import { CreateEmployeeButton } from "@/features/CreateEmployee";
 import { EditEmployeeButton } from "@/features/EditEmployee";
+import { PayrollDetailsButton, RegisterPaymentButton } from "@/features/ManagePayroll";
+import { WorkHistoryButton } from "@/features/ViewWorkHistory";
 import { getErrorMessage } from "@/shared/api";
 
 import styles from "./EmployeesTableWidget.module.scss";
@@ -69,6 +71,9 @@ export function EmployeesTableWidget() {
   };
   const renderActions = (employee: Employee) => (
     <div className={styles.actions}>
+      <RegisterPaymentButton employee={employee} />
+      <PayrollDetailsButton employee={employee} />
+      <WorkHistoryButton employee={employee} />
       <EditEmployeeButton employee={employee} />
       <ArchiveEmployeeButton employee={employee} />
     </div>

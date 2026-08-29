@@ -1,4 +1,4 @@
-import {Wrench} from '@gravity-ui/icons';
+import { Wrench } from "@gravity-ui/icons";
 import {
   Alert,
   Button,
@@ -11,17 +11,17 @@ import {
   Skeleton,
   Text,
   TextInput,
-} from '@gravity-ui/uikit';
-import {useMutation, useQueryClient} from '@tanstack/react-query';
-import {useRef, useState} from 'react';
+} from "@gravity-ui/uikit";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 
-import {useManufacturedItemsQuery} from '@/entities/ManufacturedItem';
+import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import {
   productionKeys,
   registerProduction,
   useProductionRecordsQuery,
   type ProductionRecord,
-} from '@/entities/Production';
+} from "@/entities/Production";
 import {
   createProductionPlan,
   productionPlanKeys,
@@ -31,67 +31,67 @@ import {
   useProductionPlansQuery,
   type ProductionPlan,
   type ProductionPlanStatus,
-} from '@/entities/ProductionPlan';
-import {getErrorMessage} from '@/shared/api';
-import {formatDateTime, formatFixedDecimal} from '@/shared/lib';
+} from "@/entities/ProductionPlan";
+import { getErrorMessage } from "@/shared/api";
+import { formatDateTime, formatFixedDecimal } from "@/shared/lib";
 
-import styles from './ProductionPlansPage.module.scss';
+import styles from "./ProductionPlansPage.module.scss";
 
 const statusView: Record<
   ProductionPlanStatus,
-  {text: string; theme: 'info' | 'success' | 'warning' | 'normal'}
+  { text: string; theme: "info" | "success" | "warning" | "normal" }
 > = {
-  draft: {text: 'Черновик', theme: 'info'},
-  active: {text: 'В работе', theme: 'success'},
-  completed: {text: 'Завершён', theme: 'normal'},
-  cancelled: {text: 'Отменён', theme: 'warning'},
+  draft: { text: "Черновик", theme: "info" },
+  active: { text: "В работе", theme: "success" },
+  completed: { text: "Завершён", theme: "normal" },
+  cancelled: { text: "Отменён", theme: "warning" },
 };
 
 const statusOptions = [
-  {value: 'all', content: 'Все планы'},
-  {value: 'active', content: 'Активные'},
-  {value: 'draft', content: 'Черновики'},
-  {value: 'completed', content: 'Завершённые'},
-  {value: 'cancelled', content: 'Отменённые'},
+  { value: "all", content: "Все планы" },
+  { value: "active", content: "Активные" },
+  { value: "draft", content: "Черновики" },
+  { value: "completed", content: "Завершённые" },
+  { value: "cancelled", content: "Отменённые" },
 ];
 
-function amount(value: string | null, suffix = ''): string {
-  return value === null ? '—' : `${formatFixedDecimal(value)}${suffix}`;
+function amount(value: string | null, suffix = ""): string {
+  return value === null ? "—" : `${formatFixedDecimal(value)}${suffix}`;
 }
 
 function CreatePlanButton() {
   const [open, setOpen] = useState(false);
-  const [productId, setProductId] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [targetDate, setTargetDate] = useState('');
+  const [productId, setProductId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [targetDate, setTargetDate] = useState("");
   const queryClient = useQueryClient();
   const productsQuery = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
-    kind: 'product',
-    sort_by: 'name',
-    sort_order: 'asc',
+    kind: "product",
+    sort_by: "name",
+    sort_order: "asc",
   });
   const mutation = useMutation({
     mutationFn: () =>
       createProductionPlan({
         product_id: productId,
-        planned_quantity: quantity.replace(',', '.'),
+        planned_quantity: quantity.replace(",", "."),
         target_date: targetDate || null,
-        status: 'active',
+        status: "active",
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({queryKey: productionPlanKeys.all});
-      await queryClient.invalidateQueries({queryKey: ['materials']});
-      await queryClient.invalidateQueries({queryKey: ['manufactured-items']});
-      await queryClient.invalidateQueries({queryKey: ['operations']});
+      await queryClient.invalidateQueries({ queryKey: productionPlanKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["materials"] });
+      await queryClient.invalidateQueries({ queryKey: ["manufactured-items"] });
+      await queryClient.invalidateQueries({ queryKey: ["operations"] });
       setOpen(false);
-      setProductId('');
-      setQuantity('');
-      setTargetDate('');
+      setProductId("");
+      setQuantity("");
+      setTargetDate("");
     },
   });
-  const validQuantity = Number(quantity.replace(',', '.')) > 0;
+  const validQuantity = Number(quantity.replace(",", ".")) > 0;
   const close = () => {
     if (!mutation.isPending) {
       mutation.reset();
@@ -115,9 +115,11 @@ function CreatePlanButton() {
                 })) ?? []
               }
               value={productId ? [productId] : []}
-              onUpdate={(values) => setProductId(values[0] ?? '')}
+              onUpdate={(values) => setProductId(values[0] ?? "")}
               label="Продукт"
-              placeholder={productsQuery.isPending ? 'Загрузка…' : 'Выберите продукт'}
+              placeholder={
+                productsQuery.isPending ? "Загрузка…" : "Выберите продукт"
+              }
               width="max"
               size="l"
               aria-label="Продукт производственного плана"
@@ -128,7 +130,10 @@ function CreatePlanButton() {
               label="Количество"
               placeholder="0,00"
               size="l"
-              controlProps={{inputMode: 'decimal', 'aria-label': 'Количество продукта'}}
+              controlProps={{
+                inputMode: "decimal",
+                "aria-label": "Количество продукта",
+              }}
             />
             <label className={styles.dateField}>
               <span>Плановая дата</span>
@@ -150,42 +155,68 @@ function CreatePlanButton() {
           onClickButtonApply={() => mutation.mutate()}
           onClickButtonCancel={close}
           loading={mutation.isPending}
-          propsButtonApply={{disabled: !productId || !validQuantity}}
+          propsButtonApply={{ disabled: !productId || !validQuantity }}
         />
       </Dialog>
     </>
   );
 }
 
-function RequirementTable({plan}: {plan: ProductionPlan}) {
+function RequirementTable({ plan }: { plan: ProductionPlan }) {
   const semis = plan.manufactured_items.filter((item) => !item.is_plan_output);
   return (
     <div className={styles.requirements}>
       <section>
-        <Text as="h4" variant="subheader-2">Материалы</Text>
+        <Text as="h4" variant="subheader-2">
+          Материалы
+        </Text>
         {plan.materials.length ? (
           <table>
-            <thead><tr><th>Позиция</th><th>Нужно</th><th>Со склада</th><th>Дефицит</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Позиция</th>
+                <th>Нужно</th>
+                <th>Со склада</th>
+                <th>Дефицит</th>
+              </tr>
+            </thead>
             <tbody>
               {plan.materials.map((item) => (
                 <tr key={item.material_id}>
                   <td>{item.name}</td>
                   <td>{amount(item.required_quantity, ` ${item.unit}`)}</td>
                   <td>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
-                  <td className={Number(item.deficit_quantity) > 0 ? styles.deficit : undefined}>
+                  <td
+                    className={
+                      Number(item.deficit_quantity) > 0
+                        ? styles.deficit
+                        : undefined
+                    }
+                  >
                     {amount(item.deficit_quantity, ` ${item.unit}`)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : <Text color="secondary">Дополнительные материалы не требуются.</Text>}
+        ) : (
+          <Text color="secondary">Дополнительные материалы не требуются.</Text>
+        )}
       </section>
       <section>
-        <Text as="h4" variant="subheader-2">Полуфабрикаты</Text>
+        <Text as="h4" variant="subheader-2">
+          Полуфабрикаты
+        </Text>
         {semis.length ? (
           <table>
-            <thead><tr><th>Позиция</th><th>Нужно</th><th>Со склада</th><th>Изготовить</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Позиция</th>
+                <th>Нужно</th>
+                <th>Со склада</th>
+                <th>Изготовить</th>
+              </tr>
+            </thead>
             <tbody>
               {semis.map((item) => (
                 <tr key={item.manufactured_item_id}>
@@ -197,35 +228,48 @@ function RequirementTable({plan}: {plan: ProductionPlan}) {
               ))}
             </tbody>
           </table>
-        ) : <Text color="secondary">Вложенных полуфабрикатов нет.</Text>}
+        ) : (
+          <Text color="secondary">Вложенных полуфабрикатов нет.</Text>
+        )}
       </section>
       <section>
-        <Text as="h4" variant="subheader-2">Операции</Text>
+        <Text as="h4" variant="subheader-2">
+          Операции
+        </Text>
         {plan.operations.length ? (
           <table>
-            <thead><tr><th>Операция</th><th>Количество</th><th>Время, мин</th><th>Стоимость</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Операция</th>
+                <th>Количество</th>
+                <th>Время, мин</th>
+                <th>Стоимость</th>
+              </tr>
+            </thead>
             <tbody>
               {plan.operations.map((item) => (
                 <tr key={item.operation_id}>
                   <td>{item.name}</td>
                   <td>{amount(item.required_quantity)}</td>
                   <td>{amount(item.required_time_minutes)}</td>
-                  <td>{amount(item.cost, ' ₽')}</td>
+                  <td>{amount(item.cost, " ₽")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : <Text color="secondary">Операции не требуются.</Text>}
+        ) : (
+          <Text color="secondary">Операции не требуются.</Text>
+        )}
       </section>
     </div>
   );
 }
 
-function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
+function RegisterProductionButton({ plan }: { plan: ProductionPlan }) {
   const [open, setOpen] = useState(false);
   const [itemId, setItemId] = useState(plan.product_id);
-  const [quantity, setQuantity] = useState('');
-  const [comment, setComment] = useState('');
+  const [quantity, setQuantity] = useState("");
+  const [comment, setComment] = useState("");
   const commandKey = useRef(crypto.randomUUID());
   const queryClient = useQueryClient();
   const candidates = [
@@ -234,7 +278,7 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
       name: plan.product_name,
       unit: plan.product_unit,
       remaining: plan.remaining_quantity,
-      kind: 'Продукт',
+      kind: "Продукт",
     },
     ...plan.manufactured_items
       .filter(
@@ -248,7 +292,7 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
         name: item.name,
         unit: item.unit,
         remaining: item.to_produce_quantity,
-        kind: 'Полуфабрикат',
+        kind: "Полуфабрикат",
       })),
   ];
   const selected = candidates.find((candidate) => candidate.id === itemId);
@@ -258,25 +302,25 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
         plan.id,
         {
           item_id: itemId,
-          quantity: quantity.replace(',', '.'),
+          quantity: quantity.replace(",", "."),
           comment: comment.trim() || null,
         },
         commandKey.current,
       ),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({queryKey: productionPlanKeys.all});
-      await queryClient.invalidateQueries({queryKey: productionKeys.all});
-      await queryClient.invalidateQueries({queryKey: ['materials']});
-      await queryClient.invalidateQueries({queryKey: ['manufactured-items']});
-      await queryClient.invalidateQueries({queryKey: ['operations']});
+      await queryClient.invalidateQueries({ queryKey: productionPlanKeys.all });
+      await queryClient.invalidateQueries({ queryKey: productionKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["materials"] });
+      await queryClient.invalidateQueries({ queryKey: ["manufactured-items"] });
+      await queryClient.invalidateQueries({ queryKey: ["operations"] });
       setOpen(false);
-      setQuantity('');
-      setComment('');
+      setQuantity("");
+      setComment("");
       setItemId(plan.product_id);
       commandKey.current = crypto.randomUUID();
     },
   });
-  const numericQuantity = Number(quantity.replace(',', '.'));
+  const numericQuantity = Number(quantity.replace(",", "."));
   const valid =
     selected !== undefined &&
     numericQuantity > 0 &&
@@ -310,7 +354,7 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
               value={[itemId]}
               onUpdate={(values) => {
                 setItemId(values[0] ?? plan.product_id);
-                setQuantity('');
+                setQuantity("");
                 commandKey.current = crypto.randomUUID();
               }}
               label="Произведённая позиция"
@@ -324,17 +368,17 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
                 setQuantity(value);
                 commandKey.current = crypto.randomUUID();
               }}
-              label={`Количество${selected ? `, ${selected.unit}` : ''}`}
+              label={`Количество${selected ? `, ${selected.unit}` : ""}`}
               placeholder="0,00"
               size="l"
               controlProps={{
-                inputMode: 'decimal',
-                'aria-label': 'Количество произведённой позиции',
+                inputMode: "decimal",
+                "aria-label": "Количество произведённой позиции",
               }}
               {...(numericQuantity > Number(selected?.remaining ?? 0)
                 ? {
-                    validationState: 'invalid' as const,
-                    errorMessage: `По плану осталось ${amount(selected?.remaining ?? '0')}`,
+                    validationState: "invalid" as const,
+                    errorMessage: `По плану осталось ${amount(selected?.remaining ?? "0")}`,
                   }
                 : {})}
             />
@@ -346,7 +390,7 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
               }}
               label="Комментарий"
               size="l"
-              controlProps={{'aria-label': 'Комментарий производства'}}
+              controlProps={{ "aria-label": "Комментарий производства" }}
             />
             {selected ? (
               <Alert
@@ -365,14 +409,14 @@ function RegisterProductionButton({plan}: {plan: ProductionPlan}) {
           onClickButtonApply={() => mutation.mutate()}
           onClickButtonCancel={close}
           loading={mutation.isPending}
-          propsButtonApply={{disabled: !valid}}
+          propsButtonApply={{ disabled: !valid }}
         />
       </Dialog>
     </>
   );
 }
 
-function ProductionRecordRow({record}: {record: ProductionRecord}) {
+function ProductionRecordRow({ record }: { record: ProductionRecord }) {
   return (
     <li>
       <div>
@@ -384,23 +428,34 @@ function ProductionRecordRow({record}: {record: ProductionRecord}) {
         {record.components.length
           ? `Списано: ${record.components
               .map((component) =>
-                amount(component.quantity, ` ${component.unit} ${component.name}`),
+                amount(
+                  component.quantity,
+                  ` ${component.unit} ${component.name}`,
+                ),
               )
-              .join(' · ')}`
-          : 'Без складских компонентов'}
+              .join(" · ")}`
+          : "Без складских компонентов"}
       </Text>
     </li>
   );
 }
 
-function ProductionHistory({planId, enabled}: {planId: string; enabled: boolean}) {
+function ProductionHistory({
+  planId,
+  enabled,
+}: {
+  planId: string;
+  enabled: boolean;
+}) {
   const query = useProductionRecordsQuery(planId, enabled);
   if (query.isPending) return <Skeleton className={styles.historySkeleton} />;
   if (query.isError) {
     return <Alert theme="danger" message={getErrorMessage(query.error)} />;
   }
   if (!query.data.items.length) {
-    return <Text color="secondary">Выпуск по плану ещё не регистрировался.</Text>;
+    return (
+      <Text color="secondary">Выпуск по плану ещё не регистрировался.</Text>
+    );
   }
   return (
     <ul className={styles.historyList}>
@@ -411,21 +466,21 @@ function ProductionHistory({planId, enabled}: {planId: string; enabled: boolean}
   );
 }
 
-function PlanCard({plan}: {plan: ProductionPlan}) {
+function PlanCard({ plan }: { plan: ProductionPlan }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const queryClient = useQueryClient();
   const refresh = async () => {
-    await queryClient.invalidateQueries({queryKey: productionPlanKeys.all});
-    await queryClient.invalidateQueries({queryKey: ['materials']});
-    await queryClient.invalidateQueries({queryKey: ['manufactured-items']});
-    await queryClient.invalidateQueries({queryKey: ['operations']});
+    await queryClient.invalidateQueries({ queryKey: productionPlanKeys.all });
+    await queryClient.invalidateQueries({ queryKey: ["materials"] });
+    await queryClient.invalidateQueries({ queryKey: ["manufactured-items"] });
+    await queryClient.invalidateQueries({ queryKey: ["operations"] });
   };
   const recalculate = useMutation({
     mutationFn: () => recalculateProductionPlan(plan.id),
     onSuccess: refresh,
   });
   const cancel = useMutation({
-    mutationFn: () => updateProductionPlan(plan.id, {status: 'cancelled'}),
+    mutationFn: () => updateProductionPlan(plan.id, { status: "cancelled" }),
     onSuccess: refresh,
   });
   return (
@@ -433,17 +488,22 @@ function PlanCard({plan}: {plan: ProductionPlan}) {
       <div className={styles.planHeading}>
         <div>
           <div className={styles.titleRow}>
-            <Text as="h3" variant="header-2">{plan.product_name}</Text>
-            <Label theme={statusView[plan.status].theme}>{statusView[plan.status].text}</Label>
+            <Text as="h3" variant="header-2">
+              {plan.product_name}
+            </Text>
+            <Label theme={statusView[plan.status].theme}>
+              {statusView[plan.status].text}
+            </Label>
           </div>
           <Text color="secondary">
-            Версия процесса v{plan.process_version_number} · {formatDateTime(plan.created_at)}
+            Версия процесса v{plan.process_version_number} ·{" "}
+            {formatDateTime(plan.created_at)}
           </Text>
         </div>
         <div className={styles.planActions}>
-          {plan.status === 'active' || plan.status === 'draft' ? (
+          {plan.status === "active" || plan.status === "draft" ? (
             <>
-              {plan.status === 'active' ? (
+              {plan.status === "active" ? (
                 <RegisterProductionButton plan={plan} />
               ) : null}
               <Button
@@ -465,21 +525,39 @@ function PlanCard({plan}: {plan: ProductionPlan}) {
         </div>
       </div>
       <div className={styles.planMetrics}>
-        <div><Text color="secondary">План</Text><b>{amount(plan.planned_quantity, ` ${plan.product_unit}`)}</b></div>
-        <div><Text color="secondary">Готово</Text><b>{amount(plan.produced_quantity, ` ${plan.product_unit}`)}</b></div>
-        <div><Text color="secondary">Осталось</Text><b>{amount(plan.remaining_quantity, ` ${plan.product_unit}`)}</b></div>
-        <div><Text color="secondary">Трудоёмкость</Text><b>{amount(plan.total_required_hours, ' ч')}</b></div>
-        <div><Text color="secondary">Стоимость</Text><b>{amount(plan.estimated_cost, ' ₽')}</b></div>
+        <div>
+          <Text color="secondary">План</Text>
+          <b>{amount(plan.planned_quantity, ` ${plan.product_unit}`)}</b>
+        </div>
+        <div>
+          <Text color="secondary">Готово</Text>
+          <b>{amount(plan.produced_quantity, ` ${plan.product_unit}`)}</b>
+        </div>
+        <div>
+          <Text color="secondary">Осталось</Text>
+          <b>{amount(plan.remaining_quantity, ` ${plan.product_unit}`)}</b>
+        </div>
+        <div>
+          <Text color="secondary">Трудоёмкость</Text>
+          <b>{amount(plan.total_required_hours, " ч")}</b>
+        </div>
+        <div>
+          <Text color="secondary">Стоимость</Text>
+          <b>{amount(plan.estimated_cost, " ₽")}</b>
+        </div>
       </div>
       {!plan.calculation_complete ? (
         <Alert
           theme="warning"
           title="Расчёт неполный"
-          message={plan.missing_data.join(' · ')}
+          message={plan.missing_data.join(" · ")}
         />
       ) : null}
       {recalculate.error || cancel.error ? (
-        <Alert theme="danger" message={getErrorMessage(recalculate.error ?? cancel.error)} />
+        <Alert
+          theme="danger"
+          message={getErrorMessage(recalculate.error ?? cancel.error)}
+        />
       ) : null}
       <details className={styles.details}>
         <summary>Показать рассчитанные потребности</summary>
@@ -503,38 +581,60 @@ function PlanCard({plan}: {plan: ProductionPlan}) {
 export function ProductionPlansPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState<'all' | ProductionPlanStatus>('all');
+  const [status, setStatus] = useState<"all" | ProductionPlanStatus>("all");
   const query = useProductionPlansQuery({
     page,
     page_size: pageSize,
-    ...(status === 'all' ? {} : {status}),
+    ...(status === "all" ? {} : { status }),
   });
   const summary = useProductionPlanSummaryQuery();
   return (
     <main className={styles.root}>
       <header className={styles.header}>
         <div>
-          <Text as="h1" variant="display-1">Планирование производства</Text>
-          <Text as="p" color="secondary">
-            Расчёт материалов, полуфабрикатов, операций, времени и дефицита.
+          <Text as="h1" variant="display-1">
+            Планирование производства
           </Text>
         </div>
         <CreatePlanButton />
       </header>
       <div className={styles.summaryGrid}>
-        <Card view="outlined"><Text color="secondary">Активных планов</Text><strong>{summary.data?.active_plans ?? '—'}</strong></Card>
-        <Card view="outlined"><Text color="secondary">Изделий к выпуску</Text><strong>{summary.data ? amount(summary.data.products_to_produce) : '—'}</strong></Card>
-        <Card view="outlined"><Text color="secondary">Позиций в дефиците</Text><strong>{summary.data?.material_deficit_positions ?? '—'}</strong></Card>
-        <Card view="outlined"><Text color="secondary">Всего часов</Text><strong>{summary.data ? amount(summary.data.total_required_hours) : '—'}</strong></Card>
-        <Card view="outlined"><Text color="secondary">Оценка стоимости</Text><strong>{summary.data ? amount(summary.data.estimated_cost, ' ₽') : '—'}</strong></Card>
+        <Card view="outlined">
+          <Text color="secondary">Активных планов</Text>
+          <strong>{summary.data?.active_plans ?? "—"}</strong>
+        </Card>
+        <Card view="outlined">
+          <Text color="secondary">Изделий к выпуску</Text>
+          <strong>
+            {summary.data ? amount(summary.data.products_to_produce) : "—"}
+          </strong>
+        </Card>
+        <Card view="outlined">
+          <Text color="secondary">Позиций в дефиците</Text>
+          <strong>{summary.data?.material_deficit_positions ?? "—"}</strong>
+        </Card>
+        <Card view="outlined">
+          <Text color="secondary">Всего часов</Text>
+          <strong>
+            {summary.data ? amount(summary.data.total_required_hours) : "—"}
+          </strong>
+        </Card>
+        <Card view="outlined">
+          <Text color="secondary">Оценка стоимости</Text>
+          <strong>
+            {summary.data ? amount(summary.data.estimated_cost, " ₽") : "—"}
+          </strong>
+        </Card>
       </div>
       <div className={styles.toolbar}>
-        <Text as="h2" variant="header-2">Производственные планы</Text>
+        <Text as="h2" variant="header-2">
+          Производственные планы
+        </Text>
         <Select
           options={statusOptions}
           value={[status]}
           onUpdate={(values) => {
-            setStatus((values[0] ?? 'all') as 'all' | ProductionPlanStatus);
+            setStatus((values[0] ?? "all") as "all" | ProductionPlanStatus);
             setPage(1);
           }}
           width="max"
@@ -543,7 +643,9 @@ export function ProductionPlansPage() {
       </div>
       {query.isPending ? (
         <div className={styles.loading}>
-          {Array.from({length: 3}, (_, index) => <Skeleton key={index} className={styles.skeleton} />)}
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} className={styles.skeleton} />
+          ))}
         </div>
       ) : query.isError ? (
         <Alert
@@ -562,7 +664,9 @@ export function ProductionPlansPage() {
       ) : (
         <>
           <div className={styles.planList}>
-            {query.data.items.map((plan) => <PlanCard key={plan.id} plan={plan} />)}
+            {query.data.items.map((plan) => (
+              <PlanCard key={plan.id} plan={plan} />
+            ))}
           </div>
           <Pagination
             page={page}

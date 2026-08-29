@@ -22,6 +22,7 @@ def to_read_model(
     operation: Operation,
     required_quantity: Decimal = Decimal("0"),
     required_time_minutes: Decimal = Decimal("0"),
+    completed_quantity: Decimal = Decimal("0"),
 ) -> OperationRead:
     return OperationRead(
         id=operation.id,
@@ -29,7 +30,7 @@ def to_read_model(
         time_norm=operation.time_norm,
         price_per_operation=operation.price_per_operation,
         required_quantity=required_quantity,
-        completed_quantity=Decimal("0"),
+        completed_quantity=completed_quantity,
         required_time_minutes=required_time_minutes,
         archived=operation.archived,
         created_at=operation.created_at,
@@ -46,7 +47,9 @@ async def create(session: AsyncSession, payload: OperationCreate) -> OperationRe
         await session.rollback()
         raise ConflictError("An operation with this name already exists") from error
     await session.refresh(operation)
-    return to_read_model(operation)
+    projection = await repository.get_operation_with_projection(session, operation.id)
+    assert projection is not None
+    return to_read_model(*projection)
 
 
 async def list_all(
@@ -98,7 +101,9 @@ async def update(
         await session.rollback()
         raise ConflictError("An operation with this name already exists") from error
     await session.refresh(operation)
-    return to_read_model(operation)
+    projection = await repository.get_operation_with_projection(session, operation.id)
+    assert projection is not None
+    return to_read_model(*projection)
 
 
 async def archive(session: AsyncSession, operation_id: uuid.UUID) -> OperationRead:
@@ -108,4 +113,6 @@ async def archive(session: AsyncSession, operation_id: uuid.UUID) -> OperationRe
     operation.archived = True
     await session.commit()
     await session.refresh(operation)
-    return to_read_model(operation)
+    projection = await repository.get_operation_with_projection(session, operation.id)
+    assert projection is not None
+    return to_read_model(*projection)

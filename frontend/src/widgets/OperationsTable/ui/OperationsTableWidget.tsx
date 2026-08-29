@@ -24,6 +24,8 @@ import {
 import { ArchiveOperationButton } from "@/features/ArchiveOperation";
 import { CreateOperationButton } from "@/features/CreateOperation";
 import { EditOperationButton } from "@/features/EditOperation";
+import { RecordWorkButton } from "@/features/RecordWork";
+import { WorkHistoryButton } from "@/features/ViewWorkHistory";
 import { getErrorMessage } from "@/shared/api";
 
 import styles from "./OperationsTableWidget.module.scss";
@@ -70,6 +72,8 @@ export function OperationsTableWidget() {
   };
   const renderActions = (operation: Operation) => (
     <div className={styles.actions}>
+      <RecordWorkButton operation={operation} />
+      <WorkHistoryButton operation={operation} />
       <EditOperationButton operation={operation} />
       {!operation.archived ? (
         <ArchiveOperationButton operation={operation} />

@@ -8,6 +8,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from app.core.query import SortOrder
 from app.modules.operations.model import Operation
 from app.modules.operations.schemas import OperationSortField
+from app.modules.payroll.model import WorkEntry
 from app.modules.production_plans.model import (
     ProductionPlan,
     ProductionPlanOperationRequirement,
@@ -56,6 +57,18 @@ def required_time_expression() -> ColumnElement[Decimal | None]:
     )
 
 
+def completed_expression() -> ColumnElement[Decimal | None]:
+    return (
+        select(func.coalesce(func.sum(WorkEntry.equivalent_quantity), Decimal("0")))
+        .where(
+            WorkEntry.operation_id == Operation.id,
+            WorkEntry.voided_at.is_(None),
+        )
+        .correlate(Operation)
+        .scalar_subquery()
+    )
+
+
 async def list_operations(
     session: AsyncSession,
     *,
@@ -65,7 +78,7 @@ async def list_operations(
     include_archived: bool,
     sort_by: OperationSortField,
     sort_order: SortOrder,
-) -> tuple[list[tuple[Operation, Decimal, Decimal]], int]:
+) -> tuple[list[tuple[Operation, Decimal, Decimal, Decimal]], int]:
     statement = select(Operation)
     if not include_archived:
         statement = statement.where(Operation.archived.is_(False))
@@ -92,12 +105,15 @@ async def list_operations(
         statement.add_columns(
             required_expression().label("required_quantity"),
             required_time_expression().label("required_time_minutes"),
+            completed_expression().label("completed_quantity"),
         )
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     rows = (await session.execute(statement)).all()
-    return [(row[0], Decimal(row[1]), Decimal(row[2])) for row in rows], total
+    return [
+        (row[0], Decimal(row[1]), Decimal(row[2]), Decimal(row[3])) for row in rows
+    ], total
 
 
 async def get_operation(
@@ -111,19 +127,20 @@ async def get_operation(
 
 async def get_operation_with_projection(
     session: AsyncSession, operation_id: uuid.UUID
-) -> tuple[Operation, Decimal, Decimal] | None:
+) -> tuple[Operation, Decimal, Decimal, Decimal] | None:
     statement = (
         select(
             Operation,
             required_expression().label("required_quantity"),
             required_time_expression().label("required_time_minutes"),
+            completed_expression().label("completed_quantity"),
         )
         .where(Operation.id == operation_id)
     )
     row = (await session.execute(statement)).one_or_none()
     if row is None:
         return None
-    return row[0], Decimal(row[1]), Decimal(row[2])
+    return row[0], Decimal(row[1]), Decimal(row[2]), Decimal(row[3])
 
 
 async def create_operation(session: AsyncSession, operation: Operation) -> Operation:
