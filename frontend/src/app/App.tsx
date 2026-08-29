@@ -31,6 +31,14 @@ const PersonnelPage = lazy(async () => {
   const module = await import("@/pages/PersonnelPage");
   return { default: module.PersonnelPage };
 });
+const SalesPage = lazy(async () => {
+  const module = await import("@/pages/SalesPage");
+  return { default: module.SalesPage };
+});
+const FinancePage = lazy(async () => {
+  const module = await import("@/pages/FinancePage");
+  return { default: module.FinancePage };
+});
 const TechnologicalProcessesPage = lazy(async () => {
   const module = await import("@/pages/TechnologicalProcessesPage");
   return { default: module.TechnologicalProcessesPage };
@@ -86,6 +94,20 @@ function AppLayout() {
           >
             Персонал
           </Button>
+          <Button
+            view="flat-action"
+            onClick={() => navigate(routes.sales)}
+            selected={location.pathname === routes.sales}
+          >
+            Продажи
+          </Button>
+          <Button
+            view="flat-action"
+            onClick={() => navigate(routes.finance)}
+            selected={location.pathname === routes.finance}
+          >
+            Финансы
+          </Button>
         </nav>
       </header>
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
@@ -106,6 +128,8 @@ function AppLayout() {
             element={<ProcessEditorPage />}
           />
           <Route path={routes.personnel} element={<PersonnelPage />} />
+          <Route path={routes.sales} element={<SalesPage />} />
+          <Route path={routes.finance} element={<FinancePage />} />
           <Route
             path="*"
             element={

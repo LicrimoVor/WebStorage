@@ -27,6 +27,8 @@ describe('AdjustStockButton', () => {
       source_type: 'manual',
       source_id: null,
       production_record_id: null,
+      unit_price_snapshot: null,
+      total_amount_snapshot: null,
       created_at: '2026-08-28T06:00:00Z',
     });
     const user = userEvent.setup();

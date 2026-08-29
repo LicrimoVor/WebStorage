@@ -635,6 +635,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sales */
+        get: operations["listSales"];
+        put?: never;
+        /** Register Sale */
+        post: operations["registerSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sales Summary */
+        get: operations["getSalesSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Financial Transaction */
+        post: operations["createFinancialTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Finance Entries */
+        get: operations["listFinanceEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Finance Summary */
+        get: operations["getFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -775,6 +861,146 @@ export interface components {
             /** Comment */
             comment?: string | null;
         };
+        /** FinanceEntryList */
+        FinanceEntryList: {
+            /** Items */
+            items: components["schemas"]["FinanceEntryRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** FinanceEntryRead */
+        FinanceEntryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            source_type: components["schemas"]["FinanceSource"];
+            direction: components["schemas"]["FinancialDirection"];
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Amount */
+            amount: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Comment */
+            comment: string | null;
+            /** Created By */
+            created_by: string;
+        };
+        /**
+         * FinanceSource
+         * @enum {string}
+         */
+        FinanceSource: "all" | "material" | "labour" | "sale" | "manual";
+        /** FinanceSummary */
+        FinanceSummary: {
+            /**
+             * Total Income
+             * @default 0
+             */
+            total_income: string;
+            /**
+             * Total Expense
+             * @default 0
+             */
+            total_expense: string;
+            /**
+             * Balance
+             * @default 0
+             */
+            balance: string;
+            /**
+             * Sales Income
+             * @default 0
+             */
+            sales_income: string;
+            /**
+             * Material Expense
+             * @default 0
+             */
+            material_expense: string;
+            /**
+             * Labour Expense
+             * @default 0
+             */
+            labour_expense: string;
+            /**
+             * Manual Income
+             * @default 0
+             */
+            manual_income: string;
+            /**
+             * Manual Expense
+             * @default 0
+             */
+            manual_expense: string;
+            /**
+             * Incomplete Material Movements
+             * @default 0
+             */
+            incomplete_material_movements: number;
+        };
+        /**
+         * FinancialDirection
+         * @enum {string}
+         */
+        FinancialDirection: "income" | "expense";
+        /** FinancialTransactionCreate */
+        FinancialTransactionCreate: {
+            transaction_type: components["schemas"]["FinancialDirection"];
+            /** Amount */
+            amount: number | string;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Category */
+            category: string;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** FinancialTransactionRead */
+        FinancialTransactionRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            transaction_type: components["schemas"]["FinancialDirection"];
+            /** Amount */
+            amount: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Category */
+            category: string;
+            /** Comment */
+            comment: string | null;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** GraphEdge */
         "GraphEdge-Input": {
             /** Id */
@@ -893,6 +1119,10 @@ export interface components {
             source_id: string | null;
             /** Production Record Id */
             production_record_id: string | null;
+            /** Unit Price Snapshot */
+            unit_price_snapshot: string | null;
+            /** Total Amount Snapshot */
+            total_amount_snapshot: string | null;
             /**
              * Created At
              * Format: date-time
@@ -979,6 +1209,8 @@ export interface components {
             source_id: string | null;
             /** Production Record Id */
             production_record_id: string | null;
+            /** Sale Id */
+            sale_id: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1802,6 +2034,110 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** SaleCreate */
+        SaleCreate: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Unit Price */
+            unit_price: number | string;
+            /** Sold At */
+            sold_at?: string | null;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** SaleList */
+        SaleList: {
+            /** Items */
+            items: components["schemas"]["SaleRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+            /** Filtered Quantity */
+            filtered_quantity: string;
+            /** Filtered Amount */
+            filtered_amount: string;
+        };
+        /** SaleRead */
+        SaleRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /** Product Unit */
+            product_unit: string;
+            /** Quantity */
+            quantity: string;
+            /** Unit Price */
+            unit_price: string;
+            /** Total Amount */
+            total_amount: string;
+            /**
+             * Sold At
+             * Format: date-time
+             */
+            sold_at: string;
+            /** Comment */
+            comment: string | null;
+            /**
+             * Inventory Movement Id
+             * Format: uuid
+             */
+            inventory_movement_id: string;
+            /** Balance After */
+            balance_after: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * SaleSortField
+         * @enum {string}
+         */
+        SaleSortField: "sold_at" | "product" | "quantity" | "total_amount";
+        /** SaleSummary */
+        SaleSummary: {
+            /** Sales Count */
+            sales_count: number;
+            /**
+             * Total Quantity
+             * @default 0
+             */
+            total_quantity: string;
+            /**
+             * Total Amount
+             * @default 0
+             */
+            total_amount: string;
+            /**
+             * Average Unit Price
+             * @default 0
+             */
+            average_unit_price: string;
         };
         /**
          * SortOrder
@@ -4470,6 +4806,243 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listSales: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                product_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                sort_by?: components["schemas"]["SaleSortField"];
+                sort_order?: components["schemas"]["SortOrder"];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleList"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registerSale: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable unique key for a retried sale command */
+                "Idempotency-Key": string;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getSalesSummary: {
+        parameters: {
+            query?: {
+                product_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaleSummary"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createFinancialTransaction: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancialTransactionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialTransactionRead"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listFinanceEntries: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                source?: components["schemas"]["FinanceSource"];
+                direction?: components["schemas"]["FinancialDirection"] | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                sort_order?: components["schemas"]["SortOrder"];
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceEntryList"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getFinanceSummary: {
+        parameters: {
+            query?: {
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSummary"];
                 };
             };
             /** @description Unprocessable Content */

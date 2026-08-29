@@ -6,4 +6,6 @@ export const routes = {
   processEditorPattern: '/processes/:processId',
   processEditor: (processId: string) => `/processes/${processId}`,
   personnel: '/personnel',
+  sales: '/sales',
+  finance: '/finance',
 } as const;

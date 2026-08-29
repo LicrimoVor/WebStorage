@@ -4,7 +4,7 @@ from enum import StrEnum
 from fastapi import Header
 
 from app.core.config import get_settings
-from app.core.errors import AuthenticationError
+from app.core.errors import AuthenticationError, AuthorizationError
 
 
 class Role(StrEnum):
@@ -33,3 +33,9 @@ async def get_current_actor(
     if scheme.lower() != "bearer" or not token or token != expected:
         raise AuthenticationError("A valid bearer token is required")
     return Actor(subject="configured-service-user", roles=frozenset({Role.ADMIN}))
+
+
+def require_any_role(actor: Actor, *allowed: Role) -> None:
+    if Role.ADMIN in actor.roles or actor.roles.intersection(allowed):
+        return
+    raise AuthorizationError("The current role is not allowed to perform this action")

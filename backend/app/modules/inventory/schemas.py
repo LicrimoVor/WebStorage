@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.types import Quantity
+from app.core.types import Money, Quantity
 from app.modules.inventory.types import ManualMovementType
 
 
@@ -32,6 +32,8 @@ class InventoryMovementRead(BaseModel):
     source_type: str | None
     source_id: uuid.UUID | None
     production_record_id: uuid.UUID | None
+    unit_price_snapshot: Money | None
+    total_amount_snapshot: Money | None
     created_at: datetime
 
 

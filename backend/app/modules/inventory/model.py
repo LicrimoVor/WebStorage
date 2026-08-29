@@ -25,6 +25,14 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         CheckConstraint("balance_before >= 0", name="balance_before_non_negative"),
         CheckConstraint("balance_after >= 0", name="balance_after_non_negative"),
         CheckConstraint(
+            "unit_price_snapshot IS NULL OR unit_price_snapshot >= 0",
+            name="unit_price_snapshot_non_negative",
+        ),
+        CheckConstraint(
+            "total_amount_snapshot IS NULL OR total_amount_snapshot >= 0",
+            name="total_amount_snapshot_non_negative",
+        ),
+        CheckConstraint(
             "movement_type IN ('receipt', 'consumption', 'production', "
             "'sale', 'adjustment', 'write_off')",
             name="movement_type_valid",
@@ -51,6 +59,12 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         UUID(as_uuid=True),
         ForeignKey("production_records.id", ondelete="RESTRICT"),
         nullable=True,
+    )
+    unit_price_snapshot: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2), nullable=True
+    )
+    total_amount_snapshot: Mapped[Decimal | None] = mapped_column(
+        Numeric(20, 2), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

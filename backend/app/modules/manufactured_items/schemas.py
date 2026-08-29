@@ -89,6 +89,7 @@ class ManufacturedItemMovementRead(BaseModel):
     source_type: str | None
     source_id: uuid.UUID | None
     production_record_id: uuid.UUID | None
+    sale_id: uuid.UUID | None
     created_at: datetime
 
 

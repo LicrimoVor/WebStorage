@@ -5,6 +5,7 @@ from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
 from app.modules.employees.model import Employee  # noqa: F401
+from app.modules.finance.model import FinancialTransaction  # noqa: F401
 from app.modules.inventory.model import InventoryMovement  # noqa: F401
 from app.modules.manufactured_items.model import (  # noqa: F401
     ManufacturedItem,
@@ -24,6 +25,7 @@ from app.modules.production_plans.model import (  # noqa: F401
     ProductionPlanMaterialRequirement,
     ProductionPlanOperationRequirement,
 )
+from app.modules.sales.model import Sale  # noqa: F401
 from app.modules.technological_processes.model import (  # noqa: F401
     TechnologicalProcess,
     TechnologicalProcessEdge,

@@ -69,6 +69,7 @@ class ManufacturedItemMovement(UUIDPrimaryKeyMixin, Base):
             "ix_manufactured_item_movements_production_record",
             "production_record_id",
         ),
+        Index("ux_manufactured_item_movements_sale", "sale_id", unique=True),
     )
 
     id: Mapped[uuid.UUID]
@@ -91,6 +92,11 @@ class ManufacturedItemMovement(UUIDPrimaryKeyMixin, Base):
     production_record_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("production_records.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    sale_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sales.id", ondelete="RESTRICT"),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(

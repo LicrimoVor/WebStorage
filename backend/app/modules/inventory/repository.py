@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,14 @@ async def create_movement(
     if balance_after < 0:
         raise ConflictError("Inventory movement would make the balance negative")
 
+    price_snapshot = material.price
+    amount_snapshot = (
+        (abs(quantity) * price_snapshot).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if price_snapshot is not None
+        else None
+    )
     movement = InventoryMovement(
         material_id=material_id,
         movement_type=movement_type.value,
@@ -46,6 +54,8 @@ async def create_movement(
         source_type=source_type,
         source_id=source_id,
         production_record_id=production_record_id,
+        unit_price_snapshot=price_snapshot,
+        total_amount_snapshot=amount_snapshot,
     )
     session.add(movement)
     await session.flush()

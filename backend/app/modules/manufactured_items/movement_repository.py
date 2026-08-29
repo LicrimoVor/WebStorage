@@ -22,6 +22,7 @@ async def create_movement(
     source_type: str | None,
     source_id: uuid.UUID | None = None,
     production_record_id: uuid.UUID | None = None,
+    sale_id: uuid.UUID | None = None,
 ) -> ManufacturedItemMovement:
     item_statement = (
         select(ManufacturedItem).where(ManufacturedItem.id == item_id).with_for_update()
@@ -50,6 +51,7 @@ async def create_movement(
         source_type=source_type,
         source_id=source_id,
         production_record_id=production_record_id,
+        sale_id=sale_id,
     )
     session.add(movement)
     await session.flush()

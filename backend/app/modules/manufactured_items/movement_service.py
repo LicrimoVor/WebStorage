@@ -29,6 +29,7 @@ def to_read_model(
         source_type=movement.source_type,
         source_id=movement.source_id,
         production_record_id=movement.production_record_id,
+        sale_id=movement.sale_id,
         created_at=movement.created_at,
     )
 

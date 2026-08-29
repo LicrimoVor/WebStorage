@@ -27,6 +27,8 @@ def to_read_model(movement: InventoryMovement) -> InventoryMovementRead:
         source_type=movement.source_type,
         source_id=movement.source_id,
         production_record_id=movement.production_record_id,
+        unit_price_snapshot=movement.unit_price_snapshot,
+        total_amount_snapshot=movement.total_amount_snapshot,
         created_at=movement.created_at,
     )
 
