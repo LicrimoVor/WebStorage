@@ -3806,6 +3806,197 @@
         }
       }
     },
+    "/api/v1/manufactured-items/{item_id}/production-preview": {
+      "post": {
+        "tags": [
+          "production execution"
+        ],
+        "summary": "Preview Direct Production",
+        "operationId": "previewDirectProduction",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectProductionPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectProductionPreviewRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/manufactured-items/{item_id}/produce": {
+      "post": {
+        "tags": [
+          "production execution"
+        ],
+        "summary": "Register Direct Production",
+        "operationId": "registerDirectProduction",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 100,
+              "description": "Stable unique key for a retried production command",
+              "title": "Idempotency-Key"
+            },
+            "description": "Stable unique key for a retried production command"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectProductionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionRecordRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/api/v1/operations/{operation_id}/work-entries": {
       "post": {
         "tags": [
@@ -5777,6 +5968,290 @@
         ],
         "title": "DemandedMaterialRow"
       },
+      "DirectProductionCreate": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "operation_assignments": {
+            "items": {
+              "$ref": "#/components/schemas/ProductionOperationAssignment"
+            },
+            "type": "array",
+            "title": "Operation Assignments"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quantity"
+        ],
+        "title": "DirectProductionCreate"
+      },
+      "DirectProductionMaterialRead": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "stock_used_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Stock Used Quantity"
+          },
+          "deficit_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Deficit Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "name",
+          "unit",
+          "required_quantity",
+          "stock_used_quantity",
+          "deficit_quantity"
+        ],
+        "title": "DirectProductionMaterialRead"
+      },
+      "DirectProductionOperationRead": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "required_time_minutes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Time Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "name",
+          "required_quantity",
+          "required_time_minutes"
+        ],
+        "title": "DirectProductionOperationRead"
+      },
+      "DirectProductionPreviewRead": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "item_name": {
+            "type": "string",
+            "title": "Item Name"
+          },
+          "item_unit": {
+            "type": "string",
+            "title": "Item Unit"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity"
+          },
+          "can_produce": {
+            "type": "boolean",
+            "title": "Can Produce"
+          },
+          "tree": {
+            "$ref": "#/components/schemas/DirectProductionTreeRead"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/DirectProductionMaterialRead"
+            },
+            "type": "array",
+            "title": "Materials"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/DirectProductionOperationRead"
+            },
+            "type": "array",
+            "title": "Operations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "item_name",
+          "item_unit",
+          "quantity",
+          "can_produce",
+          "tree",
+          "materials",
+          "operations"
+        ],
+        "title": "DirectProductionPreviewRead"
+      },
+      "DirectProductionPreviewRequest": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quantity"
+        ],
+        "title": "DirectProductionPreviewRequest"
+      },
+      "DirectProductionTreeRead": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity"
+          },
+          "stock_used_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Stock Used Quantity"
+          },
+          "to_produce_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "To Produce Quantity"
+          },
+          "process_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Version Id"
+          },
+          "process_version_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Version Number"
+          },
+          "recipe_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Source"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/DirectProductionTreeRead"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "name",
+          "unit",
+          "required_quantity",
+          "stock_used_quantity",
+          "to_produce_quantity",
+          "process_version_id",
+          "process_version_number",
+          "recipe_source"
+        ],
+        "title": "DirectProductionTreeRead"
+      },
       "EmployeeAnalyticsRow": {
         "properties": {
           "employee_id": {
@@ -5826,6 +6301,14 @@
         ],
         "title": "EmployeeAnalyticsRow"
       },
+      "EmployeeCompensationType": {
+        "type": "string",
+        "enum": [
+          "piecework",
+          "hourly"
+        ],
+        "title": "EmployeeCompensationType"
+      },
       "EmployeeCreate": {
         "properties": {
           "full_name": {
@@ -5833,6 +6316,27 @@
             "maxLength": 200,
             "minLength": 1,
             "title": "Full Name"
+          },
+          "compensation_type": {
+            "$ref": "#/components/schemas/EmployeeCompensationType",
+            "default": "piecework"
+          },
+          "hourly_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourly Rate"
           },
           "comment": {
             "anyOf": [
@@ -5905,6 +6409,11 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
             "title": "Completed Quantity"
           },
+          "paid_quantity_equivalent": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Paid Quantity Equivalent"
+          },
           "time_minutes": {
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
@@ -5931,6 +6440,7 @@
           "operation_id",
           "operation_name",
           "completed_quantity",
+          "paid_quantity_equivalent",
           "time_minutes",
           "accrued_amount",
           "paid_amount",
@@ -5965,6 +6475,11 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
             "title": "Completed Operations"
           },
+          "paid_operations_equivalent": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Paid Operations Equivalent"
+          },
           "operations": {
             "items": {
               "$ref": "#/components/schemas/EmployeeOperationSummary"
@@ -5980,6 +6495,7 @@
           "paid_total",
           "payable_total",
           "completed_operations",
+          "paid_operations_equivalent",
           "operations"
         ],
         "title": "EmployeePayrollSummary"
@@ -5998,6 +6514,21 @@
           "active": {
             "type": "boolean",
             "title": "Active"
+          },
+          "compensation_type": {
+            "$ref": "#/components/schemas/EmployeeCompensationType"
+          },
+          "hourly_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourly Rate"
           },
           "comment": {
             "anyOf": [
@@ -6034,6 +6565,12 @@
             "title": "Completed Operations",
             "default": "0"
           },
+          "paid_operations_equivalent": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Paid Operations Equivalent",
+            "default": "0"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6050,6 +6587,8 @@
           "id",
           "full_name",
           "active",
+          "compensation_type",
+          "hourly_rate",
           "comment",
           "created_at",
           "updated_at"
@@ -6078,6 +6617,33 @@
               }
             ],
             "title": "Full Name"
+          },
+          "compensation_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeCompensationType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hourly_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hourly Rate"
           },
           "comment": {
             "anyOf": [
@@ -8971,6 +9537,32 @@
         ],
         "title": "ProductionComponentRead"
       },
+      "ProductionOperationAssignment": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "employee_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id"
+        ],
+        "title": "ProductionOperationAssignment"
+      },
       "ProductionPlanCreate": {
         "properties": {
           "product_id": {
@@ -9471,8 +10063,15 @@
             "title": "Id"
           },
           "production_plan_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Production Plan Id"
           },
           "item_id": {
@@ -9537,6 +10136,14 @@
             },
             "type": "array",
             "title": "Components"
+          },
+          "work_entry_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Work Entry Ids"
           },
           "created_at": {
             "type": "string",
@@ -10047,6 +10654,15 @@
         ],
         "title": "WarehouseAnalytics"
       },
+      "WorkCompensationType": {
+        "type": "string",
+        "enum": [
+          "piecework",
+          "hourly",
+          "anonymous"
+        ],
+        "title": "WorkCompensationType"
+      },
       "WorkEntryCreate": {
         "properties": {
           "employee_id": {
@@ -10147,8 +10763,15 @@
             "title": "Id"
           },
           "employee_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Employee Id"
           },
           "employee_name": {
@@ -10166,6 +10789,9 @@
           },
           "input_mode": {
             "$ref": "#/components/schemas/WorkInputMode"
+          },
+          "compensation_type_snapshot": {
+            "$ref": "#/components/schemas/WorkCompensationType"
           },
           "input_value": {
             "type": "string",
@@ -10318,6 +10944,18 @@
               }
             ],
             "title": "Void Reason"
+          },
+          "production_record_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Production Record Id"
           }
         },
         "type": "object",
@@ -10328,6 +10966,7 @@
           "operation_id",
           "operation_name",
           "input_mode",
+          "compensation_type_snapshot",
           "input_value",
           "equivalent_quantity",
           "time_minutes",
@@ -10341,7 +10980,8 @@
           "updated_at",
           "voided_at",
           "voided_by",
-          "void_reason"
+          "void_reason",
+          "production_record_id"
         ],
         "title": "WorkEntryRead"
       },

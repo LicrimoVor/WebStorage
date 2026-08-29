@@ -347,7 +347,10 @@ export function AnalyticsPage() {
           actions={<Button onClick={() => query.refetch()}>Повторить</Button>}
         />
       ) : !query.data ? (
-        <PlaceholderContainer image={<ChartColumn />} title="Данных пока нет" />
+        <PlaceholderContainer
+          image={<ChartColumn width={100} height={100} />}
+          title="Данных пока нет"
+        />
       ) : (
         <Dashboard dashboard={query.data} />
       )}

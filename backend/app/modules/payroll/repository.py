@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.selectable import Subquery
 
@@ -41,11 +41,11 @@ async def work_entry_details(
         await session.execute(
             select(
                 WorkEntry.id,
-                Employee.full_name,
+                func.coalesce(Employee.full_name, "Анонимно"),
                 Operation.name,
                 func.coalesce(totals.c.paid_amount, Decimal("0")),
             )
-            .join(Employee, Employee.id == WorkEntry.employee_id)
+            .outerjoin(Employee, Employee.id == WorkEntry.employee_id)
             .join(Operation, Operation.id == WorkEntry.operation_id)
             .outerjoin(totals, totals.c.work_entry_id == WorkEntry.id)
             .where(WorkEntry.id.in_(work_entry_ids))
@@ -164,10 +164,19 @@ async def payment_allocations(
 
 async def employee_totals(
     session: AsyncSession, employee_ids: Sequence[uuid.UUID]
-) -> dict[uuid.UUID, tuple[Decimal, Decimal, Decimal]]:
+) -> dict[uuid.UUID, tuple[Decimal, Decimal, Decimal, Decimal]]:
     if not employee_ids:
         return {}
     totals = allocation_totals_subquery()
+    paid_amount = func.coalesce(totals.c.paid_amount, Decimal("0"))
+    paid_equivalent = case(
+        (
+            WorkEntry.accrued_amount > 0,
+            func.coalesce(WorkEntry.equivalent_quantity, Decimal("0"))
+            * func.least(paid_amount / WorkEntry.accrued_amount, Decimal("1")),
+        ),
+        else_=Decimal("0"),
+    )
     rows = (
         await session.execute(
             select(
@@ -175,6 +184,7 @@ async def employee_totals(
                 func.coalesce(func.sum(WorkEntry.accrued_amount), Decimal("0")),
                 func.coalesce(func.sum(totals.c.paid_amount), Decimal("0")),
                 func.coalesce(func.sum(WorkEntry.equivalent_quantity), Decimal("0")),
+                func.coalesce(func.sum(paid_equivalent), Decimal("0")),
             )
             .outerjoin(totals, totals.c.work_entry_id == WorkEntry.id)
             .where(
@@ -185,7 +195,12 @@ async def employee_totals(
         )
     ).all()
     return {
-        row[0]: (Decimal(row[1]), Decimal(row[2]), Decimal(row[3]))
+        row[0]: (
+            Decimal(row[1]),
+            Decimal(row[2]),
+            Decimal(row[3]),
+            Decimal(row[4]),
+        )
         for row in rows
     }
 
@@ -213,8 +228,17 @@ async def operation_completed_totals(
 
 async def employee_operation_totals(
     session: AsyncSession, employee_id: uuid.UUID
-) -> list[tuple[uuid.UUID, str, Decimal, Decimal, Decimal, Decimal]]:
+) -> list[tuple[uuid.UUID, str, Decimal, Decimal, Decimal, Decimal, Decimal]]:
     totals = allocation_totals_subquery()
+    paid_amount = func.coalesce(totals.c.paid_amount, Decimal("0"))
+    paid_equivalent = case(
+        (
+            WorkEntry.accrued_amount > 0,
+            func.coalesce(WorkEntry.equivalent_quantity, Decimal("0"))
+            * func.least(paid_amount / WorkEntry.accrued_amount, Decimal("1")),
+        ),
+        else_=Decimal("0"),
+    )
     rows = (
         await session.execute(
             select(
@@ -224,6 +248,7 @@ async def employee_operation_totals(
                 func.coalesce(func.sum(WorkEntry.time_minutes), Decimal("0")),
                 func.coalesce(func.sum(WorkEntry.accrued_amount), Decimal("0")),
                 func.coalesce(func.sum(totals.c.paid_amount), Decimal("0")),
+                func.coalesce(func.sum(paid_equivalent), Decimal("0")),
             )
             .join(Operation, Operation.id == WorkEntry.operation_id)
             .outerjoin(totals, totals.c.work_entry_id == WorkEntry.id)
@@ -243,6 +268,7 @@ async def employee_operation_totals(
             Decimal(row[3]),
             Decimal(row[4]),
             Decimal(row[5]),
+            Decimal(row[6]),
         )
         for row in rows
     ]

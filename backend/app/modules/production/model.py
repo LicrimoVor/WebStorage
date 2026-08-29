@@ -20,8 +20,10 @@ class ProductionRecord(UUIDPrimaryKeyMixin, Base):
     )
 
     id: Mapped[uuid.UUID]
-    production_plan_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("production_plans.id", ondelete="RESTRICT")
+    production_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("production_plans.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("manufactured_items.id", ondelete="RESTRICT")

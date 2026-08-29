@@ -530,6 +530,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manufactured-items/{item_id}/production-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Direct Production */
+        post: operations["previewDirectProduction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manufactured-items/{item_id}/produce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Direct Production */
+        post: operations["registerDirectProduction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operations/{operation_id}/work-entries": {
         parameters: {
             query?: never;
@@ -825,6 +859,99 @@ export interface components {
              */
             consumed_quantity: string;
         };
+        /** DirectProductionCreate */
+        DirectProductionCreate: {
+            /** Quantity */
+            quantity: number | string;
+            /** Operation Assignments */
+            operation_assignments?: components["schemas"]["ProductionOperationAssignment"][];
+            /** Comment */
+            comment?: string | null;
+        };
+        /** DirectProductionMaterialRead */
+        DirectProductionMaterialRead: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Stock Used Quantity */
+            stock_used_quantity: string;
+            /** Deficit Quantity */
+            deficit_quantity: string;
+        };
+        /** DirectProductionOperationRead */
+        DirectProductionOperationRead: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Name */
+            name: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Required Time Minutes */
+            required_time_minutes: string | null;
+        };
+        /** DirectProductionPreviewRead */
+        DirectProductionPreviewRead: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Item Name */
+            item_name: string;
+            /** Item Unit */
+            item_unit: string;
+            /** Quantity */
+            quantity: string;
+            /** Can Produce */
+            can_produce: boolean;
+            tree: components["schemas"]["DirectProductionTreeRead"];
+            /** Materials */
+            materials: components["schemas"]["DirectProductionMaterialRead"][];
+            /** Operations */
+            operations: components["schemas"]["DirectProductionOperationRead"][];
+        };
+        /** DirectProductionPreviewRequest */
+        DirectProductionPreviewRequest: {
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** DirectProductionTreeRead */
+        DirectProductionTreeRead: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Stock Used Quantity */
+            stock_used_quantity: string;
+            /** To Produce Quantity */
+            to_produce_quantity: string;
+            /** Process Version Id */
+            process_version_id: string | null;
+            /** Process Version Number */
+            process_version_number: number | null;
+            /** Recipe Source */
+            recipe_source: string | null;
+            /** Children */
+            children?: components["schemas"]["DirectProductionTreeRead"][];
+        };
         /** EmployeeAnalyticsRow */
         EmployeeAnalyticsRow: {
             /**
@@ -860,10 +987,19 @@ export interface components {
              */
             person_hours: string;
         };
+        /**
+         * EmployeeCompensationType
+         * @enum {string}
+         */
+        EmployeeCompensationType: "piecework" | "hourly";
         /** EmployeeCreate */
         EmployeeCreate: {
             /** Full Name */
             full_name: string;
+            /** @default piecework */
+            compensation_type: components["schemas"]["EmployeeCompensationType"];
+            /** Hourly Rate */
+            hourly_rate?: number | string | null;
             /** Comment */
             comment?: string | null;
         };
@@ -891,6 +1027,8 @@ export interface components {
             operation_name: string;
             /** Completed Quantity */
             completed_quantity: string;
+            /** Paid Quantity Equivalent */
+            paid_quantity_equivalent: string;
             /** Time Minutes */
             time_minutes: string;
             /** Accrued Amount */
@@ -915,6 +1053,8 @@ export interface components {
             payable_total: string;
             /** Completed Operations */
             completed_operations: string;
+            /** Paid Operations Equivalent */
+            paid_operations_equivalent: string;
             /** Operations */
             operations: components["schemas"]["EmployeeOperationSummary"][];
         };
@@ -929,6 +1069,9 @@ export interface components {
             full_name: string;
             /** Active */
             active: boolean;
+            compensation_type: components["schemas"]["EmployeeCompensationType"];
+            /** Hourly Rate */
+            hourly_rate: string | null;
             /** Comment */
             comment: string | null;
             /**
@@ -952,6 +1095,11 @@ export interface components {
              */
             completed_operations: string;
             /**
+             * Paid Operations Equivalent
+             * @default 0
+             */
+            paid_operations_equivalent: string;
+            /**
              * Created At
              * Format: date-time
              */
@@ -971,6 +1119,9 @@ export interface components {
         EmployeeUpdate: {
             /** Full Name */
             full_name?: string | null;
+            compensation_type?: components["schemas"]["EmployeeCompensationType"] | null;
+            /** Hourly Rate */
+            hourly_rate?: number | string | null;
             /** Comment */
             comment?: string | null;
         };
@@ -2075,6 +2226,16 @@ export interface components {
              */
             movement_id: string;
         };
+        /** ProductionOperationAssignment */
+        ProductionOperationAssignment: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Employee Id */
+            employee_id?: string | null;
+        };
         /** ProductionPlanCreate */
         ProductionPlanCreate: {
             /**
@@ -2256,11 +2417,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /**
-             * Production Plan Id
-             * Format: uuid
-             */
-            production_plan_id: string;
+            /** Production Plan Id */
+            production_plan_id: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -2294,6 +2452,8 @@ export interface components {
             output_balance_after: string;
             /** Components */
             components: components["schemas"]["ProductionComponentRead"][];
+            /** Work Entry Ids */
+            work_entry_ids?: string[];
             /**
              * Created At
              * Format: date-time
@@ -2547,6 +2707,11 @@ export interface components {
             /** Dynamics */
             dynamics: components["schemas"]["StockPoint"][];
         };
+        /**
+         * WorkCompensationType
+         * @enum {string}
+         */
+        WorkCompensationType: "piecework" | "hourly" | "anonymous";
         /** WorkEntryCreate */
         WorkEntryCreate: {
             /**
@@ -2582,11 +2747,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
+            /** Employee Id */
+            employee_id: string | null;
             /** Employee Name */
             employee_name: string;
             /**
@@ -2597,6 +2759,7 @@ export interface components {
             /** Operation Name */
             operation_name: string;
             input_mode: components["schemas"]["WorkInputMode"];
+            compensation_type_snapshot: components["schemas"]["WorkCompensationType"];
             /** Input Value */
             input_value: string;
             /** Equivalent Quantity */
@@ -2646,6 +2809,8 @@ export interface components {
             voided_by: string | null;
             /** Void Reason */
             void_reason: string | null;
+            /** Production Record Id */
+            production_record_id: string | null;
         };
         /** WorkEntryUpdate */
         WorkEntryUpdate: {
@@ -4727,6 +4892,118 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ProductionRecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductionRecordRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    previewDirectProduction: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectProductionPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectProductionPreviewRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registerDirectProduction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable unique key for a retried production command */
+                "Idempotency-Key": string;
+                authorization?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectProductionCreate"];
             };
         };
         responses: {

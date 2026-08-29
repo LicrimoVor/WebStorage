@@ -22,11 +22,11 @@ import {
   type ManufacturedItemSortField,
   type SortOrder,
 } from "@/entities/ManufacturedItem";
-import { AdjustManufacturedStockButton } from "@/features/AdjustManufacturedStock";
 import { ArchiveManufacturedItemButton } from "@/features/ArchiveManufacturedItem";
 import { CreateManufacturedItemButton } from "@/features/CreateManufacturedItem";
 import { EditManufacturedItemButton } from "@/features/EditManufacturedItem";
 import { ExportExcelButton } from "@/features/ExportExcel";
+import { ProduceManufacturedItemButton } from "@/features/ProduceManufacturedItem";
 import { ManufacturedInventoryHistoryButton } from "@/features/ViewManufacturedInventoryHistory";
 import { getErrorMessage } from "@/shared/api";
 
@@ -101,7 +101,7 @@ export function ManufacturedItemsSection({
   };
   const renderActions = (item: ManufacturedItem) => (
     <div className={styles.actions}>
-      <AdjustManufacturedStockButton item={item} />
+      <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />
       <ManufacturedInventoryHistoryButton item={item} />
       <EditManufacturedItemButton item={item} />
       <ArchiveManufacturedItemButton item={item} />
@@ -198,7 +198,7 @@ export function ManufacturedItemsSection({
         />
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
-          image={<Boxes3 />}
+          image={<Boxes3 width={100} height={100} />}
           title={
             hasFilters ? "Ничего не найдено" : `${title} пока не добавлены`
           }

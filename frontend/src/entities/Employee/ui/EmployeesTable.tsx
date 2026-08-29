@@ -20,6 +20,20 @@ export function EmployeesTable({items, renderActions}: EmployeesTableProps) {
       template: (item) => <Text variant="body-2">{item.full_name}</Text>,
     },
     {
+      id: 'compensation_type',
+      name: 'Оплата',
+      template: (item) => (
+        <div>
+          <Text>{item.compensation_type === 'hourly' ? 'Почасовая' : 'Сдельная'}</Text>
+          {item.hourly_rate ? (
+            <Text as="div" color="secondary" variant="caption-2">
+              {formatMoney(item.hourly_rate)} / ч
+            </Text>
+          ) : null}
+        </div>
+      ),
+    },
+    {
       id: 'status',
       name: 'Статус',
       template: (item) => (
@@ -48,9 +62,15 @@ export function EmployeesTable({items, renderActions}: EmployeesTableProps) {
     },
     {
       id: 'completed_operations',
-      name: 'Выполнено операций',
+      name: 'Выполнено, экв.',
       align: 'end',
       template: (item) => formatDecimal(item.completed_operations),
+    },
+    {
+      id: 'paid_operations_equivalent',
+      name: 'Оплачено, экв.',
+      align: 'end',
+      template: (item) => formatDecimal(item.paid_operations_equivalent),
     },
     {id: 'comment', name: 'Комментарий', template: (item) => item.comment ?? '—'},
     {

@@ -234,6 +234,11 @@
   min-width: min(480px, 80vw);
 }
 
+.productionTab {
+  display: grid;
+  gap: var(--g-spacing-4);
+}
+
 .fileInput {
   position: absolute;
   width: 1px;

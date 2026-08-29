@@ -45,17 +45,26 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "accrued_amount IS NULL OR accrued_amount >= 0",
             name="accrued_amount_non_negative",
         ),
+        CheckConstraint(
+            "compensation_type_snapshot IN ('piecework', 'hourly', 'anonymous')",
+            name="compensation_type_snapshot_valid",
+        ),
+        CheckConstraint(
+            "employee_id IS NOT NULL OR production_record_id IS NOT NULL",
+            name="employee_or_production_present",
+        ),
         Index("ix_work_entries_employee_performed", "employee_id", "performed_at"),
         Index("ix_work_entries_operation_performed", "operation_id", "performed_at"),
         Index("ix_work_entries_voided_at", "voided_at"),
         Index("ix_work_entries_performed_at", "performed_at"),
+        Index("ix_work_entries_production_record", "production_record_id"),
     )
 
     id: Mapped[uuid.UUID]
-    employee_id: Mapped[uuid.UUID] = mapped_column(
+    employee_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("employees.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     operation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -63,6 +72,9 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
     )
     input_mode: Mapped[str] = mapped_column(String(20), nullable=False)
+    compensation_type_snapshot: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="piecework", default="piecework"
+    )
     input_value: Mapped[Decimal] = mapped_column(Numeric(20, 6), nullable=False)
     equivalent_quantity: Mapped[Decimal | None] = mapped_column(
         Numeric(20, 6), nullable=True
@@ -78,6 +90,11 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     performed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    production_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("production_records.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     voided_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
     void_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

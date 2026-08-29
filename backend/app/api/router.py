@@ -13,7 +13,12 @@ from app.modules.materials.router import router as materials_router
 from app.modules.media.router import router as media_router
 from app.modules.operations.router import router as operations_router
 from app.modules.payroll.router import router as payroll_router
-from app.modules.production.router import router as production_router
+from app.modules.production.router import (
+    router as production_router,
+)
+from app.modules.production.router import (
+    standalone_router as standalone_production_router,
+)
 from app.modules.production_plans.router import router as production_plans_router
 from app.modules.sales.router import router as sales_router
 from app.modules.technological_processes.router import (
@@ -30,6 +35,7 @@ api_router.include_router(employees_router)
 api_router.include_router(technological_processes_router)
 api_router.include_router(production_plans_router)
 api_router.include_router(production_router)
+api_router.include_router(standalone_production_router)
 api_router.include_router(payroll_router)
 api_router.include_router(sales_router)
 api_router.include_router(finance_router)

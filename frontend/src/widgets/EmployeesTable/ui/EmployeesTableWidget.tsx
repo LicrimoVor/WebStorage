@@ -158,7 +158,7 @@ export function EmployeesTableWidget() {
         />
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
-          image={<Persons />}
+          image={<Persons width={100} height={100} />}
           title={hasFilters ? "Ничего не найдено" : "Сотрудников пока нет"}
           description={
             hasFilters

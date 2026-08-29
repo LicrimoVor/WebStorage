@@ -42,6 +42,11 @@ export function CreateEmployeeButton() {
     }
     mutation.mutate({
       full_name: form.fullName.trim(),
+      compensation_type: form.compensationType,
+      hourly_rate:
+        form.compensationType === 'hourly'
+          ? form.hourlyRate.replace(',', '.')
+          : null,
       comment: form.comment.trim() || null,
     });
   };

@@ -160,7 +160,7 @@ export function OperationsTableWidget() {
         />
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
-          image={<Wrench />}
+          image={<Wrench width={100} height={100} />}
           title={hasFilters ? "Ничего не найдено" : "Операций пока нет"}
           description={
             hasFilters

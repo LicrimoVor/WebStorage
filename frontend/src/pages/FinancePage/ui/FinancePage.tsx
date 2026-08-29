@@ -374,7 +374,7 @@ export function FinancePage() {
           />
         ) : query.data.items.length === 0 ? (
           <PlaceholderContainer
-            image={<Archive />}
+            image={<Archive width={100} height={100} />}
             title="Финансовых операций пока нет"
             description="Продажи, выплаты, расходы материалов и ручные операции появятся здесь."
           />

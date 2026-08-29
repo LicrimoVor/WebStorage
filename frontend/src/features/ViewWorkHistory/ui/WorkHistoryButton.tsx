@@ -129,6 +129,7 @@ function EditWorkEntryButton({ entry }: { entry: WorkEntry }) {
               onUpdate={(values) =>
                 setMode((values[0] as WorkInputMode) ?? mode)
               }
+              disabled={entry.compensation_type_snapshot === "hourly"}
               width="max"
               size="l"
             />

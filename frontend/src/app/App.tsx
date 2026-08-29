@@ -150,7 +150,7 @@ function AppLayout() {
             element={
               <div className={styles.notFound}>
                 <PlaceholderContainer
-                  image={<Icon data={CircleQuestion} size={48} />}
+                  image={<Icon data={CircleQuestion} size={100} />}
                   title="Страница не найдена"
                   description="Проверьте адрес или вернитесь на склад."
                   actions={

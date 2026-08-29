@@ -13,6 +13,12 @@ class WorkInputMode(StrEnum):
     TIME = "time"
 
 
+class WorkCompensationType(StrEnum):
+    PIECEWORK = "piecework"
+    HOURLY = "hourly"
+    ANONYMOUS = "anonymous"
+
+
 class WorkEntryCreate(BaseModel):
     employee_id: uuid.UUID
     input_mode: WorkInputMode
@@ -58,11 +64,12 @@ class WorkEntryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    employee_id: uuid.UUID
+    employee_id: uuid.UUID | None
     employee_name: str
     operation_id: uuid.UUID
     operation_name: str
     input_mode: WorkInputMode
+    compensation_type_snapshot: WorkCompensationType
     input_value: Quantity
     equivalent_quantity: Quantity | None
     time_minutes: Quantity | None
@@ -80,6 +87,7 @@ class WorkEntryRead(BaseModel):
     voided_at: datetime | None
     voided_by: str | None
     void_reason: str | None
+    production_record_id: uuid.UUID | None
 
 
 class WorkEntryList(BaseModel):
@@ -151,6 +159,7 @@ class EmployeeOperationSummary(BaseModel):
     operation_id: uuid.UUID
     operation_name: str
     completed_quantity: Quantity
+    paid_quantity_equivalent: Quantity
     time_minutes: Quantity
     accrued_amount: Money
     paid_amount: Money
@@ -163,4 +172,5 @@ class EmployeePayrollSummary(BaseModel):
     paid_total: Money
     payable_total: Money
     completed_operations: Quantity
+    paid_operations_equivalent: Quantity
     operations: list[EmployeeOperationSummary]

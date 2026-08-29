@@ -7,6 +7,7 @@ export const workEntryFixture: WorkEntry = {
   operation_id: '046791de-a39d-412e-848c-64465806c45b',
   operation_name: 'Сверление',
   input_mode: 'quantity',
+  compensation_type_snapshot: 'piecework',
   input_value: '2.000000',
   equivalent_quantity: '2.000000',
   time_minutes: '7.000000',
@@ -24,11 +25,12 @@ export const workEntryFixture: WorkEntry = {
   voided_at: null,
   voided_by: null,
   void_reason: null,
+  production_record_id: null,
 };
 
 export const paymentFixture: Payment = {
   id: '54f29e67-7f83-4284-9705-7d6d94f07731',
-  employee_id: workEntryFixture.employee_id,
+  employee_id: workEntryFixture.employee_id!,
   employee_name: workEntryFixture.employee_name,
   amount: '20.00',
   paid_at: '2026-08-29T05:00:00Z',

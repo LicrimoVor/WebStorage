@@ -247,3 +247,60 @@ async def test_payment_cannot_exceed_payable_amount(client: AsyncClient) -> None
         f"/api/v1/employees/{employee['id']}/payments", json={"amount": "10.01"}
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_hourly_employee_is_paid_by_time_and_tracks_paid_equivalent(
+    client: AsyncClient,
+) -> None:
+    employee_response = await client.post(
+        "/api/v1/employees",
+        json={
+            "full_name": "Hourly Operator",
+            "compensation_type": "hourly",
+            "hourly_rate": "600",
+        },
+    )
+    assert employee_response.status_code == 201, employee_response.text
+    employee = employee_response.json()
+    operation = await create_operation(
+        client, name="Hourly assembly", time_norm="5", rate="999"
+    )
+
+    rejected = await client.post(
+        f"/api/v1/operations/{operation['id']}/work-entries",
+        json={
+            "employee_id": employee["id"],
+            "input_mode": "quantity",
+            "input_value": "6",
+        },
+    )
+    assert rejected.status_code == 422
+
+    entry = await record_work(
+        client,
+        operation_id=operation["id"],
+        employee_id=employee["id"],
+        mode="time",
+        value="30",
+    )
+    assert entry["compensation_type_snapshot"] == "hourly"
+    assert Decimal(entry["equivalent_quantity"]) == Decimal("6")
+    assert Decimal(entry["rate_snapshot"]) == Decimal("600")
+    assert Decimal(entry["accrued_amount"]) == Decimal("300")
+
+    payment = await client.post(
+        f"/api/v1/employees/{employee['id']}/payments", json={"amount": "150"}
+    )
+    assert payment.status_code == 201, payment.text
+    summary = (
+        await client.get(f"/api/v1/employees/{employee['id']}/payroll-summary")
+    ).json()
+    assert Decimal(summary["completed_operations"]) == Decimal("6")
+    assert Decimal(summary["paid_operations_equivalent"]) == Decimal("3")
+    assert Decimal(summary["operations"][0]["paid_quantity_equivalent"]) == Decimal(
+        "3"
+    )
+    employee_read = (await client.get(f"/api/v1/employees/{employee['id']}")).json()
+    assert employee_read["compensation_type"] == "hourly"
+    assert Decimal(employee_read["paid_operations_equivalent"]) == Decimal("3")

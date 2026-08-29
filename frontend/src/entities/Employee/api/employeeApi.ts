@@ -37,11 +37,12 @@ export async function listEmployees(
   );
 }
 
-export function useEmployeesQuery(params: EmployeeListParams) {
+export function useEmployeesQuery(params: EmployeeListParams, enabled = true) {
   return useQuery({
     queryKey: employeeKeys.list(params),
     queryFn: ({signal}) => listEmployees(params, signal),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

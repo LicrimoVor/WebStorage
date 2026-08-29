@@ -106,8 +106,13 @@ DATASET_COLUMNS: dict[ExportDataset, tuple[str, list[ExportColumn]]] = {
         "Персонал",
         [
             ExportColumn("full_name", "Сотрудник", width=32),
+            ExportColumn("compensation_type", "Тип оплаты", width=18),
+            ExportColumn("hourly_rate", "Ставка в час", MONEY),
             ExportColumn("active", "Статус", width=14),
             ExportColumn("completed_operations", "Операций", QUANTITY),
+            ExportColumn(
+                "paid_operations_equivalent", "Оплачено, экв.", QUANTITY
+            ),
             ExportColumn("accrued", "Начислено", MONEY),
             ExportColumn("paid", "Выплачено", MONEY),
             ExportColumn("payable", "К выплате", MONEY),  # noqa: RUF001
@@ -202,6 +207,7 @@ DATASET_COLUMNS: dict[ExportDataset, tuple[str, list[ExportColumn]]] = {
 VALUE_LABELS: dict[str, dict[object, str]] = {
     "archived": {True: "Архив", False: "Активен"},
     "active": {True: "Активен", False: "Неактивен"},
+    "compensation_type": {"piecework": "Сдельная", "hourly": "Почасовая"},
     "calculation_complete": {True: "Полный", False: "Неполный"},
     "movement_type": {
         "receipt": "Приход",

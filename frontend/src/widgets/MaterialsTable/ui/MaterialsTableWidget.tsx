@@ -185,7 +185,7 @@ export function MaterialsTableWidget() {
         />
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
-          image={<Boxes3 />}
+          image={<Boxes3 width={100} height={100} />}
           title={
             search || deficitOnly ? "Ничего не найдено" : "Материалов пока нет"
           }

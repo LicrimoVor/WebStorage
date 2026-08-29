@@ -26,7 +26,36 @@ describe('CreateEmployeeButton', () => {
     await waitFor(() =>
       expect(createEmployee).toHaveBeenCalledWith({
         full_name: 'Иванов Иван Иванович',
+        compensation_type: 'piecework',
+        hourly_rate: null,
         comment: 'Участок 1',
+      }),
+    );
+  });
+
+  it('creates an hourly employee with an hourly rate', async () => {
+    vi.mocked(createEmployee).mockResolvedValue({
+      ...employeeFixture,
+      compensation_type: 'hourly',
+      hourly_rate: '600.00',
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<CreateEmployeeButton />);
+    await user.click(screen.getByRole('button', {name: 'Добавить сотрудника'}));
+    await user.type(screen.getByLabelText('ФИО сотрудника'), 'Почасовой мастер');
+    await user.click(screen.getByLabelText('Тип оплаты сотрудника'));
+    await user.click(
+      screen.getByRole('option', {name: 'Почасовая — за затраченное время'}),
+    );
+    await user.type(screen.getByLabelText('Почасовая ставка'), '600,00');
+    await user.click(screen.getByRole('button', {name: 'Добавить'}));
+
+    await waitFor(() =>
+      expect(createEmployee).toHaveBeenCalledWith({
+        full_name: 'Почасовой мастер',
+        compensation_type: 'hourly',
+        hourly_rate: '600.00',
+        comment: null,
       }),
     );
   });

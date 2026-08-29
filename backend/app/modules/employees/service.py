@@ -4,11 +4,12 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError
+from app.core.errors import DomainValidationError, NotFoundError
 from app.core.query import SortOrder
 from app.modules.employees import repository
 from app.modules.employees.model import Employee
 from app.modules.employees.schemas import (
+    EmployeeCompensationType,
     EmployeeCreate,
     EmployeeList,
     EmployeeRead,
@@ -20,22 +21,26 @@ from app.modules.payroll import repository as payroll_repository
 
 def to_read_model(
     employee: Employee,
-    totals: tuple[Decimal, Decimal, Decimal] = (
+    totals: tuple[Decimal, Decimal, Decimal, Decimal] = (
+        Decimal("0"),
         Decimal("0"),
         Decimal("0"),
         Decimal("0"),
     ),
 ) -> EmployeeRead:
-    accrued, paid, completed = totals
+    accrued, paid, completed, paid_equivalent = totals
     return EmployeeRead(
         id=employee.id,
         full_name=employee.full_name,
         active=employee.active,
+        compensation_type=employee.compensation_type,
+        hourly_rate=employee.hourly_rate,
         comment=employee.comment,
         accrued_total=accrued,
         paid_total=paid,
         payable_total=max(accrued - paid, Decimal("0")),
         completed_operations=completed,
+        paid_operations_equivalent=paid_equivalent,
         created_at=employee.created_at,
         updated_at=employee.updated_at,
     )
@@ -73,7 +78,7 @@ async def list_all(
     )
     return EmployeeList(
         items=[
-            to_read_model(item, totals.get(item.id, (Decimal("0"),) * 3))
+            to_read_model(item, totals.get(item.id, (Decimal("0"),) * 4))
             for item in items
         ],
         page=page,
@@ -88,7 +93,7 @@ async def get(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead:
     if employee is None:
         raise NotFoundError("Employee was not found")
     totals = await payroll_repository.employee_totals(session, [employee.id])
-    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 4))
 
 
 async def update(
@@ -97,12 +102,19 @@ async def update(
     employee = await repository.get_employee(session, employee_id, for_update=True)
     if employee is None:
         raise NotFoundError("Employee was not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changes = payload.model_dump(exclude_unset=True)
+    next_type = changes.get("compensation_type", employee.compensation_type)
+    next_rate = changes.get("hourly_rate", employee.hourly_rate)
+    if next_type == EmployeeCompensationType.HOURLY and next_rate is None:
+        raise DomainValidationError("An hourly employee must have an hourly rate")
+    if next_type == EmployeeCompensationType.PIECEWORK:
+        changes["hourly_rate"] = None
+    for field, value in changes.items():
         setattr(employee, field, value)
     await session.commit()
     await session.refresh(employee)
     totals = await payroll_repository.employee_totals(session, [employee.id])
-    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 4))
 
 
 async def archive(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead:
@@ -113,4 +125,4 @@ async def archive(session: AsyncSession, employee_id: uuid.UUID) -> EmployeeRead
     await session.commit()
     await session.refresh(employee)
     totals = await payroll_repository.employee_totals(session, [employee.id])
-    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 3))
+    return to_read_model(employee, totals.get(employee.id, (Decimal("0"),) * 4))

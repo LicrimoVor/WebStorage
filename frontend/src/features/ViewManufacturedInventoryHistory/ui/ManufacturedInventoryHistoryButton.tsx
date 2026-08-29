@@ -104,7 +104,7 @@ export function ManufacturedInventoryHistoryButton({
             />
           ) : query.data.items.length === 0 ? (
             <PlaceholderContainer
-              image={<Archive />}
+              image={<Archive width={100} height={100} />}
               title="Движений пока нет"
               description="Первое изменение остатка появится здесь."
             />

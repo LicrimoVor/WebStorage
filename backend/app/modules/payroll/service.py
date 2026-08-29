@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, DomainValidationError, NotFoundError
 from app.modules.employees import repository as employee_repository
+from app.modules.employees.schemas import EmployeeCompensationType
 from app.modules.operations import repository as operation_repository
 from app.modules.operations.model import Operation
 from app.modules.payroll import repository
@@ -19,6 +20,7 @@ from app.modules.payroll.schemas import (
     PaymentCreate,
     PaymentList,
     PaymentRead,
+    WorkCompensationType,
     WorkEntryCreate,
     WorkEntryList,
     WorkEntryRead,
@@ -53,6 +55,7 @@ def calculate(
     input_value: Decimal,
     time_norm: Decimal | None,
     rate: Decimal | None,
+    compensation_type: WorkCompensationType | str = WorkCompensationType.PIECEWORK,
 ) -> tuple[Decimal | None, Decimal | None, Decimal | None]:
     equivalent: Decimal | None
     minutes: Decimal | None
@@ -62,16 +65,35 @@ def calculate(
     else:
         minutes = quantity(input_value)
         equivalent = quantity(input_value / time_norm) if time_norm is not None else None
-    accrued = money(equivalent * rate) if equivalent is not None and rate is not None else None
+    if compensation_type == WorkCompensationType.HOURLY:
+        accrued = (
+            money(minutes * rate / Decimal("60"))
+            if minutes is not None and rate is not None
+            else None
+        )
+    elif compensation_type == WorkCompensationType.ANONYMOUS:
+        accrued = None
+    else:
+        accrued = money(equivalent * rate) if equivalent is not None and rate is not None else None
     return equivalent, minutes, accrued
 
 
 def calculation_message(entry: WorkEntry) -> str | None:
+    if (
+        entry.compensation_type_snapshot == WorkCompensationType.HOURLY
+        and entry.time_norm_snapshot is None
+        and entry.rate_snapshot is not None
+    ):
+        return "Operation equivalent is unavailable: missing operation time norm"
     missing: list[str] = []
     if entry.input_mode == WorkInputMode.TIME and entry.time_norm_snapshot is None:
         missing.append("operation time norm")
-    if entry.rate_snapshot is None:
-        missing.append("operation rate")
+    if entry.rate_snapshot is None and entry.compensation_type_snapshot != "anonymous":
+        missing.append(
+            "hourly rate"
+            if entry.compensation_type_snapshot == "hourly"
+            else "operation rate"
+        )
     if not missing:
         return None
     return "Automatic accrual is unavailable: missing " + " and ".join(missing)
@@ -93,6 +115,7 @@ def to_work_read(
         operation_id=entry.operation_id,
         operation_name=operation_name,
         input_mode=WorkInputMode(entry.input_mode),
+        compensation_type_snapshot=entry.compensation_type_snapshot,
         input_value=entry.input_value,
         equivalent_quantity=entry.equivalent_quantity,
         time_minutes=entry.time_minutes,
@@ -110,6 +133,7 @@ def to_work_read(
         voided_at=entry.voided_at,
         voided_by=entry.voided_by,
         void_reason=entry.void_reason,
+        production_record_id=entry.production_record_id,
     )
 
 
@@ -141,21 +165,34 @@ async def create_work_entry(
         raise NotFoundError("Employee was not found")
     if not employee.active:
         raise DomainValidationError("Work cannot be recorded for an inactive employee")
+    if (
+        employee.compensation_type == EmployeeCompensationType.HOURLY
+        and payload.input_mode != WorkInputMode.TIME
+    ):
+        raise DomainValidationError("Hourly employee work must be recorded by time")
+    compensation_type = WorkCompensationType(employee.compensation_type)
+    rate = (
+        employee.hourly_rate
+        if compensation_type == WorkCompensationType.HOURLY
+        else operation.price_per_operation
+    )
     equivalent, minutes, accrued = calculate(
         input_mode=payload.input_mode,
         input_value=payload.input_value,
         time_norm=operation.time_norm,
-        rate=operation.price_per_operation,
+        rate=rate,
+        compensation_type=compensation_type,
     )
     entry = WorkEntry(
         employee_id=employee.id,
         operation_id=operation.id,
         input_mode=payload.input_mode.value,
+        compensation_type_snapshot=compensation_type.value,
         input_value=quantity(payload.input_value),
         equivalent_quantity=equivalent,
         time_minutes=minutes,
         time_norm_snapshot=operation.time_norm,
-        rate_snapshot=operation.price_per_operation,
+        rate_snapshot=rate,
         accrued_amount=accrued,
         performed_at=timestamp(payload.performed_at),
         comment=payload.comment,
@@ -238,6 +275,16 @@ async def update_work_entry(
         if not employee.active:
             raise DomainValidationError("Work cannot be assigned to an inactive employee")
         entry.employee_id = employee.id
+        entry.compensation_type_snapshot = employee.compensation_type
+        if employee.compensation_type == EmployeeCompensationType.HOURLY:
+            entry.rate_snapshot = employee.hourly_rate
+        else:
+            operation = await operation_repository.get_operation(
+                session, entry.operation_id
+            )
+            if operation is None:
+                raise NotFoundError("Operation was not found")
+            entry.rate_snapshot = operation.price_per_operation
     if payload.input_mode is not None:
         entry.input_mode = payload.input_mode.value
     if payload.input_value is not None:
@@ -246,11 +293,17 @@ async def update_work_entry(
         entry.performed_at = timestamp(payload.performed_at)
     if "comment" in payload.model_fields_set:
         entry.comment = payload.comment
+    if (
+        entry.compensation_type_snapshot == WorkCompensationType.HOURLY
+        and entry.input_mode != WorkInputMode.TIME
+    ):
+        raise DomainValidationError("Hourly employee work must be recorded by time")
     equivalent, minutes, accrued = calculate(
         input_mode=entry.input_mode,
         input_value=entry.input_value,
         time_norm=entry.time_norm_snapshot,
         rate=entry.rate_snapshot,
+        compensation_type=entry.compensation_type_snapshot,
     )
     entry.equivalent_quantity = equivalent
     entry.time_minutes = minutes
@@ -426,8 +479,8 @@ async def payroll_summary(
     if employee is None:
         raise NotFoundError("Employee was not found")
     totals = await repository.employee_totals(session, [employee_id])
-    accrued, paid, completed = totals.get(
-        employee_id, (Decimal("0"), Decimal("0"), Decimal("0"))
+    accrued, paid, completed, paid_equivalent = totals.get(
+        employee_id, (Decimal("0"),) * 4
     )
     rows = await repository.employee_operation_totals(session, employee_id)
     operations = [
@@ -435,6 +488,7 @@ async def payroll_summary(
             operation_id=row[0],
             operation_name=row[1],
             completed_quantity=Decimal(row[2]),
+            paid_quantity_equivalent=Decimal(row[6]),
             time_minutes=Decimal(row[3]),
             accrued_amount=Decimal(row[4]),
             paid_amount=Decimal(row[5]),
@@ -448,5 +502,6 @@ async def payroll_summary(
         paid_total=paid,
         payable_total=max(accrued - paid, Decimal("0")),
         completed_operations=completed,
+        paid_operations_equivalent=paid_equivalent,
         operations=operations,
     )

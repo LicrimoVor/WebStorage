@@ -30,9 +30,15 @@ const operationColumns: TableColumnConfig<EmployeeOperationSummary>[] = [
   {id: 'operation_name', name: 'Операция'},
   {
     id: 'completed_quantity',
-    name: 'Выполнено',
+    name: 'Выполнено, экв.',
     align: 'end',
     template: (item) => formatDecimal(item.completed_quantity),
+  },
+  {
+    id: 'paid_quantity_equivalent',
+    name: 'Оплачено, экв.',
+    align: 'end',
+    template: (item) => formatDecimal(item.paid_quantity_equivalent),
   },
   {
     id: 'time_minutes',
@@ -138,6 +144,12 @@ export function PayrollDetailsButton({employee}: {employee: Employee}) {
                     {formatDecimal(summary.data.completed_operations)}
                   </Text>
                 </Card>
+                <Card className={styles.summaryCard} view="outlined">
+                  <Text color="secondary">Оплачено, экв.</Text>
+                  <Text variant="header-1">
+                    {formatDecimal(summary.data.paid_operations_equivalent)}
+                  </Text>
+                </Card>
               </div>
               <div className={styles.exports}>
                 <ExportExcelButton
@@ -158,7 +170,10 @@ export function PayrollDetailsButton({employee}: {employee: Employee}) {
                   По операциям
                 </Text>
                 {summary.data.operations.length === 0 ? (
-                  <PlaceholderContainer image={<Archive />} title="Начислений пока нет" />
+                  <PlaceholderContainer
+                    image={<Archive width={100} height={100} />}
+                    title="Начислений пока нет"
+                  />
                 ) : (
                   <div className={styles.tableWrap}>
                     <Table
@@ -195,7 +210,10 @@ export function PayrollDetailsButton({employee}: {employee: Employee}) {
                     />
                   </>
                 ) : (
-                  <PlaceholderContainer image={<Archive />} title="Выплат пока нет" />
+                  <PlaceholderContainer
+                    image={<Archive width={100} height={100} />}
+                    title="Выплат пока нет"
+                  />
                 )}
               </section>
             </div>

@@ -8,9 +8,13 @@ export type EmployeeListParams = NonNullable<
   operations['listEmployees']['parameters']['query']
 >;
 export type EmployeeSortField = components['schemas']['EmployeeSortField'];
+export type EmployeeCompensationType =
+  components['schemas']['EmployeeCompensationType'];
 export type SortOrder = components['schemas']['SortOrder'];
 
 export interface EmployeeFormValue {
   fullName: string;
+  compensationType: EmployeeCompensationType;
+  hourlyRate: string;
   comment: string;
 }

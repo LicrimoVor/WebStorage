@@ -15,6 +15,7 @@ from app.modules.inventory.types import MovementType
 from app.modules.manufactured_items import movement_repository
 from app.modules.manufactured_items.model import ManufacturedItem, ManufacturedItemMovement
 from app.modules.materials.model import Material
+from app.modules.payroll.model import WorkEntry
 from app.modules.production import repository
 from app.modules.production.model import ProductionRecord
 from app.modules.production.schemas import (
@@ -207,6 +208,15 @@ async def _read(
         for movement, component in manufactured_rows
     )
     components.sort(key=lambda component: (component.kind.value, component.name))
+    work_entry_ids = list(
+        (
+            await session.execute(
+                select(WorkEntry.id)
+                .where(WorkEntry.production_record_id == record.id)
+                .order_by(WorkEntry.created_at, WorkEntry.id)
+            )
+        ).scalars()
+    )
     return ProductionRecordRead(
         id=record.id,
         production_plan_id=record.production_plan_id,
@@ -222,6 +232,7 @@ async def _read(
         output_movement_id=output_movement.id,
         output_balance_after=output_movement.balance_after,
         components=components,
+        work_entry_ids=work_entry_ids,
         created_at=record.created_at,
     )
 

@@ -271,7 +271,7 @@ def work_entries_statement(filters: ExportFilters) -> Select[Any]:
     statement = (
         select(
             WorkEntry.id.label("id"),
-            Employee.full_name.label("employee"),
+            func.coalesce(Employee.full_name, "Анонимно").label("employee"),
             Operation.name.label("operation"),
             WorkEntry.input_mode.label("input_mode"),
             WorkEntry.input_value.label("input_value"),
@@ -288,7 +288,7 @@ def work_entries_statement(filters: ExportFilters) -> Select[Any]:
             WorkEntry.comment.label("comment"),
             WorkEntry.voided_at.label("voided_at"),
         )
-        .join(Employee, Employee.id == WorkEntry.employee_id)
+        .outerjoin(Employee, Employee.id == WorkEntry.employee_id)
         .join(Operation, Operation.id == WorkEntry.operation_id)
     )
     if filters.employee_id is not None:
@@ -347,11 +347,51 @@ async def employees(
         .correlate(Employee)
         .scalar_subquery()
     )
+    paid_equivalent = (
+        select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            WorkEntry.accrued_amount > 0,
+                            func.coalesce(
+                                WorkEntry.equivalent_quantity, Decimal("0")
+                            )
+                            * func.least(
+                                func.coalesce(
+                                    select(func.sum(PaymentAllocation.amount))
+                                    .where(
+                                        PaymentAllocation.work_entry_id == WorkEntry.id
+                                    )
+                                    .correlate(WorkEntry)
+                                    .scalar_subquery(),
+                                    Decimal("0"),
+                                )
+                                / WorkEntry.accrued_amount,
+                                Decimal("1"),
+                            ),
+                        ),
+                        else_=Decimal("0"),
+                    )
+                ),
+                Decimal("0"),
+            )
+        )
+        .where(
+            WorkEntry.employee_id == Employee.id,
+            WorkEntry.voided_at.is_(None),
+        )
+        .correlate(Employee)
+        .scalar_subquery()
+    )
     statement = select(
         Employee.id.label("id"),
         Employee.full_name.label("full_name"),
         Employee.active.label("active"),
+        Employee.compensation_type.label("compensation_type"),
+        Employee.hourly_rate.label("hourly_rate"),
         completed.label("completed_operations"),
+        paid_equivalent.label("paid_operations_equivalent"),
         accrued.label("accrued"),
         paid.label("paid"),
         func.greatest(accrued - paid, Decimal("0")).label("payable"),
@@ -465,8 +505,8 @@ async def production_records(
             ProductionRecord.created_by.label("created_by"),
             ProductionRecord.created_at.label("created_at"),
         )
-        .join(ProductionPlan, ProductionPlan.id == ProductionRecord.production_plan_id)
-        .join(plan_product, plan_product.c.id == ProductionPlan.product_id)
+        .outerjoin(ProductionPlan, ProductionPlan.id == ProductionRecord.production_plan_id)
+        .outerjoin(plan_product, plan_product.c.id == ProductionPlan.product_id)
         .join(output_item, output_item.c.id == ProductionRecord.item_id)
         .join(
             TechnologicalProcessVersion,

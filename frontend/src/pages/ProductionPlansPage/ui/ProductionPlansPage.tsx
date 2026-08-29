@@ -668,7 +668,7 @@ export function ProductionPlansPage() {
         />
       ) : query.data.items.length === 0 ? (
         <PlaceholderContainer
-          image={<Wrench />}
+          image={<Wrench width={100} height={100} />}
           title="Планов пока нет"
           description="Создайте первый план — потребности будут рассчитаны автоматически."
           actions={<CreatePlanButton />}

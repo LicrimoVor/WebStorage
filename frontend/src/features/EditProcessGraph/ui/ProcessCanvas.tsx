@@ -5,6 +5,8 @@ import {
   Dialog,
   Label,
   Select,
+  Tab,
+  TabList,
   Text,
   TextInput,
 } from "@gravity-ui/uikit";
@@ -24,6 +26,7 @@ import {
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import { useMaterialsQuery } from "@/entities/Material";
 import { useOperationsQuery } from "@/entities/Operation";
+import { ProduceManufacturedItemButton } from "@/features/ProduceManufacturedItem";
 import {
   saveTechnologicalProcessDraft,
   type ProcessEdgeInput,
@@ -170,6 +173,7 @@ export const ProcessCanvas = forwardRef<
   const [pan, setPan] = useState<PanState>();
   const [connectionDrag, setConnectionDrag] = useState<ConnectionDrag>();
   const [nodeDialog, setNodeDialog] = useState<NodeDialogState>();
+  const [nodeDialogTab, setNodeDialogTab] = useState("settings");
   const [edgeDialog, setEdgeDialog] = useState<EdgeDialogState>();
   const [edgeDialogError, setEdgeDialogError] = useState<string>();
   const [importError, setImportError] = useState<string>();
@@ -309,6 +313,7 @@ export const ProcessCanvas = forwardRef<
   ]);
 
   const openNodeDialog = (node: ProcessNode) => {
+    setNodeDialogTab("settings");
     setNodeDialog({
       mode: "edit",
       nodeId: node.id,
@@ -635,14 +640,15 @@ export const ProcessCanvas = forwardRef<
           {editable ? (
             <Button
               view="action"
-              onClick={() =>
+              onClick={() => {
+                setNodeDialogTab("settings");
                 setNodeDialog({
                   mode: "add",
                   type: "material",
                   referenceId: "",
                   label: "",
-                })
-              }
+                });
+              }}
             >
               Добавить узел
             </Button>
@@ -975,7 +981,28 @@ export const ProcessCanvas = forwardRef<
         <Dialog.Body>
           {nodeDialog ? (
             <div className={styles.dialogForm}>
-              {nodeDialog.type === "output" ? (
+              {nodeDialog.mode === "edit" &&
+              ["manufactured_item", "output"].includes(nodeDialog.type) &&
+              nodeDialog.referenceId ? (
+                <TabList value={nodeDialogTab} onUpdate={setNodeDialogTab}>
+                  <Tab value="settings">Настройки</Tab>
+                  <Tab value="production">Производство</Tab>
+                </TabList>
+              ) : null}
+              {nodeDialogTab === "production" ? (
+                <div className={styles.productionTab}>
+                  <Text color="secondary">
+                    Расчёт использует активный рецепт и сначала расходует доступные
+                    полуфабрикаты со склада.
+                  </Text>
+                  <ProduceManufacturedItemButton
+                    itemId={nodeDialog.referenceId}
+                    itemName={nodeDialog.label || "Позиция"}
+                    size="l"
+                    view="action"
+                  />
+                </div>
+              ) : nodeDialog.type === "output" ? (
                 <Text color="secondary">
                   Финальный результат процесса: тип и сопоставление
                   зафиксированы.
@@ -1025,12 +1052,19 @@ export const ProcessCanvas = forwardRef<
             </div>
           ) : null}
         </Dialog.Body>
-        <Dialog.Footer
-          textButtonApply="Готово"
-          textButtonCancel="Отмена"
-          onClickButtonApply={commitNodeDialog}
-          onClickButtonCancel={() => setNodeDialog(undefined)}
-        />
+        {nodeDialogTab === "production" ? (
+          <Dialog.Footer
+            textButtonCancel="Закрыть"
+            onClickButtonCancel={() => setNodeDialog(undefined)}
+          />
+        ) : (
+          <Dialog.Footer
+            textButtonApply="Готово"
+            textButtonCancel="Отмена"
+            onClickButtonApply={commitNodeDialog}
+            onClickButtonCancel={() => setNodeDialog(undefined)}
+          />
+        )}
       </Dialog>
 
       <Dialog

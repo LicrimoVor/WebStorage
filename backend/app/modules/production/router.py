@@ -7,8 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.security import Actor, get_current_actor
-from app.modules.production import service
+from app.modules.production import service, standalone
 from app.modules.production.schemas import (
+    DirectProductionCreate,
+    DirectProductionPreviewRead,
+    DirectProductionPreviewRequest,
     ProductionRecordCreate,
     ProductionRecordList,
     ProductionRecordRead,
@@ -16,6 +19,11 @@ from app.modules.production.schemas import (
 
 router = APIRouter(
     prefix="/production-plans",
+    tags=["production execution"],
+    responses={422: {"model": ProblemDetail}},
+)
+standalone_router = APIRouter(
+    prefix="/manufactured-items",
     tags=["production execution"],
     responses={422: {"model": ProblemDetail}},
 )
@@ -69,4 +77,43 @@ async def list_production_records(
 ) -> ProductionRecordList:
     return await service.list_for_plan(
         session, plan_id=plan_id, page=page, page_size=page_size
+    )
+
+
+@standalone_router.post(
+    "/{item_id}/production-preview",
+    response_model=DirectProductionPreviewRead,
+    operation_id="previewDirectProduction",
+    responses={404: {"model": ProblemDetail}, 409: {"model": ProblemDetail}},
+)
+async def preview_direct_production(
+    item_id: uuid.UUID,
+    payload: DirectProductionPreviewRequest,
+    session: Session,
+) -> DirectProductionPreviewRead:
+    return await standalone.preview(
+        session, item_id=item_id, quantity=payload.quantity
+    )
+
+
+@standalone_router.post(
+    "/{item_id}/produce",
+    response_model=ProductionRecordRead,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="registerDirectProduction",
+    responses={404: {"model": ProblemDetail}, 409: {"model": ProblemDetail}},
+)
+async def register_direct_production(
+    item_id: uuid.UUID,
+    payload: DirectProductionCreate,
+    session: Session,
+    actor: ActorDependency,
+    idempotency_key: IdempotencyKey,
+) -> ProductionRecordRead:
+    return await standalone.register(
+        session,
+        item_id=item_id,
+        payload=payload,
+        idempotency_key=idempotency_key,
+        created_by=actor.subject,
     )

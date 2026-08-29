@@ -110,6 +110,73 @@ async def create_product_plan(
     return response.json()
 
 
+async def activate_embedded_semi_recipe(
+    client: AsyncClient,
+    *,
+    name: str,
+    output: dict[str, Any],
+    semi: dict[str, Any],
+    material: dict[str, Any],
+) -> None:
+    created = await client.post(
+        "/api/v1/technological-processes",
+        json={"name": name, "output_item_id": output["id"]},
+    )
+    process_id = created.json()["process"]["id"]
+    version_id = created.json()["version"]["id"]
+    graph = {
+        "schemaVersion": 1,
+        "name": name,
+        "outputItemId": output["id"],
+        "nodes": [
+            {
+                "id": "material",
+                "type": "material",
+                "referenceId": material["id"],
+                "label": material["name"],
+                "position": {"x": -300, "y": 0},
+            },
+            {
+                "id": "semi",
+                "type": "manufactured_item",
+                "referenceId": semi["id"],
+                "label": semi["name"],
+                "position": {"x": 0, "y": 0},
+            },
+            {
+                "id": "output",
+                "type": "output",
+                "referenceId": output["id"],
+                "label": output["name"],
+                "position": {"x": 300, "y": 0},
+            },
+        ],
+        "edges": [
+            {
+                "id": "material-semi",
+                "source": "material",
+                "target": "semi",
+                "quantity": "1",
+            },
+            {
+                "id": "semi-output",
+                "source": "semi",
+                "target": "output",
+                "quantity": "1",
+            },
+        ],
+    }
+    saved = await client.put(
+        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/graph",
+        json=graph,
+    )
+    assert saved.status_code == 200, saved.text
+    activated = await client.post(
+        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/activate"
+    )
+    assert activated.status_code == 200, activated.text
+
+
 @pytest.mark.asyncio
 async def test_atomic_product_registration_posts_components_and_progress(
     client: AsyncClient,
@@ -325,3 +392,168 @@ async def test_concurrent_production_cannot_exceed_plan_remaining(
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("3")
     product_read = await client.get(f"/api/v1/manufactured-items/{product['id']}")
     assert Decimal(product_read.json()["free_quantity"]) == Decimal("3")
+
+
+@pytest.mark.asyncio
+async def test_direct_production_recursively_builds_missing_stock_and_records_work(
+    client: AsyncClient,
+) -> None:
+    material = await create_material(client, name="Direct bar", stock="20")
+    semi = await create_item(
+        client, name="Direct shaft", is_product=False, stock="1"
+    )
+    product = await create_item(client, name="Direct gearbox", is_product=True)
+    cut = (
+        await client.post(
+            "/api/v1/operations",
+            json={"name": "Direct cutting", "time_norm": "4", "price_per_operation": "5"},
+        )
+    ).json()
+    assembly = (
+        await client.post(
+            "/api/v1/operations",
+            json={"name": "Direct assembly", "time_norm": "10", "price_per_operation": "8"},
+        )
+    ).json()
+    await activate_process(
+        client,
+        name="Direct shaft recipe",
+        output=semi,
+        inputs=[
+            ("material", material["id"], "2"),
+            ("operation", cut["id"], "1"),
+        ],
+    )
+    await activate_process(
+        client,
+        name="Direct gearbox recipe",
+        output=product,
+        inputs=[
+            ("manufactured_item", semi["id"], "2"),
+            ("operation", assembly["id"], "1"),
+        ],
+    )
+    employee = (
+        await client.post(
+            "/api/v1/employees",
+            json={
+                "full_name": "Direct hourly worker",
+                "compensation_type": "hourly",
+                "hourly_rate": "600",
+            },
+        )
+    ).json()
+
+    preview_response = await client.post(
+        f"/api/v1/manufactured-items/{product['id']}/production-preview",
+        json={"quantity": "2"},
+    )
+    assert preview_response.status_code == 200, preview_response.text
+    preview = preview_response.json()
+    assert preview["can_produce"] is True
+    assert Decimal(preview["materials"][0]["required_quantity"]) == Decimal("6")
+    child = preview["tree"]["children"][0]
+    assert Decimal(child["stock_used_quantity"]) == Decimal("1")
+    assert Decimal(child["to_produce_quantity"]) == Decimal("3")
+    operations = {
+        row["operation_id"]: Decimal(row["required_quantity"])
+        for row in preview["operations"]
+    }
+    assert operations == {
+        cut["id"]: Decimal("3"),
+        assembly["id"]: Decimal("2"),
+    }
+
+    produced_response = await client.post(
+        f"/api/v1/manufactured-items/{product['id']}/produce",
+        headers={"Idempotency-Key": "direct-recursive-production-1"},
+        json={
+            "quantity": "2",
+            "operation_assignments": [
+                {"operation_id": assembly["id"], "employee_id": employee["id"]}
+            ],
+        },
+    )
+    assert produced_response.status_code == 201, produced_response.text
+    record = produced_response.json()
+    assert record["production_plan_id"] is None
+    assert len(record["work_entry_ids"]) == 2
+    assert Decimal(record["output_balance_after"]) == Decimal("2")
+    replay = await client.post(
+        f"/api/v1/manufactured-items/{product['id']}/produce",
+        headers={"Idempotency-Key": "direct-recursive-production-1"},
+        json={
+            "quantity": "2",
+            "operation_assignments": [
+                {"operation_id": assembly["id"], "employee_id": employee["id"]}
+            ],
+        },
+    )
+    assert replay.status_code == 201
+    assert replay.json()["id"] == record["id"]
+    changed_assignment = await client.post(
+        f"/api/v1/manufactured-items/{product['id']}/produce",
+        headers={"Idempotency-Key": "direct-recursive-production-1"},
+        json={
+            "quantity": "2",
+            "operation_assignments": [
+                {"operation_id": cut["id"], "employee_id": employee["id"]},
+                {"operation_id": assembly["id"], "employee_id": employee["id"]},
+            ],
+        },
+    )
+    assert changed_assignment.status_code == 409
+    assert Decimal(
+        (await client.get(f"/api/v1/materials/{material['id']}")).json()[
+            "free_quantity"
+        ]
+    ) == Decimal("14")
+    assert Decimal(
+        (await client.get(f"/api/v1/manufactured-items/{semi['id']}")).json()[
+            "free_quantity"
+        ]
+    ) == Decimal("0")
+
+    assembly_work = (
+        await client.get(f"/api/v1/operations/{assembly['id']}/work-entries")
+    ).json()["items"][0]
+    assert assembly_work["employee_id"] == employee["id"]
+    assert assembly_work["input_mode"] == "time"
+    assert Decimal(assembly_work["accrued_amount"]) == Decimal("200")
+    anonymous_work = (
+        await client.get(f"/api/v1/operations/{cut['id']}/work-entries")
+    ).json()["items"][0]
+    assert anonymous_work["employee_id"] is None
+    assert anonymous_work["employee_name"] == "Анонимно"
+    assert anonymous_work["accrued_amount"] is None
+
+
+@pytest.mark.asyncio
+async def test_direct_semi_production_rejects_multiple_active_embedded_recipes(
+    client: AsyncClient,
+) -> None:
+    material = await create_material(client, name="Ambiguous raw", stock="10")
+    semi = await create_item(client, name="Ambiguous semi", is_product=False)
+    first = await create_item(client, name="Ambiguous product A", is_product=True)
+    second = await create_item(client, name="Ambiguous product B", is_product=True)
+    await activate_embedded_semi_recipe(
+        client,
+        name="Ambiguous recipe A",
+        output=first,
+        semi=semi,
+        material=material,
+    )
+    await activate_embedded_semi_recipe(
+        client,
+        name="Ambiguous recipe B",
+        output=second,
+        semi=semi,
+        material=material,
+    )
+
+    response = await client.post(
+        f"/api/v1/manufactured-items/{semi['id']}/production-preview",
+        json={"quantity": "1"},
+    )
+    assert response.status_code == 422
+    assert "Several active recipes" in response.json()["detail"]

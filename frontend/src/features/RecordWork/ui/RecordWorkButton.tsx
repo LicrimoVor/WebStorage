@@ -59,18 +59,38 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
       setComment('');
     },
   });
+  const selectedEmployee = (employees.data?.items ?? []).find(
+    (employee) => employee.id === employeeId,
+  );
+  const isHourly = selectedEmployee?.compensation_type === 'hourly';
   const estimate = useMemo(() => {
     if (!isDecimal(value) || Number(normalizeDecimal(value)) <= 0) return null;
     const input = Number(normalizeDecimal(value));
     const norm = operation.time_norm === null ? null : Number(operation.time_norm);
-    const rate =
-      operation.price_per_operation === null
+    const rate = isHourly
+      ? selectedEmployee?.hourly_rate == null
+        ? null
+        : Number(selectedEmployee.hourly_rate)
+      : operation.price_per_operation === null
         ? null
         : Number(operation.price_per_operation);
     const equivalent = mode === 'quantity' ? input : norm ? input / norm : null;
-    const accrued = equivalent !== null && rate !== null ? equivalent * rate : null;
+    const accrued = isHourly
+      ? rate === null
+        ? null
+        : (input * rate) / 60
+      : equivalent !== null && rate !== null
+        ? equivalent * rate
+        : null;
     return {equivalent, accrued};
-  }, [mode, operation.price_per_operation, operation.time_norm, value]);
+  }, [
+    isHourly,
+    mode,
+    operation.price_per_operation,
+    operation.time_norm,
+    selectedEmployee?.hourly_rate,
+    value,
+  ]);
 
   const openDialog = () => {
     setValidationError(undefined);
@@ -130,7 +150,14 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
                 content: employee.full_name,
               }))}
               value={employeeId ? [employeeId] : []}
-              onUpdate={(values) => setEmployeeId(values[0] ?? '')}
+              onUpdate={(values) => {
+                const nextId = values[0] ?? '';
+                setEmployeeId(nextId);
+                const employee = (employees.data?.items ?? []).find(
+                  (item) => item.id === nextId,
+                );
+                if (employee?.compensation_type === 'hourly') setMode('time');
+              }}
               loading={employees.isPending}
               width="max"
               size="l"
@@ -142,6 +169,7 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
               options={modeOptions}
               value={[mode]}
               onUpdate={(values) => setMode((values[0] as WorkInputMode) ?? 'quantity')}
+              disabled={isHourly}
               width="max"
               size="l"
               aria-label="Способ ввода работы"
@@ -172,7 +200,13 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
               size="l"
               hasClear
             />
-            {mode === 'time' && operation.time_norm === null ? (
+            {isHourly ? (
+              <Alert
+                theme="info"
+                view="outlined"
+                message="Почасовой сотрудник вводит затраченное время. Начисление считается по его ставке, а эквивалент операций — по норме операции."
+              />
+            ) : mode === 'time' && operation.time_norm === null ? (
               <Alert
                 theme="warning"
                 message="В операции не задана норма времени: работа сохранится, но количество и начисление рассчитать нельзя."

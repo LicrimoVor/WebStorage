@@ -440,7 +440,7 @@ export function SalesPage() {
           />
         ) : query.data.items.length === 0 ? (
           <PlaceholderContainer
-            image={<Archive />}
+            image={<Archive width={100} height={100} />}
             title="Продаж пока нет"
             description="Зарегистрируйте первую продажу готового продукта."
           />
