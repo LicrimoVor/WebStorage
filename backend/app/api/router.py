@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from app.core.security import Actor, get_current_actor
 from app.modules.analytics.router import router as analytics_router
 from app.modules.employees.router import router as employees_router
+from app.modules.exports.router import router as exports_router
 from app.modules.finance.router import router as finance_router
 from app.modules.inventory.router import router as inventory_router
 from app.modules.manufactured_items.router import router as manufactured_items_router
@@ -33,6 +34,7 @@ api_router.include_router(payroll_router)
 api_router.include_router(sales_router)
 api_router.include_router(finance_router)
 api_router.include_router(analytics_router)
+api_router.include_router(exports_router)
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 

@@ -16,6 +16,7 @@ import {
   type ManufacturedItem,
   type ManufacturedItemMovement,
 } from '@/entities/ManufacturedItem';
+import {ExportExcelButton} from '@/features/ExportExcel';
 import {getErrorMessage} from '@/shared/api';
 import {formatDateTime, formatDecimal} from '@/shared/lib';
 
@@ -126,6 +127,12 @@ export function ManufacturedInventoryHistoryButton({
               />
             </div>
           )}
+          <ExportExcelButton
+            dataset="inventory_movements"
+            params={{product_id: item.id}}
+            label="История в Excel"
+            size="m"
+          />
         </Dialog.Body>
         <Dialog.Footer
           textButtonCancel="Закрыть"

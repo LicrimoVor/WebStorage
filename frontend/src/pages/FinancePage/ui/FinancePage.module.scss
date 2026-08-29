@@ -14,6 +14,13 @@
   gap: var(--g-spacing-4);
 }
 
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--g-spacing-3);
+  justify-content: flex-end;
+}
+
 .summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(170px, 1fr));

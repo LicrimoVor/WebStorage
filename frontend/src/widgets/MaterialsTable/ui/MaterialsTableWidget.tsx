@@ -26,6 +26,7 @@ import { AdjustStockButton } from "@/features/AdjustStock";
 import { ArchiveMaterialButton } from "@/features/ArchiveMaterial";
 import { CreateMaterialButton } from "@/features/CreateMaterial";
 import { EditMaterialButton } from "@/features/EditMaterial";
+import { ExportExcelButton } from "@/features/ExportExcel";
 import { InventoryHistoryButton } from "@/features/ViewInventoryHistory";
 import { getErrorMessage } from "@/shared/api";
 
@@ -103,7 +104,19 @@ export function MaterialsTableWidget() {
             Материалы
           </Text>
         </div>
-        <CreateMaterialButton />
+        <div className={styles.actions}>
+          <ExportExcelButton
+            dataset="materials"
+            params={{
+              ...(search ? { search } : {}),
+              sort_by: sortBy,
+              sort_order: sortOrder,
+              availability,
+              deficit_only: deficitOnly,
+            }}
+          />
+          <CreateMaterialButton />
+        </div>
       </div>
 
       <div className={styles.filters}>

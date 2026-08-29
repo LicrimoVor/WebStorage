@@ -24,6 +24,7 @@ import {
 import { ArchiveOperationButton } from "@/features/ArchiveOperation";
 import { CreateOperationButton } from "@/features/CreateOperation";
 import { EditOperationButton } from "@/features/EditOperation";
+import { ExportExcelButton } from "@/features/ExportExcel";
 import { RecordWorkButton } from "@/features/RecordWork";
 import { WorkHistoryButton } from "@/features/ViewWorkHistory";
 import { getErrorMessage } from "@/shared/api";
@@ -89,7 +90,18 @@ export function OperationsTableWidget() {
             Справочник операций
           </Text>
         </div>
-        <CreateOperationButton />
+        <div className={styles.actions}>
+          <ExportExcelButton
+            dataset="operations"
+            params={{
+              ...(search ? { search } : {}),
+              include_archived: includeArchived,
+              sort_by: sortBy,
+              sort_order: sortOrder,
+            }}
+          />
+          <CreateOperationButton />
+        </div>
       </div>
       <div className={styles.filters}>
         <TextInput

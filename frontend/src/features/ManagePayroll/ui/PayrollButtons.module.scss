@@ -17,6 +17,12 @@
   padding: var(--g-spacing-3);
 }
 
+.exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--g-spacing-3);
+}
+
 .tableWrap {
   overflow: auto;
 }

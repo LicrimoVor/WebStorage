@@ -738,6 +738,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/{dataset}.xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Dataset To Excel */
+        get: operations["exportDatasetToExcel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -957,6 +974,11 @@ export interface components {
             /** Comment */
             comment?: string | null;
         };
+        /**
+         * ExportDataset
+         * @enum {string}
+         */
+        ExportDataset: "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
         /** FinanceEntryList */
         FinanceEntryList: {
             /** Items */
@@ -5446,6 +5468,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsDashboardRead"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    exportDatasetToExcel: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                include_archived?: boolean;
+                include_voided?: boolean;
+                availability?: components["schemas"]["AvailabilityFilter"];
+                deficit_only?: boolean;
+                kind?: components["schemas"]["ManufacturedItemKind"];
+                plan_status?: string | null;
+                movement_type?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                material_id?: string | null;
+                product_id?: string | null;
+                employee_id?: string | null;
+                operation_id?: string | null;
+                plan_id?: string | null;
+                source?: components["schemas"]["FinanceSource"];
+                direction?: components["schemas"]["FinancialDirection"] | null;
+                sort_by?: string | null;
+                sort_order?: components["schemas"]["SortOrder"];
+                ids?: string[] | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                dataset: components["schemas"]["ExportDataset"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Filtered Excel workbook */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
                 };
             };
             /** @description Unprocessable Content */

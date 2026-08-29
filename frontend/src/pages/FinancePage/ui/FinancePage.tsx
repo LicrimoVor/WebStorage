@@ -28,6 +28,7 @@ import {
   type FinancialDirection,
   type FinancialTransactionCreate,
 } from '@/entities/Finance';
+import {ExportExcelButton} from '@/features/ExportExcel';
 import {getErrorMessage} from '@/shared/api';
 import {formatDateTime, formatMoney, normalizeDecimal} from '@/shared/lib';
 
@@ -264,7 +265,18 @@ export function FinancePage() {
         <Text as="h1" variant="display-1">
           Финансы
         </Text>
-        <AddTransactionButton />
+        <div className={styles.headerActions}>
+          <ExportExcelButton
+            dataset="finance_entries"
+            params={{
+              source,
+              ...(direction === 'all' ? {} : {direction}),
+              ...dateFilters,
+              sort_order: sortOrder,
+            }}
+          />
+          <AddTransactionButton />
+        </div>
       </header>
       <div className={styles.summary}>
         <Card view="outlined">

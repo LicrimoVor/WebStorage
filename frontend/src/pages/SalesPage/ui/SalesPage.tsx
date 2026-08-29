@@ -31,6 +31,7 @@ import {
   type SaleSortField,
 } from '@/entities/Sale';
 import {financeKeys} from '@/entities/Finance';
+import {ExportExcelButton} from '@/features/ExportExcel';
 import {getErrorMessage} from '@/shared/api';
 import {
   formatDateTime,
@@ -344,7 +345,17 @@ export function SalesPage() {
         <Text as="h1" variant="display-1">
           Продажи
         </Text>
-        <RegisterSaleButton />
+        <div className={styles.headerActions}>
+          <ExportExcelButton
+            dataset="sales"
+            params={{
+              ...apiFilters,
+              sort_by: sortBy,
+              sort_order: sortOrder,
+            }}
+          />
+          <RegisterSaleButton />
+        </div>
       </header>
       <div className={styles.summary}>
         <Card view="outlined">

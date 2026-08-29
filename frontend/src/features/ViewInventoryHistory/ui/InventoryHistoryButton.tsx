@@ -7,66 +7,69 @@ import {
   Spin,
   Table,
   type TableColumnConfig,
-} from '@gravity-ui/uikit';
-import {Archive} from '@gravity-ui/icons';
-import {useState} from 'react';
+} from "@gravity-ui/uikit";
+import { Archive } from "@gravity-ui/icons";
+import { useState } from "react";
 
 import {
   useInventoryMovementsQuery,
   type InventoryMovement,
   type Material,
-} from '@/entities/Material';
-import {getErrorMessage} from '@/shared/api';
-import {formatDateTime, formatDecimal} from '@/shared/lib';
+} from "@/entities/Material";
+import { ExportExcelButton } from "@/features/ExportExcel";
+import { getErrorMessage } from "@/shared/api";
+import { formatDateTime, formatDecimal } from "@/shared/lib";
 
-import styles from './InventoryHistoryButton.module.scss';
+import styles from "./InventoryHistoryButton.module.scss";
 
 const labels: Record<string, string> = {
-  receipt: 'Приход',
-  consumption: 'Расход',
-  production: 'Производство',
-  sale: 'Продажа',
-  adjustment: 'Корректировка',
-  write_off: 'Списание',
+  receipt: "Приход",
+  consumption: "Расход",
+  production: "Производство",
+  sale: "Продажа",
+  adjustment: "Корректировка",
+  write_off: "Списание",
 };
 
 const columns: TableColumnConfig<InventoryMovement>[] = [
   {
-    id: 'created_at',
-    name: 'Дата',
+    id: "created_at",
+    name: "Дата",
     template: (item) => formatDateTime(item.created_at),
   },
   {
-    id: 'movement_type',
-    name: 'Тип',
+    id: "movement_type",
+    name: "Тип",
     template: (item) => labels[item.movement_type] ?? item.movement_type,
   },
   {
-    id: 'quantity',
-    name: 'Изменение',
-    align: 'end',
+    id: "quantity",
+    name: "Изменение",
+    align: "end",
     template: (item) => formatDecimal(item.quantity),
   },
   {
-    id: 'balance_before',
-    name: 'До',
-    align: 'end',
+    id: "balance_before",
+    name: "До",
+    align: "end",
     template: (item) => formatDecimal(item.balance_before),
   },
   {
-    id: 'balance_after',
-    name: 'После',
-    align: 'end',
+    id: "balance_after",
+    name: "После",
+    align: "end",
     template: (item) => formatDecimal(item.balance_after),
   },
-  {id: 'comment', name: 'Комментарий'},
+  { id: "comment", name: "Комментарий" },
 ];
 
 interface InventoryHistoryButtonProps {
   material: Material;
 }
 
-export function InventoryHistoryButton({material}: InventoryHistoryButtonProps) {
+export function InventoryHistoryButton({
+  material,
+}: InventoryHistoryButtonProps) {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -97,7 +100,9 @@ export function InventoryHistoryButton({material}: InventoryHistoryButtonProps) 
               theme="danger"
               title="Не удалось загрузить историю"
               message={getErrorMessage(query.error)}
-              actions={<Button onClick={() => query.refetch()}>Повторить</Button>}
+              actions={
+                <Button onClick={() => query.refetch()}>Повторить</Button>
+              }
             />
           ) : query.data.items.length === 0 ? (
             <PlaceholderContainer
@@ -110,6 +115,7 @@ export function InventoryHistoryButton({material}: InventoryHistoryButtonProps) 
               <div className={styles.tableWrap}>
                 <Table
                   data={query.data.items}
+                  className={styles.table}
                   columns={columns}
                   getRowId={(item) => item.id}
                   verticalAlign="middle"
@@ -124,6 +130,12 @@ export function InventoryHistoryButton({material}: InventoryHistoryButtonProps) 
               />
             </div>
           )}
+          <ExportExcelButton
+            dataset="inventory_movements"
+            params={{ material_id: material.id }}
+            label="История в Excel"
+            size="m"
+          />
         </Dialog.Body>
         <Dialog.Footer
           textButtonCancel="Закрыть"

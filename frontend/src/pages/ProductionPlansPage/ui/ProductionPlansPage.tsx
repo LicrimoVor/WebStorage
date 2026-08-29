@@ -32,6 +32,7 @@ import {
   type ProductionPlan,
   type ProductionPlanStatus,
 } from "@/entities/ProductionPlan";
+import { ExportExcelButton } from "@/features/ExportExcel";
 import { getErrorMessage } from "@/shared/api";
 import { formatDateTime, formatFixedDecimal } from "@/shared/lib";
 
@@ -596,7 +597,18 @@ export function ProductionPlansPage() {
             Планирование производства
           </Text>
         </div>
-        <CreatePlanButton />
+        <div className={styles.headerActions}>
+          <ExportExcelButton
+            dataset="production_plans"
+            params={status === "all" ? {} : { plan_status: status }}
+            label="Планы Excel"
+          />
+          <ExportExcelButton
+            dataset="production_records"
+            label="Выпуск Excel"
+          />
+          <CreatePlanButton />
+        </div>
       </header>
       <div className={styles.summaryGrid}>
         <Card view="outlined">

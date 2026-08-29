@@ -8,7 +8,8 @@
 .toolbar,
 .planHeading,
 .titleRow,
-.planActions {
+.planActions,
+.headerActions {
   display: flex;
   align-items: center;
 }
@@ -66,7 +67,8 @@
 }
 
 .titleRow,
-.planActions {
+.planActions,
+.headerActions {
   gap: var(--g-spacing-3);
 }
 
@@ -96,6 +98,11 @@
 
 .history {
   margin-top: var(--g-spacing-4);
+}
+
+.headerActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .historyList {

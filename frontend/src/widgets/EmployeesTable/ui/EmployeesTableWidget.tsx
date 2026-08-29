@@ -24,6 +24,7 @@ import {
 import { ArchiveEmployeeButton } from "@/features/ArchiveEmployee";
 import { CreateEmployeeButton } from "@/features/CreateEmployee";
 import { EditEmployeeButton } from "@/features/EditEmployee";
+import { ExportExcelButton } from "@/features/ExportExcel";
 import { PayrollDetailsButton, RegisterPaymentButton } from "@/features/ManagePayroll";
 import { WorkHistoryButton } from "@/features/ViewWorkHistory";
 import { getErrorMessage } from "@/shared/api";
@@ -87,7 +88,18 @@ export function EmployeesTableWidget() {
             Сотрудники
           </Text>
         </div>
-        <CreateEmployeeButton />
+        <div className={styles.actions}>
+          <ExportExcelButton
+            dataset="employees"
+            params={{
+              ...(search ? { search } : {}),
+              include_archived: includeInactive,
+              sort_by: sortBy,
+              sort_order: sortOrder,
+            }}
+          />
+          <CreateEmployeeButton />
+        </div>
       </div>
       <div className={styles.filters}>
         <TextInput

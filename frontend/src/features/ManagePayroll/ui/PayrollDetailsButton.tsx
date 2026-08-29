@@ -20,6 +20,7 @@ import {
   type EmployeeOperationSummary,
   type Payment,
 } from '@/entities/WorkPayroll';
+import {ExportExcelButton} from '@/features/ExportExcel';
 import {getErrorMessage} from '@/shared/api';
 import {formatDateTime, formatDecimal, formatMoney} from '@/shared/lib';
 
@@ -137,6 +138,20 @@ export function PayrollDetailsButton({employee}: {employee: Employee}) {
                     {formatDecimal(summary.data.completed_operations)}
                   </Text>
                 </Card>
+              </div>
+              <div className={styles.exports}>
+                <ExportExcelButton
+                  dataset="payroll_accruals"
+                  params={{employee_id: employee.id}}
+                  label="Начисления Excel"
+                  size="m"
+                />
+                <ExportExcelButton
+                  dataset="employee_payments"
+                  params={{employee_id: employee.id}}
+                  label="Выплаты Excel"
+                  size="m"
+                />
               </div>
               <section className={styles.section}>
                 <Text as="h3" variant="subheader-2">

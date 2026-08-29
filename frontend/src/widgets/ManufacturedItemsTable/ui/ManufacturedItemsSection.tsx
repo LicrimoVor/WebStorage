@@ -26,6 +26,7 @@ import { AdjustManufacturedStockButton } from "@/features/AdjustManufacturedStoc
 import { ArchiveManufacturedItemButton } from "@/features/ArchiveManufacturedItem";
 import { CreateManufacturedItemButton } from "@/features/CreateManufacturedItem";
 import { EditManufacturedItemButton } from "@/features/EditManufacturedItem";
+import { ExportExcelButton } from "@/features/ExportExcel";
 import { ManufacturedInventoryHistoryButton } from "@/features/ViewManufacturedInventoryHistory";
 import { getErrorMessage } from "@/shared/api";
 
@@ -117,10 +118,22 @@ export function ManufacturedItemsSection({
             {title}
           </Text>
         </div>
-        <CreateManufacturedItemButton
-          defaultIsProduct={isProduct}
-          buttonLabel={isProduct ? "Создать продукт" : "Создать полуфабрикат"}
-        />
+        <div className={styles.actions}>
+          <ExportExcelButton
+            dataset="manufactured_items"
+            params={{
+              ...(search ? { search } : {}),
+              sort_by: sortBy,
+              sort_order: sortOrder,
+              availability,
+              kind,
+            }}
+          />
+          <CreateManufacturedItemButton
+            defaultIsProduct={isProduct}
+            buttonLabel={isProduct ? "Создать продукт" : "Создать полуфабрикат"}
+          />
+        </div>
       </div>
 
       <div className={styles.filters}>

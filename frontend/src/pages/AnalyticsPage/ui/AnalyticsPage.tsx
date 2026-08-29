@@ -22,6 +22,7 @@ import {
   type ProductSalesRow,
   type StockPoint,
 } from '@/entities/Analytics';
+import {ExportExcelButton} from '@/features/ExportExcel';
 import {getErrorMessage} from '@/shared/api';
 import {formatDecimal, formatMoney} from '@/shared/lib';
 
@@ -326,6 +327,13 @@ export function AnalyticsPage() {
               </label>
             </>
           ) : null}
+          <ExportExcelButton
+            dataset="analytics"
+            params={{
+              date_from: startIso(dateFrom),
+              date_to: endIso(dateTo),
+            }}
+          />
         </div>
       </header>
 
