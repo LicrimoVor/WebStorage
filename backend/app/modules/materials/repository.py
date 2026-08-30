@@ -13,6 +13,7 @@ from app.modules.production_plans.model import (
     ProductionPlan,
     ProductionPlanMaterialRequirement,
 )
+from app.modules.warehouse.model import InventoryGroupMaterial
 
 
 def balance_expression() -> ColumnElement[Decimal]:
@@ -52,11 +53,20 @@ def _apply_filters(
     include_archived: bool,
     availability: AvailabilityFilter,
     deficit_only: bool,
+    allowed_ids: set[uuid.UUID] | None,
+    group_id: uuid.UUID | None,
 ) -> Select[tuple[Material]]:
     if not include_archived:
         statement = statement.where(Material.archived.is_(False))
     if search:
         statement = statement.where(Material.name.ilike(f"%{search.strip()}%"))
+    if allowed_ids is not None:
+        statement = statement.where(Material.id.in_(allowed_ids))
+    if group_id is not None:
+        statement = statement.join(
+            InventoryGroupMaterial,
+            InventoryGroupMaterial.material_id == Material.id,
+        ).where(InventoryGroupMaterial.group_id == group_id)
 
     balance = balance_expression()
     if availability == AvailabilityFilter.IN_STOCK:
@@ -79,6 +89,8 @@ async def list_materials(
     deficit_only: bool,
     sort_by: MaterialSortField,
     sort_order: SortOrder,
+    allowed_ids: set[uuid.UUID] | None = None,
+    group_id: uuid.UUID | None = None,
 ) -> tuple[list[tuple[Material, Decimal, Decimal]], int]:
     balance = balance_expression().label("free_quantity")
     required = required_expression().label("required_quantity")
@@ -88,6 +100,8 @@ async def list_materials(
         include_archived=include_archived,
         availability=availability,
         deficit_only=deficit_only,
+        allowed_ids=allowed_ids,
+        group_id=group_id,
     )
     count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
     total = int((await session.execute(count_statement)).scalar_one())

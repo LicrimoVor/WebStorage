@@ -2,6 +2,7 @@ import {Alert, Select, Switch, TextInput} from '@gravity-ui/uikit';
 
 import {measurementUnitOptions} from '@/shared/lib';
 import {ImageUploadField} from '@/shared/ui';
+import {useInventoryGroupsQuery} from '@/entities/InventoryGroup';
 
 import type {ManufacturedItemFormValue} from '../model/types';
 import styles from './ManufacturedItemForm.module.scss';
@@ -19,6 +20,7 @@ export function ManufacturedItemForm({
   includeInitialQuantity = false,
   error,
 }: ManufacturedItemFormProps) {
+  const groupsQuery = useInventoryGroupsQuery();
   const update = <K extends keyof ManufacturedItemFormValue>(
     field: K,
     fieldValue: ManufacturedItemFormValue[K],
@@ -38,10 +40,30 @@ export function ManufacturedItemForm({
       <Switch
         size="l"
         checked={value.isProduct}
-        onUpdate={(next) => update('isProduct', next)}
+        onUpdate={(next) =>
+          onChange({...value, isProduct: next, groupIds: next ? [] : value.groupIds})
+        }
       >
         Готовый продукт
       </Switch>
+      {!value.isProduct ? (
+        <Select
+          label="Группы"
+          options={(groupsQuery.data ?? []).map((group) => ({
+            value: group.id,
+            content: group.name,
+          }))}
+          value={value.groupIds}
+          onUpdate={(next) => update('groupIds', next)}
+          multiple
+          hasClear
+          filterable
+          placeholder="Без группы"
+          aria-label="Группы полуфабриката"
+          width="max"
+          size="l"
+        />
+      ) : null}
       <Select
         label="Единица"
         options={measurementUnitOptions}

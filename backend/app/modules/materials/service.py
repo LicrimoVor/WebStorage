@@ -19,6 +19,9 @@ from app.modules.materials.schemas import (
     MaterialSortField,
     MaterialUpdate,
 )
+from app.modules.warehouse import repository as warehouse_repository
+from app.modules.warehouse.composition import product_components
+from app.modules.warehouse.schemas import InventoryGroupSummary
 
 
 def _url_value(value: AnyHttpUrl | None) -> str | None:
@@ -26,7 +29,10 @@ def _url_value(value: AnyHttpUrl | None) -> str | None:
 
 
 def to_read_model(
-    material: Material, free_quantity: Decimal, required_quantity: Decimal = Decimal("0")
+    material: Material,
+    free_quantity: Decimal,
+    required_quantity: Decimal = Decimal("0"),
+    groups: list[InventoryGroupSummary] | None = None,
 ) -> MaterialRead:
     return MaterialRead(
         id=material.id,
@@ -38,6 +44,7 @@ def to_read_model(
         price=material.price,
         url=material.url,
         image=material.image,
+        groups=groups or [],
         archived=material.archived,
         created_at=material.created_at,
         updated_at=material.updated_at,
@@ -54,6 +61,9 @@ async def create(session: AsyncSession, payload: MaterialCreate) -> MaterialRead
     )
     try:
         await repository.create_material(session, material)
+        await warehouse_repository.set_material_groups(
+            session, material.id, payload.group_ids
+        )
         balance = Decimal("0")
         if payload.initial_quantity > 0:
             movement = await create_movement(
@@ -70,7 +80,8 @@ async def create(session: AsyncSession, payload: MaterialCreate) -> MaterialRead
         await session.rollback()
         raise ConflictError("A material with this name already exists") from error
     await session.refresh(material)
-    return to_read_model(material, balance)
+    groups = await warehouse_repository.material_group_map(session, [material.id])
+    return to_read_model(material, balance, groups=groups.get(material.id, []))
 
 
 async def list_all(
@@ -84,7 +95,12 @@ async def list_all(
     deficit_only: bool,
     sort_by: MaterialSortField,
     sort_order: SortOrder,
+    product_id: uuid.UUID | None,
+    group_id: uuid.UUID | None,
 ) -> MaterialList:
+    allowed_ids = None
+    if product_id is not None:
+        allowed_ids = (await product_components(session, product_id)).material_ids
     rows, total = await repository.list_materials(
         session,
         page=page,
@@ -95,9 +111,19 @@ async def list_all(
         deficit_only=deficit_only,
         sort_by=sort_by,
         sort_order=sort_order,
+        allowed_ids=allowed_ids,
+        group_id=group_id,
+    )
+    group_map = await warehouse_repository.material_group_map(
+        session, (material.id for material, _, _ in rows)
     )
     return MaterialList(
-        items=[to_read_model(material, balance, required) for material, balance, required in rows],
+        items=[
+            to_read_model(
+                material, balance, required, group_map.get(material.id, [])
+            )
+            for material, balance, required in rows
+        ],
         page=page,
         page_size=page_size,
         total=total,
@@ -109,7 +135,8 @@ async def get(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead:
     result = await repository.get_material_with_balance(session, material_id)
     if result is None:
         raise NotFoundError("Material was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.material_group_map(session, [material_id])
+    return to_read_model(*result, groups.get(material_id, []))
 
 
 async def update(
@@ -119,10 +146,13 @@ async def update(
     if material is None:
         raise NotFoundError("Material was not found")
     changes = payload.model_dump(exclude_unset=True)
+    group_ids = changes.pop("group_ids", None)
     for field, value in changes.items():
         if field in {"url", "image"}:
             value = _url_value(value)
         setattr(material, field, value)
+    if group_ids is not None:
+        await warehouse_repository.set_material_groups(session, material.id, group_ids)
     try:
         await session.commit()
     except IntegrityError as error:
@@ -132,7 +162,8 @@ async def update(
     result = await repository.get_material_with_balance(session, material_id)
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Material was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.material_group_map(session, [material_id])
+    return to_read_model(*result, groups.get(material_id, []))
 
 
 async def archive(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead:
@@ -145,4 +176,5 @@ async def archive(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead
     result = await repository.get_material_with_balance(session, material_id)
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Material was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.material_group_map(session, [material_id])
+    return to_read_model(*result, groups.get(material_id, []))

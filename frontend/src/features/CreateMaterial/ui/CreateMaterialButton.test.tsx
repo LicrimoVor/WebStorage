@@ -9,6 +9,11 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {CreateMaterialButton} from './CreateMaterialButton';
 
+vi.mock('@/entities/InventoryGroup', () => ({
+  inventoryGroupKeys: {all: ['inventory-groups']},
+  useInventoryGroupsQuery: () => ({data: []}),
+}));
+
 vi.mock('@/entities/Material', async (importOriginal) => {
   const actual = await importOriginal<typeof MaterialExports>();
   return {...actual, createMaterial: vi.fn()};

@@ -12,6 +12,7 @@ import {
   type ManufacturedItemFormValue,
 } from '@/entities/ManufacturedItem';
 import {getErrorMessage} from '@/shared/api';
+import {inventoryGroupKeys} from '@/entities/InventoryGroup';
 import {normalizeDecimal} from '@/shared/lib';
 
 const titleId = 'create-manufactured-item-title';
@@ -38,6 +39,7 @@ export function CreateManufacturedItemButton({
       createManufacturedItem(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
+      await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
       setForm(initialForm());
       setValidationError(undefined);
@@ -63,6 +65,7 @@ export function CreateManufacturedItemButton({
       unit: form.unit.trim(),
       initial_quantity: normalizeDecimal(form.initialQuantity),
       image: form.image || null,
+      group_ids: form.groupIds,
     };
     setValidationError(undefined);
     mutation.mutate(payload);

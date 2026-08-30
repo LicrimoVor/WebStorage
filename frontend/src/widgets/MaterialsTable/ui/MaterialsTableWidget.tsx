@@ -22,6 +22,8 @@ import {
   type MaterialSortField,
   type SortOrder,
 } from "@/entities/Material";
+import { useInventoryGroupsQuery } from "@/entities/InventoryGroup";
+import { useProductOptionsQuery } from "@/entities/ManufacturedItem";
 import { AdjustStockButton } from "@/features/AdjustStock";
 import { ArchiveMaterialButton } from "@/features/ArchiveMaterial";
 import { CreateMaterialButton } from "@/features/CreateMaterial";
@@ -63,6 +65,10 @@ export function MaterialsTableWidget() {
   const availability = (searchParams.get("availability") ??
     "all") as AvailabilityFilter;
   const deficitOnly = searchParams.get("deficit_only") === "true";
+  const productId = searchParams.get("product_id") ?? "";
+  const groupId = searchParams.get("group_id") ?? "";
+  const productsQuery = useProductOptionsQuery();
+  const groupsQuery = useInventoryGroupsQuery();
 
   const params: MaterialListParams = {
     page,
@@ -72,6 +78,8 @@ export function MaterialsTableWidget() {
     sort_order: sortOrder,
     availability,
     deficit_only: deficitOnly,
+    product_id: productId || null,
+    group_id: groupId || null,
   };
   const query = useMaterialsQuery(params);
 
@@ -128,6 +136,34 @@ export function MaterialsTableWidget() {
           hasClear
           size="l"
           controlProps={{ "aria-label": "Поиск материалов" }}
+        />
+        <Select
+          options={(productsQuery.data ?? []).map((product) => ({
+            value: product.id,
+            content: product.name,
+          }))}
+          value={productId ? [productId] : []}
+          onUpdate={(values) => updateUrl({ product_id: values[0] ?? "", page: 1 })}
+          placeholder="Для любого продукта"
+          hasClear
+          filterable
+          width="max"
+          size="l"
+          aria-label="Фильтр материалов по продукту"
+        />
+        <Select
+          options={(groupsQuery.data ?? []).map((group) => ({
+            value: group.id,
+            content: group.name,
+          }))}
+          value={groupId ? [groupId] : []}
+          onUpdate={(values) => updateUrl({ group_id: values[0] ?? "", page: 1 })}
+          placeholder="Любая группа"
+          hasClear
+          filterable
+          width="max"
+          size="l"
+          aria-label="Фильтр материалов по группе"
         />
         <Select
           options={availabilityOptions}
@@ -187,14 +223,20 @@ export function MaterialsTableWidget() {
         <PlaceholderContainer
           image={<Boxes3 width={100} height={100} />}
           title={
-            search || deficitOnly ? "Ничего не найдено" : "Материалов пока нет"
+            search || deficitOnly || productId || groupId
+              ? "Ничего не найдено"
+              : "Материалов пока нет"
           }
           description={
-            search || deficitOnly
+            search || deficitOnly || productId || groupId
               ? "Измените поисковый запрос или фильтры."
               : "Создайте первый материал и укажите его начальный остаток."
           }
-          actions={!search && !deficitOnly ? <CreateMaterialButton /> : null}
+          actions={
+            !search && !deficitOnly && !productId && !groupId ? (
+              <CreateMaterialButton />
+            ) : null
+          }
         />
       ) : (
         <div className={styles.content}>

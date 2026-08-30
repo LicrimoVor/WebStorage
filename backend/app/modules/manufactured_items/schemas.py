@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
 from app.core.types import Quantity
+from app.modules.warehouse.schemas import InventoryGroupSummary
 
 
 class ManufacturedItemSortField(StrEnum):
@@ -26,6 +27,7 @@ class ManufacturedItemCreate(BaseModel):
     unit: str = Field(min_length=1, max_length=32)
     initial_quantity: Quantity = Field(default=Decimal("0"), ge=0)
     image: AnyHttpUrl | None = None
+    group_ids: list[uuid.UUID] = Field(default_factory=list)
 
     @field_validator("name", "unit")
     @classmethod
@@ -41,6 +43,7 @@ class ManufacturedItemUpdate(BaseModel):
     is_product: bool | None = None
     unit: str | None = Field(default=None, min_length=1, max_length=32)
     image: AnyHttpUrl | None = None
+    group_ids: list[uuid.UUID] | None = None
 
     @field_validator("name", "unit")
     @classmethod
@@ -64,6 +67,7 @@ class ManufacturedItemRead(BaseModel):
     required_quantity: Quantity = Decimal("0")
     to_produce_quantity: Quantity = Decimal("0")
     image: AnyHttpUrl | None
+    groups: list[InventoryGroupSummary] = Field(default_factory=list)
     active_process_id: uuid.UUID | None
     archived: bool
     created_at: datetime

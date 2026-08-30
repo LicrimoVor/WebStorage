@@ -6,6 +6,7 @@ export {
   updateManufacturedItem,
   useManufacturedItemMovementsQuery,
   useManufacturedItemsQuery,
+  useProductOptionsQuery,
 } from './api/manufacturedItemApi';
 export {
   emptyManufacturedItemForm,

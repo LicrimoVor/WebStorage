@@ -944,6 +944,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inventory-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Inventory Groups */
+        get: operations["listInventoryGroups"];
+        put?: never;
+        /** Create Inventory Group */
+        post: operations["createInventoryGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory-groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Inventory Group */
+        put: operations["updateInventoryGroup"];
+        post?: never;
+        /** Delete Inventory Group */
+        delete: operations["deleteInventoryGroup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/warehouse/revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Stock Revision Rows */
+        get: operations["listStockRevisionRows"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/warehouse/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Stock Revision */
+        post: operations["createStockRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -1645,6 +1715,56 @@ export interface components {
              */
             updated_at: string;
         };
+        /** InventoryGroupCreate */
+        InventoryGroupCreate: {
+            /** Name */
+            name: string;
+        };
+        /** InventoryGroupRead */
+        InventoryGroupRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Material Count
+             * @default 0
+             */
+            material_count: number;
+            /**
+             * Semi Finished Count
+             * @default 0
+             */
+            semi_finished_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** InventoryGroupSummary */
+        InventoryGroupSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** InventoryGroupUpdate */
+        InventoryGroupUpdate: {
+            /** Name */
+            name: string;
+        };
         /** InventoryMovementCreate */
         InventoryMovementCreate: {
             movement_type: components["schemas"]["ManualMovementType"];
@@ -1724,6 +1844,8 @@ export interface components {
             initial_quantity: number | string;
             /** Image */
             image?: string | null;
+            /** Group Ids */
+            group_ids?: string[];
         };
         /**
          * ManufacturedItemKind
@@ -1819,6 +1941,8 @@ export interface components {
             to_produce_quantity: string;
             /** Image */
             image: string | null;
+            /** Groups */
+            groups?: components["schemas"]["InventoryGroupSummary"][];
             /** Active Process Id */
             active_process_id: string | null;
             /** Archived */
@@ -1849,6 +1973,8 @@ export interface components {
             unit?: string | null;
             /** Image */
             image?: string | null;
+            /** Group Ids */
+            group_ids?: string[] | null;
         };
         /** MaterialCreate */
         MaterialCreate: {
@@ -1867,6 +1993,8 @@ export interface components {
             url?: string | null;
             /** Image */
             image?: string | null;
+            /** Group Ids */
+            group_ids?: string[];
         };
         /** MaterialList */
         MaterialList: {
@@ -1910,6 +2038,8 @@ export interface components {
             url: string | null;
             /** Image */
             image: string | null;
+            /** Groups */
+            groups?: components["schemas"]["InventoryGroupSummary"][];
             /** Archived */
             archived: boolean;
             /**
@@ -1940,6 +2070,8 @@ export interface components {
             url?: string | null;
             /** Image */
             image?: string | null;
+            /** Group Ids */
+            group_ids?: string[] | null;
         };
         /** OperationAnalyticsRow */
         OperationAnalyticsRow: {
@@ -2999,6 +3131,94 @@ export interface components {
              */
             products_delta: string;
         };
+        /** StockRevisionCatalogRef */
+        StockRevisionCatalogRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** StockRevisionCreate */
+        StockRevisionCreate: {
+            /** Entries */
+            entries: components["schemas"]["StockRevisionEntryCreate"][];
+            /** Comment */
+            comment?: string | null;
+        };
+        /**
+         * StockRevisionEntityType
+         * @enum {string}
+         */
+        StockRevisionEntityType: "material" | "semi_finished" | "product";
+        /** StockRevisionEntryCreate */
+        StockRevisionEntryCreate: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            type: components["schemas"]["StockRevisionEntityType"];
+            /** Counted Quantity */
+            counted_quantity: number | string;
+        };
+        /** StockRevisionEntryRead */
+        StockRevisionEntryRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            type: components["schemas"]["StockRevisionEntityType"];
+            /** Counted Quantity */
+            counted_quantity: string;
+            /** Balance Before */
+            balance_before: string;
+            /** Adjustment */
+            adjustment: string;
+        };
+        /** StockRevisionRead */
+        StockRevisionRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Created By */
+            created_by: string;
+            /** Comment */
+            comment: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Entries */
+            entries: components["schemas"]["StockRevisionEntryRead"][];
+        };
+        /** StockRevisionRow */
+        StockRevisionRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            type: components["schemas"]["StockRevisionEntityType"];
+            /** Name */
+            name: string;
+            /** Image */
+            image: string | null;
+            /** Unit */
+            unit: string;
+            /** Products */
+            products?: components["schemas"]["StockRevisionCatalogRef"][];
+            /** Groups */
+            groups?: components["schemas"]["InventoryGroupSummary"][];
+            /** Current Quantity */
+            current_quantity: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3216,6 +3436,8 @@ export interface operations {
                 deficit_only?: boolean;
                 sort_by?: components["schemas"]["MaterialSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
+                product_id?: string | null;
+                group_id?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -3574,6 +3796,8 @@ export interface operations {
                 kind?: components["schemas"]["ManufacturedItemKind"];
                 sort_by?: components["schemas"]["ManufacturedItemSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
+                product_id?: string | null;
+                group_id?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -6540,6 +6764,265 @@ export interface operations {
                 };
                 content: {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": unknown;
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listInventoryGroups: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryGroupRead"][];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createInventoryGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryGroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryGroupRead"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    updateInventoryGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryGroupUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryGroupRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    deleteInventoryGroup: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listStockRevisionRows: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                type?: components["schemas"]["StockRevisionEntityType"] | null;
+                product_id?: string | null;
+                group_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockRevisionRow"][];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    createStockRevision: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockRevisionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockRevisionRead"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Unprocessable Content */

@@ -19,6 +19,10 @@ const WarehousePage = lazy(async () => {
   const module = await import("@/pages/WarehousePage");
   return { default: module.WarehousePage };
 });
+const StockRevisionPage = lazy(async () => {
+  const module = await import("@/pages/StockRevisionPage");
+  return { default: module.StockRevisionPage };
+});
 const ProductionPlansPage = lazy(async () => {
   const module = await import("@/pages/ProductionPlansPage");
   return { default: module.ProductionPlansPage };
@@ -50,6 +54,10 @@ const TechnologicalProcessesPage = lazy(async () => {
 const ProcessEditorPage = lazy(async () => {
   const module = await import("@/pages/ProcessEditorPage");
   return { default: module.ProcessEditorPage };
+});
+const ProcessPromptPage = lazy(async () => {
+  const module = await import("@/pages/ProcessPromptPage");
+  return { default: module.ProcessPromptPage };
 });
 const OperationInstructionPage = lazy(async () => {
   const module = await import("@/pages/OperationInstructionPage");
@@ -88,7 +96,7 @@ function AppLayout() {
           <Button
             view="flat-action"
             onClick={() => navigate(routes.warehouse)}
-            selected={location.pathname === routes.warehouse}
+            selected={location.pathname.startsWith(routes.warehouse)}
           >
             Склад
           </Button>
@@ -140,6 +148,7 @@ function AppLayout() {
             element={<ProductionPlansPage />}
           />
           <Route path={routes.warehouse} element={<WarehousePage />} />
+          <Route path={routes.stockRevision} element={<StockRevisionPage />} />
           <Route path={routes.operations} element={<OperationsPage />} />
           <Route
             path={routes.operationInstructionPattern}
@@ -148,6 +157,10 @@ function AppLayout() {
           <Route
             path={routes.processes}
             element={<TechnologicalProcessesPage />}
+          />
+          <Route
+            path={routes.processPrompt}
+            element={<ProcessPromptPage />}
           />
           <Route
             path={routes.processEditorPattern}

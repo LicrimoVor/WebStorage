@@ -38,6 +38,13 @@ from app.modules.technological_processes.model import (  # noqa: F401
     TechnologicalProcessNode,
     TechnologicalProcessVersion,
 )
+from app.modules.warehouse.model import (  # noqa: F401
+    InventoryGroup,
+    InventoryGroupManufacturedItem,
+    InventoryGroupMaterial,
+    StockRevision,
+    StockRevisionEntry,
+)
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 

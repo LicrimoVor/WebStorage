@@ -367,6 +367,13 @@ export function TechnologicalProcessesWidget() {
         </div>
         <div className={styles.headingActions}>
           <ImportProcessButton />
+          <Button
+            view="outlined"
+            size="l"
+            onClick={() => navigate(routes.processPrompt)}
+          >
+            Промпт
+          </Button>
           <CreateProcessButton />
         </div>
       </div>

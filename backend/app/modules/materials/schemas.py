@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
 from app.core.types import Money, Quantity
+from app.modules.warehouse.schemas import InventoryGroupSummary
 
 
 class MaterialSortField(StrEnum):
@@ -22,6 +23,7 @@ class MaterialCreate(BaseModel):
     price: Money | None = None
     url: AnyHttpUrl | None = None
     image: AnyHttpUrl | None = None
+    group_ids: list[uuid.UUID] = Field(default_factory=list)
 
     @field_validator("name", "unit")
     @classmethod
@@ -38,6 +40,7 @@ class MaterialUpdate(BaseModel):
     price: Money | None = None
     url: AnyHttpUrl | None = None
     image: AnyHttpUrl | None = None
+    group_ids: list[uuid.UUID] | None = None
 
     @field_validator("name", "unit")
     @classmethod
@@ -62,6 +65,7 @@ class MaterialRead(BaseModel):
     price: Money | None
     url: AnyHttpUrl | None
     image: AnyHttpUrl | None
+    groups: list[InventoryGroupSummary] = Field(default_factory=list)
     archived: bool
     created_at: datetime
     updated_at: datetime

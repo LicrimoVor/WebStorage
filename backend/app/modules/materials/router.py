@@ -46,6 +46,8 @@ async def list_materials(
     deficit_only: bool = False,
     sort_by: MaterialSortField = MaterialSortField.NAME,
     sort_order: SortOrder = SortOrder.ASC,
+    product_id: uuid.UUID | None = None,
+    group_id: uuid.UUID | None = None,
 ) -> MaterialList:
     return await service.list_all(
         session,
@@ -57,6 +59,8 @@ async def list_materials(
         deficit_only=deficit_only,
         sort_by=sort_by,
         sort_order=sort_order,
+        product_id=product_id,
+        group_id=group_id,
     )
 
 

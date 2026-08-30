@@ -15,6 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   ManufacturedItemsTable,
   useManufacturedItemsQuery,
+  useProductOptionsQuery,
   type AvailabilityFilter,
   type ManufacturedItem,
   type ManufacturedItemKind,
@@ -22,6 +23,7 @@ import {
   type ManufacturedItemSortField,
   type SortOrder,
 } from "@/entities/ManufacturedItem";
+import { useInventoryGroupsQuery } from "@/entities/InventoryGroup";
 import { ArchiveManufacturedItemButton } from "@/features/ArchiveManufacturedItem";
 import { CreateManufacturedItemButton } from "@/features/CreateManufacturedItem";
 import { EditManufacturedItemButton } from "@/features/EditManufacturedItem";
@@ -73,6 +75,8 @@ export function ManufacturedItemsSection({
   const sortByKey = `${prefix}_sort_by`;
   const sortOrderKey = `${prefix}_sort_order`;
   const availabilityKey = `${prefix}_availability`;
+  const productKey = `${prefix}_product_id`;
+  const groupKey = `${prefix}_group_id`;
   const page = positiveInteger(searchParams.get(pageKey), 1);
   const pageSize = positiveInteger(searchParams.get(pageSizeKey), 20);
   const search = searchParams.get(searchKey) ?? "";
@@ -81,6 +85,11 @@ export function ManufacturedItemsSection({
   const sortOrder = (searchParams.get(sortOrderKey) ?? "asc") as SortOrder;
   const availability = (searchParams.get(availabilityKey) ??
     "all") as AvailabilityFilter;
+  const productId = searchParams.get(productKey) ?? "";
+  const groupId = searchParams.get(groupKey) ?? "";
+  const isProduct = kind === "product";
+  const productsQuery = useProductOptionsQuery(!isProduct);
+  const groupsQuery = useInventoryGroupsQuery();
   const params: ManufacturedItemListParams = {
     page,
     page_size: pageSize,
@@ -89,6 +98,8 @@ export function ManufacturedItemsSection({
     sort_order: sortOrder,
     availability,
     kind,
+    product_id: !isProduct && productId ? productId : null,
+    group_id: !isProduct && groupId ? groupId : null,
   };
   const query = useManufacturedItemsQuery(params);
   const updateUrl = (updates: Record<string, string | number | undefined>) => {
@@ -107,8 +118,10 @@ export function ManufacturedItemsSection({
       <ArchiveManufacturedItemButton item={item} />
     </div>
   );
-  const hasFilters = Boolean(search) || availability !== "all";
-  const isProduct = kind === "product";
+  const hasFilters =
+    Boolean(search) ||
+    availability !== "all" ||
+    (!isProduct && Boolean(productId || groupId));
 
   return (
     <Card className={styles.root} view="outlined">
@@ -146,6 +159,42 @@ export function ManufacturedItemsSection({
           size="l"
           controlProps={{ "aria-label": `Поиск: ${title.toLowerCase()}` }}
         />
+        {!isProduct ? (
+          <Select
+            options={(productsQuery.data ?? []).map((product) => ({
+              value: product.id,
+              content: product.name,
+            }))}
+            value={productId ? [productId] : []}
+            onUpdate={(values) =>
+              updateUrl({ [productKey]: values[0] ?? "", [pageKey]: 1 })
+            }
+            placeholder="Для любого продукта"
+            hasClear
+            filterable
+            width="max"
+            size="l"
+            aria-label="Фильтр полуфабрикатов по продукту"
+          />
+        ) : null}
+        {!isProduct ? (
+          <Select
+            options={(groupsQuery.data ?? []).map((group) => ({
+              value: group.id,
+              content: group.name,
+            }))}
+            value={groupId ? [groupId] : []}
+            onUpdate={(values) =>
+              updateUrl({ [groupKey]: values[0] ?? "", [pageKey]: 1 })
+            }
+            placeholder="Любая группа"
+            hasClear
+            filterable
+            width="max"
+            size="l"
+            aria-label="Фильтр полуфабрикатов по группе"
+          />
+        ) : null}
         <Select
           options={availabilityOptions}
           value={[availability]}

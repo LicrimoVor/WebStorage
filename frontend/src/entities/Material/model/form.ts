@@ -7,6 +7,7 @@ export const emptyMaterialForm: MaterialFormValue = {
   price: '',
   url: '',
   image: '',
+  groupIds: [],
 };
 
 export function materialToForm(material: Material): MaterialFormValue {
@@ -17,6 +18,6 @@ export function materialToForm(material: Material): MaterialFormValue {
     price: material.price ?? '',
     url: material.url ?? '',
     image: material.image ?? '',
+    groupIds: material.groups?.map((group) => group.id) ?? [],
   };
 }
-

@@ -25,6 +25,7 @@ from app.modules.sales.router import router as sales_router
 from app.modules.technological_processes.router import (
     router as technological_processes_router,
 )
+from app.modules.warehouse.router import groups_router, warehouse_router
 
 api_router = APIRouter(dependencies=[Depends(get_current_actor)])
 api_router.include_router(materials_router)
@@ -43,6 +44,8 @@ api_router.include_router(sales_router)
 api_router.include_router(finance_router)
 api_router.include_router(analytics_router)
 api_router.include_router(exports_router)
+api_router.include_router(groups_router)
+api_router.include_router(warehouse_router)
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 

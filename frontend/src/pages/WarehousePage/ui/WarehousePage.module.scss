@@ -6,6 +6,15 @@
 
 .header {
   margin-bottom: var(--g-spacing-7);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--g-spacing-4);
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: var(--g-spacing-2);
 }
 
 .description {
@@ -21,5 +30,11 @@
   .root {
     width: calc(100% - var(--g-spacing-4));
     padding-top: var(--g-spacing-5);
+  }
+
+  .header,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

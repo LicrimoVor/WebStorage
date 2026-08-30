@@ -36,6 +36,7 @@ describe('TechnologicalProcessesWidget', () => {
       data: {items: [], page: 1, page_size: 20, total: 0, pages: 0},
     } as unknown as ReturnType<typeof useTechnologicalProcessesQuery>);
     renderWithProviders(<TechnologicalProcessesWidget />, '/processes');
+    expect(screen.getByRole('button', {name: 'Промпт'})).toBeInTheDocument();
     expect(screen.getByText('Техпроцессов пока нет')).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Импорт JSON'})).toBeInTheDocument();
   });

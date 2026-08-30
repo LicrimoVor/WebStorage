@@ -169,6 +169,40 @@
             }
           },
           {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -831,6 +865,40 @@
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
               "default": "asc"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
             }
           },
           {
@@ -6550,6 +6618,474 @@
         }
       }
     },
+    "/api/v1/inventory-groups": {
+      "get": {
+        "tags": [
+          "inventory groups"
+        ],
+        "summary": "List Inventory Groups",
+        "operationId": "listInventoryGroups",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InventoryGroupRead"
+                  },
+                  "title": "Response Listinventorygroups"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "inventory groups"
+        ],
+        "summary": "Create Inventory Group",
+        "operationId": "createInventoryGroup",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryGroupCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryGroupRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/inventory-groups/{group_id}": {
+      "put": {
+        "tags": [
+          "inventory groups"
+        ],
+        "summary": "Update Inventory Group",
+        "operationId": "updateInventoryGroup",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryGroupUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryGroupRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "inventory groups"
+        ],
+        "summary": "Delete Inventory Group",
+        "operationId": "deleteInventoryGroup",
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/warehouse/revision": {
+      "get": {
+        "tags": [
+          "warehouse"
+        ],
+        "summary": "List Stock Revision Rows",
+        "operationId": "listStockRevisionRows",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/StockRevisionEntityType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockRevisionRow"
+                  },
+                  "title": "Response Liststockrevisionrows"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/warehouse/revisions": {
+      "post": {
+        "tags": [
+          "warehouse"
+        ],
+        "summary": "Create Stock Revision",
+        "operationId": "createStockRevision",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockRevisionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockRevisionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -8318,6 +8854,96 @@
         ],
         "title": "InstructionVersionSummary"
       },
+      "InventoryGroupCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "InventoryGroupCreate"
+      },
+      "InventoryGroupRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "material_count": {
+            "type": "integer",
+            "title": "Material Count",
+            "default": 0
+          },
+          "semi_finished_count": {
+            "type": "integer",
+            "title": "Semi Finished Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "InventoryGroupRead"
+      },
+      "InventoryGroupSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "InventoryGroupSummary"
+      },
+      "InventoryGroupUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "InventoryGroupUpdate"
+      },
       "InventoryMovementCreate": {
         "properties": {
           "movement_type": {
@@ -8570,6 +9196,14 @@
               }
             ],
             "title": "Image"
+          },
+          "group_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Group Ids"
           }
         },
         "type": "object",
@@ -8822,6 +9456,13 @@
             ],
             "title": "Image"
           },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryGroupSummary"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
           "active_process_id": {
             "anyOf": [
               {
@@ -8924,6 +9565,21 @@
               }
             ],
             "title": "Image"
+          },
+          "group_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Ids"
           }
         },
         "type": "object",
@@ -8998,6 +9654,14 @@
               }
             ],
             "title": "Image"
+          },
+          "group_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Group Ids"
           }
         },
         "type": "object",
@@ -9113,6 +9777,13 @@
             ],
             "title": "Image"
           },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryGroupSummary"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
           "archived": {
             "type": "boolean",
             "title": "Archived"
@@ -9222,6 +9893,21 @@
               }
             ],
             "title": "Image"
+          },
+          "group_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Ids"
           }
         },
         "type": "object",
@@ -11803,6 +12489,237 @@
           "period_start"
         ],
         "title": "StockPoint"
+      },
+      "StockRevisionCatalogRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "StockRevisionCatalogRef"
+      },
+      "StockRevisionCreate": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/StockRevisionEntryCreate"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Entries"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "title": "StockRevisionCreate"
+      },
+      "StockRevisionEntityType": {
+        "type": "string",
+        "enum": [
+          "material",
+          "semi_finished",
+          "product"
+        ],
+        "title": "StockRevisionEntityType"
+      },
+      "StockRevisionEntryCreate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StockRevisionEntityType"
+          },
+          "counted_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Counted Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "counted_quantity"
+        ],
+        "title": "StockRevisionEntryCreate"
+      },
+      "StockRevisionEntryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StockRevisionEntityType"
+          },
+          "counted_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Counted Quantity"
+          },
+          "balance_before": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Balance Before"
+          },
+          "adjustment": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Adjustment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "counted_quantity",
+          "balance_before",
+          "adjustment"
+        ],
+        "title": "StockRevisionEntryRead"
+      },
+      "StockRevisionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/StockRevisionEntryRead"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_by",
+          "comment",
+          "created_at",
+          "entries"
+        ],
+        "title": "StockRevisionRead"
+      },
+      "StockRevisionRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StockRevisionEntityType"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/StockRevisionCatalogRef"
+            },
+            "type": "array",
+            "title": "Products"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryGroupSummary"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "current_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Current Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "name",
+          "image",
+          "unit",
+          "current_quantity"
+        ],
+        "title": "StockRevisionRow"
       },
       "ValidationError": {
         "properties": {

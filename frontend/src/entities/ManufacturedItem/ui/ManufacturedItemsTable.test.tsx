@@ -7,7 +7,7 @@ import {manufacturedItemFixture} from '../testing';
 import {ManufacturedItemsTable} from './ManufacturedItemsTable';
 
 describe('ManufacturedItemsTable', () => {
-  it('renders stock, kind and future process columns', () => {
+  it('renders stock and future process columns', () => {
     renderWithProviders(
       <ManufacturedItemsTable
         items={[manufacturedItemFixture]}
@@ -16,7 +16,6 @@ describe('ManufacturedItemsTable', () => {
     );
 
     expect(screen.getByText('Корпус редуктора')).toBeInTheDocument();
-    expect(screen.getByText('Полуфабрикат')).toBeInTheDocument();
     expect(screen.getByText('4,5')).toBeInTheDocument();
     expect(screen.getByText('Состав')).toBeInTheDocument();
     expect(screen.getByText('Операции')).toBeInTheDocument();

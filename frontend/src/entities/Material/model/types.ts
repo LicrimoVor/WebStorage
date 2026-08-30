@@ -22,5 +22,5 @@ export interface MaterialFormValue {
   price: string;
   url: string;
   image: string;
+  groupIds: string[];
 }
-

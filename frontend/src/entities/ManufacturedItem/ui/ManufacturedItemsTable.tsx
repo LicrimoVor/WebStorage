@@ -1,4 +1,4 @@
-import { Label, Table, Text, type TableColumnConfig } from "@gravity-ui/uikit";
+import { Table, Text, type TableColumnConfig } from "@gravity-ui/uikit";
 import type { ReactNode } from "react";
 
 import { formatDecimal } from "@/shared/lib";
@@ -32,14 +32,19 @@ export function ManufacturedItemsTable({
       template: (item) => <Text variant="body-2">{item.name}</Text>,
     },
     {
-      id: "kind",
-      name: "Тип",
-      template: (item) => (
-        <Label theme={item.is_product ? "success" : "info"}>
-          {item.is_product ? "Продукт" : "Полуфабрикат"}
-        </Label>
-      ),
+      id: "groups",
+      name: "Группы",
+      template: (item) => item.groups?.map((group) => group.name).join(", ") || "—",
     },
+    // {
+    //   id: "kind",
+    //   name: "Тип",
+    //   template: (item) => (
+    //     <Label theme={item.is_product ? "success" : "info"}>
+    //       {item.is_product ? "Продукт" : "Полуфабрикат"}
+    //     </Label>
+    //   ),
+    // },
     {
       id: "free_quantity",
       name: "Свободно",

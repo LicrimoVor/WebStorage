@@ -12,6 +12,7 @@ import {
   type MaterialFormValue,
 } from '@/entities/Material';
 import {getErrorMessage} from '@/shared/api';
+import {inventoryGroupKeys} from '@/entities/InventoryGroup';
 import {normalizeDecimal} from '@/shared/lib';
 
 const titleId = 'create-material-title';
@@ -25,6 +26,7 @@ export function CreateMaterialButton() {
     mutationFn: (payload: MaterialCreate) => createMaterial(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: materialKeys.all});
+      await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
       setForm(emptyMaterialForm);
       setValidationError(undefined);
@@ -52,6 +54,7 @@ export function CreateMaterialButton() {
       price: form.price ? normalizeDecimal(form.price) : null,
       url: form.url || null,
       image: form.image || null,
+      group_ids: form.groupIds,
     };
     setValidationError(undefined);
     mutation.mutate(payload);

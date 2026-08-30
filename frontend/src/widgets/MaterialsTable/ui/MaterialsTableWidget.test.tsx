@@ -1,7 +1,8 @@
 import {screen} from '@testing-library/react';
-import {describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {useMaterialsQuery} from '@/entities/Material';
+import {useProductOptionsQuery} from '@/entities/ManufacturedItem';
 import type * as MaterialExports from '@/entities/Material';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
@@ -11,8 +12,20 @@ vi.mock('@/entities/Material', async (importOriginal) => {
   const actual = await importOriginal<typeof MaterialExports>();
   return {...actual, useMaterialsQuery: vi.fn()};
 });
+vi.mock('@/entities/ManufacturedItem', () => ({
+  useProductOptionsQuery: vi.fn(),
+}));
+vi.mock('@/entities/InventoryGroup', () => ({
+  inventoryGroupKeys: {all: ['inventory-groups']},
+  useInventoryGroupsQuery: () => ({data: []}),
+}));
 
 describe('MaterialsTableWidget states', () => {
+  beforeEach(() => {
+    vi.mocked(useProductOptionsQuery).mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useProductOptionsQuery>);
+  });
   it('renders loading state', () => {
     vi.mocked(useMaterialsQuery).mockReturnValue({
       isPending: true,

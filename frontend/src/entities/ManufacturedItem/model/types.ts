@@ -25,4 +25,5 @@ export interface ManufacturedItemFormValue {
   unit: string;
   initialQuantity: string;
   image: string;
+  groupIds: string[];
 }

@@ -18,6 +18,7 @@ from app.modules.production_plans.model import (
     ProductionPlan,
     ProductionPlanItemRequirement,
 )
+from app.modules.warehouse.model import InventoryGroupManufacturedItem
 
 
 def balance_expression() -> ColumnElement[Decimal]:
@@ -54,11 +55,20 @@ def _apply_filters(
     include_archived: bool,
     availability: AvailabilityFilter,
     kind: ManufacturedItemKind,
+    allowed_ids: set[uuid.UUID] | None,
+    group_id: uuid.UUID | None,
 ) -> Select[tuple[ManufacturedItem]]:
     if not include_archived:
         statement = statement.where(ManufacturedItem.archived.is_(False))
     if search:
         statement = statement.where(ManufacturedItem.name.ilike(f"%{search.strip()}%"))
+    if allowed_ids is not None:
+        statement = statement.where(ManufacturedItem.id.in_(allowed_ids))
+    if group_id is not None:
+        statement = statement.join(
+            InventoryGroupManufacturedItem,
+            InventoryGroupManufacturedItem.manufactured_item_id == ManufacturedItem.id,
+        ).where(InventoryGroupManufacturedItem.group_id == group_id)
     if kind == ManufacturedItemKind.PRODUCT:
         statement = statement.where(ManufacturedItem.is_product.is_(True))
     elif kind == ManufacturedItemKind.SEMI_FINISHED:
@@ -83,6 +93,8 @@ async def list_items(
     kind: ManufacturedItemKind,
     sort_by: ManufacturedItemSortField,
     sort_order: SortOrder,
+    allowed_ids: set[uuid.UUID] | None = None,
+    group_id: uuid.UUID | None = None,
 ) -> tuple[list[tuple[ManufacturedItem, Decimal, Decimal]], int]:
     balance = balance_expression().label("free_quantity")
     required = required_expression().label("required_quantity")
@@ -92,6 +104,8 @@ async def list_items(
         include_archived=include_archived,
         availability=availability,
         kind=kind,
+        allowed_ids=allowed_ids,
+        group_id=group_id,
     )
     count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
     total = int((await session.execute(count_statement)).scalar_one())

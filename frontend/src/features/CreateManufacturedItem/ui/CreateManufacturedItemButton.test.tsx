@@ -9,6 +9,11 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {CreateManufacturedItemButton} from './CreateManufacturedItemButton';
 
+vi.mock('@/entities/InventoryGroup', () => ({
+  inventoryGroupKeys: {all: ['inventory-groups']},
+  useInventoryGroupsQuery: () => ({data: []}),
+}));
+
 vi.mock('@/entities/ManufacturedItem', async (importOriginal) => {
   const actual = await importOriginal<typeof ManufacturedItemExports>();
   return {...actual, createManufacturedItem: vi.fn()};
@@ -41,6 +46,7 @@ describe('CreateManufacturedItemButton', () => {
         unit: 'шт.',
         initial_quantity: '4.5',
         image: null,
+        group_ids: [],
       }),
     );
   });

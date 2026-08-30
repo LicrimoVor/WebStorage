@@ -6,6 +6,7 @@ export const emptyManufacturedItemForm: ManufacturedItemFormValue = {
   unit: 'шт.',
   initialQuantity: '0',
   image: '',
+  groupIds: [],
 };
 
 export function manufacturedItemToForm(
@@ -17,5 +18,6 @@ export function manufacturedItemToForm(
     unit: item.unit,
     initialQuantity: '0',
     image: item.image ?? '',
+    groupIds: item.groups?.map((group) => group.id) ?? [],
   };
 }

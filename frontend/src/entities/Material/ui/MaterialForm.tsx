@@ -2,6 +2,7 @@ import {Alert, Select, TextInput} from '@gravity-ui/uikit';
 
 import {measurementUnitOptions} from '@/shared/lib';
 import {ImageUploadField} from '@/shared/ui';
+import {useInventoryGroupsQuery} from '@/entities/InventoryGroup';
 
 import type {MaterialFormValue} from '../model/types';
 import styles from './MaterialForm.module.scss';
@@ -19,6 +20,7 @@ export function MaterialForm({
   includeInitialQuantity = false,
   error,
 }: MaterialFormProps) {
+  const groupsQuery = useInventoryGroupsQuery();
   const update = (field: keyof MaterialFormValue, fieldValue: string) => {
     onChange({...value, [field]: fieldValue});
   };
@@ -40,6 +42,22 @@ export function MaterialForm({
         value={value.unit ? [value.unit] : []}
         onUpdate={(next) => update('unit', next[0] ?? '')}
         aria-label="Единица измерения"
+        width="max"
+        size="l"
+      />
+      <Select
+        label="Группы"
+        options={(groupsQuery.data ?? []).map((group) => ({
+          value: group.id,
+          content: group.name,
+        }))}
+        value={value.groupIds}
+        onUpdate={(next) => onChange({...value, groupIds: next})}
+        multiple
+        hasClear
+        filterable
+        placeholder="Без группы"
+        aria-label="Группы материала"
         width="max"
         size="l"
       />

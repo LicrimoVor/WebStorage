@@ -13,6 +13,7 @@ import {
   type MaterialUpdate,
 } from '@/entities/Material';
 import {getErrorMessage} from '@/shared/api';
+import {inventoryGroupKeys} from '@/entities/InventoryGroup';
 import {normalizeDecimal} from '@/shared/lib';
 
 interface EditMaterialButtonProps {
@@ -29,6 +30,7 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
     mutationFn: (payload: MaterialUpdate) => updateMaterial(material.id, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: materialKeys.all});
+      await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
     },
   });
@@ -52,6 +54,7 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
       price: form.price ? normalizeDecimal(form.price) : null,
       url: form.url || null,
       image: form.image || null,
+      group_ids: form.groupIds,
     });
   };
 
@@ -87,4 +90,3 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
     </>
   );
 }
-

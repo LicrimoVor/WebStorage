@@ -6,7 +6,7 @@ from pydantic import AnyHttpUrl
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import ConflictError, DomainValidationError, NotFoundError
 from app.core.query import AvailabilityFilter, SortOrder
 from app.modules.inventory.types import MovementType
 from app.modules.manufactured_items import movement_repository, repository
@@ -19,6 +19,9 @@ from app.modules.manufactured_items.schemas import (
     ManufacturedItemSortField,
     ManufacturedItemUpdate,
 )
+from app.modules.warehouse import repository as warehouse_repository
+from app.modules.warehouse.composition import product_components
+from app.modules.warehouse.schemas import InventoryGroupSummary
 
 
 def _url_value(value: AnyHttpUrl | None) -> str | None:
@@ -29,6 +32,7 @@ def to_read_model(
     item: ManufacturedItem,
     free_quantity: Decimal,
     required_quantity: Decimal = Decimal("0"),
+    groups: list[InventoryGroupSummary] | None = None,
 ) -> ManufacturedItemRead:
     return ManufacturedItemRead(
         id=item.id,
@@ -39,6 +43,7 @@ def to_read_model(
         required_quantity=required_quantity,
         to_produce_quantity=max(required_quantity - free_quantity, Decimal("0")),
         image=item.image,
+        groups=groups or [],
         active_process_id=item.active_process_id,
         archived=item.archived,
         created_at=item.created_at,
@@ -47,6 +52,8 @@ def to_read_model(
 
 
 async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> ManufacturedItemRead:
+    if payload.is_product and payload.group_ids:
+        raise DomainValidationError("Groups can only be assigned to semi-finished items")
     item = ManufacturedItem(
         name=payload.name,
         is_product=payload.is_product,
@@ -55,6 +62,7 @@ async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> Manu
     )
     try:
         await repository.create_item(session, item)
+        await warehouse_repository.set_item_groups(session, item.id, payload.group_ids)
         balance = Decimal("0")
         if payload.initial_quantity > 0:
             movement = await movement_repository.create_movement(
@@ -71,7 +79,8 @@ async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> Manu
         await session.rollback()
         raise ConflictError("A manufactured item with this name already exists") from error
     await session.refresh(item)
-    return to_read_model(item, balance)
+    groups = await warehouse_repository.item_group_map(session, [item.id])
+    return to_read_model(item, balance, groups=groups.get(item.id, []))
 
 
 async def list_all(
@@ -85,7 +94,12 @@ async def list_all(
     kind: ManufacturedItemKind,
     sort_by: ManufacturedItemSortField,
     sort_order: SortOrder,
+    product_id: uuid.UUID | None,
+    group_id: uuid.UUID | None,
 ) -> ManufacturedItemList:
+    allowed_ids = None
+    if product_id is not None:
+        allowed_ids = (await product_components(session, product_id)).manufactured_item_ids
     rows, total = await repository.list_items(
         session,
         page=page,
@@ -96,9 +110,17 @@ async def list_all(
         kind=kind,
         sort_by=sort_by,
         sort_order=sort_order,
+        allowed_ids=allowed_ids,
+        group_id=group_id,
+    )
+    group_map = await warehouse_repository.item_group_map(
+        session, (item.id for item, _, _ in rows)
     )
     return ManufacturedItemList(
-        items=[to_read_model(item, balance, required) for item, balance, required in rows],
+        items=[
+            to_read_model(item, balance, required, group_map.get(item.id, []))
+            for item, balance, required in rows
+        ],
         page=page,
         page_size=page_size,
         total=total,
@@ -110,7 +132,8 @@ async def get(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItemRead
     result = await repository.get_item_with_balance(session, item_id)
     if result is None:
         raise NotFoundError("Manufactured item was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.item_group_map(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []))
 
 
 async def update(
@@ -122,10 +145,18 @@ async def update(
     if item is None:
         raise NotFoundError("Manufactured item was not found")
     changes = payload.model_dump(exclude_unset=True)
+    group_ids = changes.pop("group_ids", None)
+    next_is_product = changes.get("is_product", item.is_product)
+    if next_is_product and group_ids:
+        raise DomainValidationError("Groups can only be assigned to semi-finished items")
     for field, value in changes.items():
         if field == "image":
             value = _url_value(value)
         setattr(item, field, value)
+    if next_is_product:
+        await warehouse_repository.set_item_groups(session, item.id, [])
+    elif group_ids is not None:
+        await warehouse_repository.set_item_groups(session, item.id, group_ids)
     try:
         await session.commit()
     except IntegrityError as error:
@@ -135,7 +166,8 @@ async def update(
     result = await repository.get_item_with_balance(session, item_id)
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Manufactured item was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.item_group_map(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []))
 
 
 async def archive(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItemRead:
@@ -148,4 +180,5 @@ async def archive(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItem
     result = await repository.get_item_with_balance(session, item_id)
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Manufactured item was not found")
-    return to_read_model(*result)
+    groups = await warehouse_repository.item_group_map(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []))

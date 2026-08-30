@@ -13,6 +13,7 @@ import {
   type ManufacturedItemUpdate,
 } from '@/entities/ManufacturedItem';
 import {getErrorMessage} from '@/shared/api';
+import {inventoryGroupKeys} from '@/entities/InventoryGroup';
 
 interface EditManufacturedItemButtonProps {
   item: ManufacturedItem;
@@ -31,6 +32,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
       updateManufacturedItem(item.id, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
+      await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
     },
   });
@@ -53,6 +55,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
       is_product: form.isProduct,
       unit: form.unit.trim(),
       image: form.image || null,
+      group_ids: form.groupIds,
     });
   };
 

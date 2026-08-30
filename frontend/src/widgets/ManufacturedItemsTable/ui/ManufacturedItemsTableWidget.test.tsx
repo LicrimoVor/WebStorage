@@ -9,8 +9,16 @@ import {ManufacturedItemsTableWidget} from './ManufacturedItemsTableWidget';
 
 vi.mock('@/entities/ManufacturedItem', async (importOriginal) => {
   const actual = await importOriginal<typeof ManufacturedItemExports>();
-  return {...actual, useManufacturedItemsQuery: vi.fn()};
+  return {
+    ...actual,
+    useManufacturedItemsQuery: vi.fn(),
+    useProductOptionsQuery: () => ({data: []}),
+  };
 });
+vi.mock('@/entities/InventoryGroup', () => ({
+  inventoryGroupKeys: {all: ['inventory-groups']},
+  useInventoryGroupsQuery: () => ({data: []}),
+}));
 
 describe('ManufacturedItemsTableWidget states', () => {
   it('renders loading state', () => {

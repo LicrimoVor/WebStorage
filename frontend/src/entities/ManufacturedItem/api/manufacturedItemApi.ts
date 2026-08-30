@@ -31,6 +31,7 @@ export const manufacturedItemKeys = {
   detail: (id: string) => [...manufacturedItemKeys.all, 'detail', id] as const,
   movements: (id: string, page: number, pageSize: number) =>
     [...manufacturedItemKeys.all, 'movements', id, page, pageSize] as const,
+  productOptions: () => [...manufacturedItemKeys.all, 'product-options'] as const,
 };
 
 export async function listManufacturedItems(
@@ -48,6 +49,35 @@ export function useManufacturedItemsQuery(params: ManufacturedItemListParams) {
     queryKey: manufacturedItemKeys.list(params),
     queryFn: ({signal}) => listManufacturedItems(params, signal),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useProductOptionsQuery(enabled = true) {
+  return useQuery({
+    queryKey: manufacturedItemKeys.productOptions(),
+    queryFn: async ({signal}) => {
+      const products: ManufacturedItem[] = [];
+      let page = 1;
+      let pages = 1;
+      while (page <= pages) {
+        const response = await listManufacturedItems(
+          {
+            page,
+            page_size: 100,
+            kind: 'product',
+            sort_by: 'name',
+            sort_order: 'asc',
+            availability: 'all',
+          },
+          signal,
+        );
+        products.push(...response.items);
+        pages = response.pages;
+        page += 1;
+      }
+      return products;
+    },
+    enabled,
   });
 }
 

@@ -1,0 +1,45 @@
+.root {
+  display: grid;
+  gap: var(--g-spacing-5);
+  min-height: 180px;
+}
+
+.createRow,
+.actions {
+  display: flex;
+  gap: var(--g-spacing-2);
+  align-items: center;
+}
+
+.createRow > :first-child {
+  flex: 1;
+}
+
+.list {
+  display: grid;
+  gap: var(--g-spacing-2);
+}
+
+.group {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--g-spacing-4);
+  align-items: center;
+  padding: var(--g-spacing-3);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: var(--g-border-radius-m);
+}
+
+.group > div:first-child {
+  display: grid;
+  gap: var(--g-spacing-1);
+}
+
+@media (width <= 680px) {
+  .createRow,
+  .group,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

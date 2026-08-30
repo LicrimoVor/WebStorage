@@ -27,6 +27,11 @@ export function MaterialsTable({ items, renderActions }: MaterialsTableProps) {
       template: (item) => <Text variant="body-2">{item.name}</Text>,
     },
     {
+      id: "groups",
+      name: "Группы",
+      template: (item) => item.groups?.map((group) => group.name).join(", ") || "—",
+    },
+    {
       id: "free_quantity",
       name: "Свободно",
       align: "end",
