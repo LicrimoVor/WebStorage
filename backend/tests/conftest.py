@@ -39,7 +39,9 @@ async def database_engine() -> AsyncIterator[AsyncEngine]:
     async with engine.begin() as connection:
         await connection.execute(
             text(
-                "TRUNCATE TABLE financial_transactions, sales, payment_allocations, "
+                "TRUNCATE TABLE operation_instruction_public_links, "
+                "operation_instruction_assets, operation_instruction_versions, "
+                "operation_instructions, financial_transactions, sales, payment_allocations, "
                 "employee_payments, work_entries, "
                 "production_records, "
                 "production_plan_operation_requirements, "

@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
+from app.modules.operation_instructions.router import public_router
 
 
 def create_app() -> FastAPI:
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(application)
     application.include_router(api_router, prefix="/api/v1")
+    application.include_router(public_router, prefix="/api/v1")
     application.mount(
         "/media",
         StaticFiles(directory=settings.media_root, check_dir=False),

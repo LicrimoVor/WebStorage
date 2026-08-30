@@ -1,6 +1,7 @@
 import {Alert, Button, Card, Dialog, Select, Text, TextInput} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useMemo, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 
 import {employeeKeys, useEmployeesQuery} from '@/entities/Employee';
 import {operationKeys, type Operation} from '@/entities/Operation';
@@ -12,6 +13,7 @@ import {
 } from '@/entities/WorkPayroll';
 import {getErrorMessage} from '@/shared/api';
 import {formatFixedDecimal, isDecimal, normalizeDecimal} from '@/shared/lib';
+import {routes} from '@/shared/routes';
 
 import styles from './RecordWorkButton.module.scss';
 
@@ -31,6 +33,7 @@ interface RecordWorkButtonProps {
 }
 
 export function RecordWorkButton({operation}: RecordWorkButtonProps) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
   const [mode, setMode] = useState<WorkInputMode>('quantity');
@@ -137,6 +140,12 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
         <Dialog.Header caption={`Выполненная операция: ${operation.name}`} />
         <Dialog.Body>
           <div className={styles.form}>
+            <Button
+              view="flat-action"
+              onClick={() => navigate(routes.operationInstruction(operation.id))}
+            >
+              Открыть техническую инструкцию
+            </Button>
             {validationError || mutation.error ? (
               <Alert
                 theme="danger"

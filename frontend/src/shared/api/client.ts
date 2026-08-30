@@ -40,6 +40,9 @@ export async function apiRequest<T>(
     }
     throw new ApiError(problem);
   }
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return (await response.json()) as T;
 }
 
@@ -54,4 +57,3 @@ export function getErrorMessage(error: unknown): string {
   }
   return 'Не удалось выполнить запрос. Проверьте соединение и повторите попытку.';
 }
-

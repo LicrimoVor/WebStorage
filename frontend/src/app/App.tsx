@@ -51,6 +51,14 @@ const ProcessEditorPage = lazy(async () => {
   const module = await import("@/pages/ProcessEditorPage");
   return { default: module.ProcessEditorPage };
 });
+const OperationInstructionPage = lazy(async () => {
+  const module = await import("@/pages/OperationInstructionPage");
+  return { default: module.OperationInstructionPage };
+});
+const PublicInstructionPage = lazy(async () => {
+  const module = await import("@/pages/PublicInstructionPage");
+  return { default: module.PublicInstructionPage };
+});
 
 function AppLayout() {
   const location = useLocation();
@@ -134,6 +142,10 @@ function AppLayout() {
           <Route path={routes.warehouse} element={<WarehousePage />} />
           <Route path={routes.operations} element={<OperationsPage />} />
           <Route
+            path={routes.operationInstructionPattern}
+            element={<OperationInstructionPage />}
+          />
+          <Route
             path={routes.processes}
             element={<TechnologicalProcessesPage />}
           />
@@ -174,7 +186,17 @@ function AppLayout() {
 function AppRouter() {
   return (
     <BrowserRouter>
-      <AppLayout />
+      <Routes>
+        <Route
+          path={routes.publicInstructionPattern}
+          element={
+            <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
+              <PublicInstructionPage />
+            </Suspense>
+          }
+        />
+        <Route path="*" element={<AppLayout />} />
+      </Routes>
     </BrowserRouter>
   );
 }

@@ -313,7 +313,14 @@ export const ProcessCanvas = forwardRef<
   ]);
 
   const openNodeDialog = (node: ProcessNode) => {
-    setNodeDialogTab("settings");
+    if (
+      !editable &&
+      (!node.referenceId ||
+        !["manufactured_item", "output"].includes(node.type))
+    ) {
+      return;
+    }
+    setNodeDialogTab(editable ? "settings" : "production");
     setNodeDialog({
       mode: "edit",
       nodeId: node.id,
@@ -491,7 +498,7 @@ export const ProcessCanvas = forwardRef<
     event.dataTransfer.effectAllowed = "move";
   };
   const onDragEnd = (event: DragEvent<HTMLDivElement>, nodeId: string) => {
-    if (!editable || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const position = calculateDroppedNodePosition(
       { x: event.clientX, y: event.clientY },
@@ -616,7 +623,9 @@ export const ProcessCanvas = forwardRef<
     ...graph.nodes.map((node) => (node.position?.y ?? 0) + 400),
   );
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-  const saveStatus = saveMutation.isPending
+  const saveStatus = !editable
+    ? { text: "Активная версия", theme: "info" as const }
+    : saveMutation.isPending
     ? { text: "Сохранение…", theme: "info" as const }
     : saveMutation.isError
       ? { text: "Ошибка сохранения", theme: "danger" as const }
@@ -859,14 +868,11 @@ export const ProcessCanvas = forwardRef<
                   style={{
                     transform: `translate(${node.position?.x ?? 0}px, ${node.position?.y ?? 0}px)`,
                   }}
-                  draggable={editable && !connectionDrag}
+                  draggable={!connectionDrag}
                   onDragStart={onDragStart}
                   onDragEnd={(event) => onDragEnd(event, node.id)}
                   onDoubleClick={(event) => {
-                    if (
-                      editable &&
-                      !(event.target as Element).closest("button, input")
-                    ) {
+                    if (!(event.target as Element).closest("button, input")) {
                       openNodeDialog(node);
                     }
                   }}
@@ -975,13 +981,18 @@ export const ProcessCanvas = forwardRef<
         maxWidth="m"
         fullWidth
       >
-        <Dialog.Header
+        {!editable && nodeDialogTab === "production" ? (
+          <Dialog.Header caption={`Производство: ${nodeDialog?.label ?? ""}`} />
+        ) : (
+          <Dialog.Header
           caption={nodeDialog?.mode === "edit" ? "Изменить узел" : "Новый узел"}
-        />
+          />
+        )}
         <Dialog.Body>
           {nodeDialog ? (
             <div className={styles.dialogForm}>
-              {nodeDialog.mode === "edit" &&
+              {editable &&
+              nodeDialog.mode === "edit" &&
               ["manufactured_item", "output"].includes(nodeDialog.type) &&
               nodeDialog.referenceId ? (
                 <TabList value={nodeDialogTab} onUpdate={setNodeDialogTab}>
@@ -1043,12 +1054,15 @@ export const ProcessCanvas = forwardRef<
                   />
                 </>
               )}
+              {editable && nodeDialogTab !== "production" ? (
               <TextInput
                 label="Подпись"
+                disabled={!editable || nodeDialogTab === "production"}
                 value={nodeDialog.label}
                 onUpdate={(label) => setNodeDialog({ ...nodeDialog, label })}
                 controlProps={{ "aria-label": "Подпись узла" }}
               />
+              ) : null}
             </div>
           ) : null}
         </Dialog.Body>

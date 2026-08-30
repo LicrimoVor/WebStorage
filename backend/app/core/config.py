@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+asyncpg://webstorage:webstorage@localhost:5432/webstorage"
     cors_origins: list[str] = ["http://localhost:5173"]
+    public_app_url: str = "http://localhost:5173"
     auth_disabled: bool = True
     development_token: SecretStr = SecretStr("change-me-outside-local-development")
     media_root: Path = Path(__file__).resolve().parents[2] / "media"

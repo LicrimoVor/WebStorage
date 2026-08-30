@@ -250,6 +250,38 @@ describe('ProcessCanvas', () => {
     ).toBeInTheDocument();
   });
 
+  it('opens production and allows local node movement in an active version', async () => {
+    renderWithProviders(
+      <ProcessCanvas
+        processId={version.process_id}
+        version={{...version, status: 'active'}}
+        editable={false}
+        onVersionUpdate={vi.fn()}
+      />,
+    );
+
+    const node = document.querySelector<HTMLElement>(
+      '[data-process-node-id="output"]',
+    );
+    expect(node).not.toBeNull();
+    expect(node).toHaveAttribute('draggable', 'true');
+    if (!node) return;
+
+    fireEvent.doubleClick(node);
+
+    expect(screen.getByRole('button', {name: 'Произвести'})).toBeInTheDocument();
+    expect(screen.getByText('Активная версия')).toBeInTheDocument();
+
+    fireEvent.dragStart(node, {
+      clientX: 520,
+      clientY: 220,
+      dataTransfer: {effectAllowed: 'none'},
+    });
+    fireEvent.dragEnd(node, {clientX: 260, clientY: 160});
+    await new Promise((resolve) => window.setTimeout(resolve, 800));
+    expect(saveTechnologicalProcessDraft).not.toHaveBeenCalled();
+  });
+
   it('rounds connection quantities and edits them on double click', async () => {
     const versionWithEdge: ProcessVersion = {
       ...version,

@@ -11,6 +11,7 @@ from app.modules.inventory.router import router as inventory_router
 from app.modules.manufactured_items.router import router as manufactured_items_router
 from app.modules.materials.router import router as materials_router
 from app.modules.media.router import router as media_router
+from app.modules.operation_instructions.router import router as operation_instructions_router
 from app.modules.operations.router import router as operations_router
 from app.modules.payroll.router import router as payroll_router
 from app.modules.production.router import (
@@ -31,6 +32,7 @@ api_router.include_router(media_router)
 api_router.include_router(inventory_router)
 api_router.include_router(manufactured_items_router)
 api_router.include_router(operations_router)
+api_router.include_router(operation_instructions_router)
 api_router.include_router(employees_router)
 api_router.include_router(technological_processes_router)
 api_router.include_router(production_plans_router)

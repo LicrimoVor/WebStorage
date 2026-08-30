@@ -11,7 +11,7 @@ import {
   Text,
   TextInput,
 } from "@gravity-ui/uikit";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   OperationsTable,
@@ -28,6 +28,7 @@ import { ExportExcelButton } from "@/features/ExportExcel";
 import { RecordWorkButton } from "@/features/RecordWork";
 import { WorkHistoryButton } from "@/features/ViewWorkHistory";
 import { getErrorMessage } from "@/shared/api";
+import { routes } from "@/shared/routes";
 
 import styles from "./OperationsTableWidget.module.scss";
 
@@ -44,6 +45,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export function OperationsTableWidget() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
   const pageSize = positiveInteger(searchParams.get("page_size"), 20);
@@ -73,6 +75,13 @@ export function OperationsTableWidget() {
   };
   const renderActions = (operation: Operation) => (
     <div className={styles.actions}>
+      <Button
+        view="flat-action"
+        size="s"
+        onClick={() => navigate(routes.operationInstruction(operation.id))}
+      >
+        Инструкция
+      </Button>
       <RecordWorkButton operation={operation} />
       <WorkHistoryButton operation={operation} />
       <EditOperationButton operation={operation} />

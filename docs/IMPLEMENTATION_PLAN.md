@@ -187,7 +187,7 @@
 - frontend показывает действия экспорта рядом с актуальными фильтрами основных страниц и внутри историй склада, работ и расчётов сотрудника;
 - OpenAPI/TypeScript-контракт обновлён; интеграционные тесты проверяют все datasets, обход пагинации, фильтры/ID, структуру ZIP/XML и типы Excel-ячеек; изменение схемы БД не потребовалось.
 
-## 12. Operation instructions + Markdown/images/public links/export
+## 12. Operation instructions + Markdown/images/public links/export — реализовано
 
 - Scope: draft/publish/version history, safe Markdown, images, public tokens/QR, md/txt/docx/pdf.
 - Backend: instruction/media/publication/export modules, sanitization and expiring revocation.
@@ -195,3 +195,15 @@
 - Migrations: instruction/version/assets/public links and permission/audit data.
 - Tests: XSS, publication isolation, link rotation/expiry, export fidelity, mobile E2E.
 - Dependencies: этап 3 и production-ready authentication/RBAC.
+
+Реализованный контракт этапа:
+
+- для операции хранится один документ и неизменяемая история версий со статусами `draft/published/archived`; редактирование опубликованной инструкции создаёт новый черновик, а optimistic `revision` защищает автосохранение от тихой перезаписи;
+- Markdown поддерживает заголовки, выделение, списки, таблицы, ссылки, изображения, цитаты и код; raw HTML отключён, а опасные URI не превращаются в ссылки, поэтому frontend получает готовый безопасный HTML;
+- редактор `/operations/:operationId/instruction` имеет автосохранение и ручное сохранение, статус, серверный предпросмотр, загрузку/drag-and-drop/вставку изображений, увеличение, список файлов и историю версий;
+- изображения связаны с документом отдельными audit-записями; удаление является логическим, физический объект сохраняется для старых опубликованных версий и уже выданных публичных документов;
+- экспорт текущей либо выбранной версии доступен в `.md`, plain-text `.txt`, Word `.docx` и печатный `.pdf`; Word/PDF используют Unicode-шрифт и включают заголовок, версию и изображения из локального media storage;
+- публичная ссылка содержит 256-битный случайный token, в БД хранится только SHA-256 hash; срок действия и отзыв проверяются на каждом запросе, а ссылка всегда разрешает актуальную опубликованную версию и никогда не показывает черновик;
+- публичный API подключён вне обязательной авторизации основного API и отдаёт только DTO инструкции; отдельная responsive/print страница не содержит внутренней навигации, QR формируется сервером и пригоден для скачивания;
+- просмотр доступен авторизованным производственным ролям, а сохранение, публикация, загрузка файлов и управление ссылками ограничены `admin/manager`; публичный endpoint имеет только token-based read boundary;
+- миграция `0012` добавляет документы, версии, assets и public links с partial unique indexes для единственного черновика и единственной опубликованной версии.
