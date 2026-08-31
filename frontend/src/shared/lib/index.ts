@@ -8,3 +8,4 @@ export {
   normalizeDecimal,
 } from './format';
 export {measurementUnitOptions} from './units';
+export {usePageMetadata} from './seo';

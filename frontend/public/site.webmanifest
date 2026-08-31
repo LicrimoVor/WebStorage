@@ -1,0 +1,18 @@
+{
+  "name": "Веб-склад",
+  "short_name": "Веб-склад",
+  "description": "Управление складом, производством и технологическими процессами.",
+  "lang": "ru",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101217",
+  "theme_color": "#101217",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

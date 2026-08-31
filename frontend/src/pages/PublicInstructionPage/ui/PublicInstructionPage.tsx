@@ -6,13 +6,17 @@ import {
   publicInstructionQrUrl,
   usePublicOperationInstructionQuery,
 } from '@/entities/OperationInstruction';
-import {formatDateTime} from '@/shared/lib';
+import {formatDateTime, usePageMetadata} from '@/shared/lib';
 
 import styles from './PublicInstructionPage.module.scss';
 
 export function PublicInstructionPage() {
   const {token = ''} = useParams();
   const query = usePublicOperationInstructionQuery(token);
+  usePageMetadata(
+    query.data?.operation_name ?? 'Производственная инструкция',
+    query.data?.title ?? 'Опубликованная производственная инструкция.',
+  );
 
   if (query.isPending) {
     return (

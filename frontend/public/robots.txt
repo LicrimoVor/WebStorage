@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Индексация закрыта через meta robots и X-Robots-Tag.
+# Доступ робота нужен, чтобы он увидел директиву noindex.

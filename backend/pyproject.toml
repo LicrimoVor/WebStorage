@@ -15,11 +15,15 @@ dependencies = [
   "pydantic==2.13.4",
   "pydantic-settings==2.15.0",
   "python-docx==1.2.0",
+  "pwdlib[argon2]==0.3.1",
   "qrcode==8.2",
   "reportlab==4.4.3",
   "sqlalchemy==2.0.52",
   "uvicorn[standard]==0.52.4",
 ]
+
+[project.scripts]
+webstorage = "app.cli:main"
 
 [project.optional-dependencies]
 dev = [

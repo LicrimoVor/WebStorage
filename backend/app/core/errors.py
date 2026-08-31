@@ -55,11 +55,9 @@ def install_error_handlers(app: FastAPI) -> None:
             code=error.code,
             detail=error.detail,
         )
-        headers = {"WWW-Authenticate": "Bearer"} if error.status_code == 401 else None
         return JSONResponse(
             status_code=error.status_code,
             content=problem.model_dump(mode="json"),
-            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)

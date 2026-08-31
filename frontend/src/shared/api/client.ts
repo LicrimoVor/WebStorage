@@ -26,8 +26,15 @@ export async function apiRequest<T>(
   if (init.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const response = await fetch(`${API_URL}${path}`, {...init, headers});
+  const response = await fetch(`${API_URL}${path}`, {
+    credentials: 'include',
+    ...init,
+    headers,
+  });
   if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/login') {
+      window.dispatchEvent(new Event('webstorage:unauthorized'));
+    }
     let problem: ProblemDetail;
     try {
       problem = (await response.json()) as ProblemDetail;

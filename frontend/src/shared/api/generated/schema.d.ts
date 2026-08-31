@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Auth Session */
+        get: operations["getAuthSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/materials": {
         parameters: {
             query?: never;
@@ -1096,6 +1147,15 @@ export interface components {
             date_to: string;
             bucket: components["schemas"]["AnalyticsBucket"];
         };
+        /** AuthSessionRead */
+        AuthSessionRead: {
+            /** Username */
+            username: string;
+            /** Roles */
+            roles: components["schemas"]["Role"][];
+            /** Expires At */
+            expires_at?: string | null;
+        };
         /**
          * AvailabilityFilter
          * @enum {string}
@@ -1823,6 +1883,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /** Username */
+            username: string;
+            /** Password */
+            password: string;
         };
         /**
          * ManualMovementType
@@ -2954,6 +3021,11 @@ export interface components {
             /** Qr Url */
             qr_url?: string | null;
         };
+        /**
+         * Role
+         * @enum {string}
+         */
+        Role: "admin" | "production" | "warehouse" | "manager" | "finance";
         /** SaleCreate */
         SaleCreate: {
             /**
@@ -3425,6 +3497,122 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getAuthSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     listMaterials: {
         parameters: {
             query?: {
@@ -3439,9 +3627,7 @@ export interface operations {
                 product_id?: string | null;
                 group_id?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3470,9 +3656,7 @@ export interface operations {
     createMaterial: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3514,9 +3698,7 @@ export interface operations {
     getMaterial: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 material_id: string;
             };
@@ -3556,9 +3738,7 @@ export interface operations {
     updateMaterial: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 material_id: string;
             };
@@ -3611,9 +3791,7 @@ export interface operations {
     archiveMaterial: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 material_id: string;
             };
@@ -3653,9 +3831,7 @@ export interface operations {
     uploadImage: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3691,9 +3867,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 material_id: string;
             };
@@ -3733,9 +3907,7 @@ export interface operations {
     createInventoryMovement: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 material_id: string;
             };
@@ -3799,9 +3971,7 @@ export interface operations {
                 product_id?: string | null;
                 group_id?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3830,9 +4000,7 @@ export interface operations {
     createManufacturedItem: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3874,9 +4042,7 @@ export interface operations {
     getManufacturedItem: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -3916,9 +4082,7 @@ export interface operations {
     updateManufacturedItem: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -3971,9 +4135,7 @@ export interface operations {
     archiveManufacturedItem: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -4016,9 +4178,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -4058,9 +4218,7 @@ export interface operations {
     createManufacturedItemMovement: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -4120,9 +4278,7 @@ export interface operations {
                 sort_by?: components["schemas"]["OperationSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4151,9 +4307,7 @@ export interface operations {
     createOperation: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4195,9 +4349,7 @@ export interface operations {
     getOperation: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4237,9 +4389,7 @@ export interface operations {
     updateOperation: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4292,9 +4442,7 @@ export interface operations {
     archiveOperation: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4334,9 +4482,7 @@ export interface operations {
     getOperationInstruction: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4367,9 +4513,7 @@ export interface operations {
     saveOperationInstructionDraft: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4404,9 +4548,7 @@ export interface operations {
     publishOperationInstruction: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4437,9 +4579,7 @@ export interface operations {
     getOperationInstructionVersion: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
                 version_id: string;
@@ -4471,9 +4611,7 @@ export interface operations {
     listOperationInstructionAssets: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4504,9 +4642,7 @@ export interface operations {
     uploadOperationInstructionAsset: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4541,9 +4677,7 @@ export interface operations {
     deleteOperationInstructionAsset: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
                 asset_id: string;
@@ -4575,9 +4709,7 @@ export interface operations {
             query?: {
                 version_id?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
                 export_format: "md" | "txt" | "docx" | "pdf";
@@ -4609,9 +4741,7 @@ export interface operations {
     listOperationInstructionPublicLinks: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4642,9 +4772,7 @@ export interface operations {
     createOperationInstructionPublicLink: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -4679,9 +4807,7 @@ export interface operations {
     revokeOperationInstructionPublicLink: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
                 link_id: string;
@@ -4720,9 +4846,7 @@ export interface operations {
                 sort_by?: components["schemas"]["EmployeeSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4751,9 +4875,7 @@ export interface operations {
     createEmployee: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4786,9 +4908,7 @@ export interface operations {
     getEmployee: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -4828,9 +4948,7 @@ export interface operations {
     updateEmployee: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -4874,9 +4992,7 @@ export interface operations {
     archiveEmployee: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -4923,9 +5039,7 @@ export interface operations {
                 sort_by?: components["schemas"]["ProcessSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4954,9 +5068,7 @@ export interface operations {
     createTechnologicalProcess: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4998,9 +5110,7 @@ export interface operations {
     importTechnologicalProcess: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5042,9 +5152,7 @@ export interface operations {
     getTechnologicalProcess: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
             };
@@ -5084,9 +5192,7 @@ export interface operations {
     updateTechnologicalProcess: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
             };
@@ -5139,9 +5245,7 @@ export interface operations {
     archiveTechnologicalProcess: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
             };
@@ -5181,9 +5285,7 @@ export interface operations {
     listTechnologicalProcessVersions: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
             };
@@ -5223,9 +5325,7 @@ export interface operations {
     createTechnologicalProcessVersion: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
             };
@@ -5278,9 +5378,7 @@ export interface operations {
     getTechnologicalProcessVersion: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
                 version_id: string;
@@ -5321,9 +5419,7 @@ export interface operations {
     exportTechnologicalProcessVersion: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
                 version_id: string;
@@ -5364,9 +5460,7 @@ export interface operations {
     replaceTechnologicalProcessGraph: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
                 version_id: string;
@@ -5420,9 +5514,7 @@ export interface operations {
     saveTechnologicalProcessDraft: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
                 version_id: string;
@@ -5476,9 +5568,7 @@ export interface operations {
     activateTechnologicalProcessVersion: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 process_id: string;
                 version_id: string;
@@ -5532,9 +5622,7 @@ export interface operations {
                 page_size?: number;
                 status?: components["schemas"]["ProductionPlanStatus"] | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5563,9 +5651,7 @@ export interface operations {
     createProductionPlan: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5616,9 +5702,7 @@ export interface operations {
     getProductionPlanSummary: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5647,9 +5731,7 @@ export interface operations {
     getProductionPlan: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 plan_id: string;
             };
@@ -5689,9 +5771,7 @@ export interface operations {
     updateProductionPlan: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 plan_id: string;
             };
@@ -5744,9 +5824,7 @@ export interface operations {
     recalculateProductionPlan: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 plan_id: string;
             };
@@ -5802,9 +5880,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 plan_id: string;
             };
@@ -5847,7 +5923,6 @@ export interface operations {
             header: {
                 /** @description Stable unique key for a retried production command */
                 "Idempotency-Key": string;
-                authorization?: string | null;
             };
             path: {
                 plan_id: string;
@@ -5901,9 +5976,7 @@ export interface operations {
     previewDirectProduction: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 item_id: string;
             };
@@ -5959,7 +6032,6 @@ export interface operations {
             header: {
                 /** @description Stable unique key for a retried production command */
                 "Idempotency-Key": string;
-                authorization?: string | null;
             };
             path: {
                 item_id: string;
@@ -6017,9 +6089,7 @@ export interface operations {
                 page_size?: number;
                 include_voided?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -6059,9 +6129,7 @@ export interface operations {
     createWorkEntry: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 operation_id: string;
             };
@@ -6118,9 +6186,7 @@ export interface operations {
                 page_size?: number;
                 include_voided?: boolean;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -6160,9 +6226,7 @@ export interface operations {
     getWorkEntry: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 work_entry_id: string;
             };
@@ -6202,9 +6266,7 @@ export interface operations {
     updateWorkEntry: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 work_entry_id: string;
             };
@@ -6257,9 +6319,7 @@ export interface operations {
     voidWorkEntry: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 work_entry_id: string;
             };
@@ -6315,9 +6375,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -6357,9 +6415,7 @@ export interface operations {
     createEmployeePayment: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -6412,9 +6468,7 @@ export interface operations {
     getEmployeePayrollSummary: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 employee_id: string;
             };
@@ -6462,9 +6516,7 @@ export interface operations {
                 sort_by?: components["schemas"]["SaleSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6496,7 +6548,6 @@ export interface operations {
             header: {
                 /** @description Stable unique key for a retried sale command */
                 "Idempotency-Key": string;
-                authorization?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -6552,9 +6603,7 @@ export interface operations {
                 date_from?: string | null;
                 date_to?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6583,9 +6632,7 @@ export interface operations {
     createFinancialTransaction: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6626,9 +6673,7 @@ export interface operations {
                 date_to?: string | null;
                 sort_order?: components["schemas"]["SortOrder"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6660,9 +6705,7 @@ export interface operations {
                 date_from?: string | null;
                 date_to?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6695,9 +6738,7 @@ export interface operations {
                 date_to: string;
                 bucket?: components["schemas"]["AnalyticsBucket"];
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6747,9 +6788,7 @@ export interface operations {
                 sort_order?: components["schemas"]["SortOrder"];
                 ids?: string[] | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 dataset: components["schemas"]["ExportDataset"];
             };
@@ -6780,9 +6819,7 @@ export interface operations {
     listInventoryGroups: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6811,9 +6848,7 @@ export interface operations {
     createInventoryGroup: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6855,9 +6890,7 @@ export interface operations {
     updateInventoryGroup: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 group_id: string;
             };
@@ -6910,9 +6943,7 @@ export interface operations {
     deleteInventoryGroup: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 group_id: string;
             };
@@ -6955,9 +6986,7 @@ export interface operations {
                 product_id?: string | null;
                 group_id?: string | null;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -6986,9 +7015,7 @@ export interface operations {
     createStockRevision: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -7039,9 +7066,7 @@ export interface operations {
     getCurrentActor: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -7056,15 +7081,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

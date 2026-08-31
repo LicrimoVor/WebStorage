@@ -1,0 +1,55 @@
+.root {
+  display: grid;
+  min-height: 100vh;
+  padding: var(--g-spacing-6);
+  place-items: center;
+  background:
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--g-color-base-brand) 32%, transparent), transparent 34%),
+    radial-gradient(circle at 90% 90%, color-mix(in srgb, var(--g-color-base-positive-heavy) 18%, transparent), transparent 30%),
+    var(--g-color-base-generic-ultralight);
+}
+
+.card {
+  display: grid;
+  width: min(100%, 460px);
+  gap: var(--g-spacing-6);
+  padding: clamp(var(--g-spacing-6), 6vw, var(--g-spacing-10));
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 28px;
+}
+
+.logo {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  color: var(--g-color-text-brand-contrast);
+  background: var(--g-color-base-brand);
+  border-radius: 18px;
+  place-items: center;
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--g-color-base-brand) 28%, transparent);
+}
+
+.heading,
+.form {
+  display: grid;
+  gap: var(--g-spacing-4);
+}
+
+.heading {
+  gap: var(--g-spacing-2);
+}
+
+.notice {
+  text-align: center;
+}
+
+@media (width <= 520px) {
+  .root {
+    padding: var(--g-spacing-3);
+  }
+
+  .card {
+    padding: var(--g-spacing-6);
+    border-radius: 20px;
+  }
+}

@@ -34,6 +34,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 alembic upgrade head
+python -m app.cli create-user admin
 uvicorn app.main:app --reload
 ```
 
@@ -45,10 +46,21 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
 alembic upgrade head
+python -m app.cli create-user admin
 uvicorn app.main:app --reload
 ```
 
 API-каталоги: `/api/v1/materials`, `/api/v1/manufactured-items`, `/api/v1/operations`, `/api/v1/employees`, `/api/v1/technological-processes`, `/api/v1/production-plans`, `/api/v1/exports/{dataset}.xlsx`. OpenAPI UI: <http://localhost:8000/docs>. Liveness: <http://localhost:8000/health/live>.
+
+Команда `create-user` в сценарии запуска создаёт первого пользователя. Пароль запрашивается интерактивно и не попадает в историю команд.
+
+Для ограниченной учётной записи роль можно указать несколько раз:
+
+```powershell
+python -m app.cli create-user operator --role warehouse --role production
+```
+
+Доступны также `list-users`, `set-password <username>`, `disable-user <username>` и `enable-user <username>`. Смена пароля и отключение пользователя немедленно отзывают его активные сессии. После установки пакета те же команды доступны через исполняемый файл `webstorage`.
 
 ### 3. Frontend
 
@@ -62,7 +74,13 @@ npm run dev
 
 Откройте <http://localhost:5173/production-plans>, <http://localhost:5173/warehouse>, <http://localhost:5173/processes>, <http://localhost:5173/operations> или <http://localhost:5173/personnel>.
 
-Локально `AUTH_DISABLED=true`, поэтому UI работает без экрана входа. Перед любым внешним развёртыванием отключите этот режим и задайте секретный `DEVELOPMENT_TOKEN`; полноценные пользователи, cookie-сессии и RBAC являются отдельным следующим security slice.
+Авторизация включена по умолчанию. Только для изолированной локальной разработки её можно временно обойти через `AUTH_DISABLED=true`; в production приложение с таким значением не запустится. Для production используйте HTTPS, `AUTH_DISABLED=false` и `SESSION_COOKIE_SECURE=true`.
+
+Пароли хранятся только как Argon2id-хеши. После входа сервер выдаёт случайную сессию в `HttpOnly`, `SameSite=Strict` cookie; исходный токен сессии в БД не сохраняется. Сессия действует 12 часов по умолчанию (`SESSION_TTL_HOURS`, допустимо 1–24). После пяти неверных попыток учётная запись временно блокируется на 15 минут.
+
+## Индексация и метаданные
+
+Веб-склад — приватная внутренняя система, поэтому приложение, экран входа и опубликованные по токену инструкции помечены `noindex, nofollow, noarchive` в HTML и HTTP-заголовках. Это не даёт поисковикам индексировать названия, остатки и технологические данные. При этом добавлены корректные русскоязычные title/description для каждого раздела, Open Graph-метаданные, favicon и web app manifest. `robots.txt` не закрывает обход: так робот сможет увидеть директиву `noindex`. Sitemap намеренно отсутствует, поскольку индексируемых публичных страниц у приложения нет.
 
 ## Технологические процессы
 

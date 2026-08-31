@@ -53,7 +53,7 @@ describe('WorkHistoryButton', () => {
     const input = screen.getByLabelText('Объём работы');
     await user.clear(input);
     await user.type(input, '3,5');
-    await user.click(screen.getByRole('button', {name: 'Сохранить'}));
+    await user.click(await screen.findByRole('button', {name: 'Сохранить'}));
 
     await waitFor(() =>
       expect(updateWorkEntry).toHaveBeenCalledWith(

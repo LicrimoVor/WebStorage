@@ -1,6 +1,7 @@
-import { CircleQuestion } from "@gravity-ui/icons";
-import { Button, Icon, PlaceholderContainer, Text } from "@gravity-ui/uikit";
-import { lazy, Suspense } from "react";
+import { ArrowRightFromSquare, CircleQuestion, Person } from "@gravity-ui/icons";
+import { Alert, Button, Icon, PlaceholderContainer, Text } from "@gravity-ui/uikit";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -11,6 +12,15 @@ import {
 } from "react-router-dom";
 
 import { routes } from "@/shared/routes";
+import {
+  authKeys,
+  logout,
+  useAuthSessionQuery,
+  type AuthSession,
+} from "@/entities/Auth";
+import { LoginPage } from "@/pages/LoginPage";
+import { ApiError, getErrorMessage } from "@/shared/api";
+import { usePageMetadata } from "@/shared/lib";
 
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
@@ -68,9 +78,50 @@ const PublicInstructionPage = lazy(async () => {
   return { default: module.PublicInstructionPage };
 });
 
-function AppLayout() {
+function getPageMetadata(pathname: string) {
+  if (pathname === routes.productionPlans) {
+    return ['Планирование производства', 'Планы производства, потребности и прогресс выпуска.'] as const;
+  }
+  if (pathname === routes.stockRevision) {
+    return ['Ревизия склада', 'Инвентаризация материалов, полуфабрикатов и продукции.'] as const;
+  }
+  if (pathname.startsWith(routes.warehouse)) {
+    return ['Склад', 'Остатки материалов, полуфабрикатов и готовой продукции.'] as const;
+  }
+  if (pathname.includes('/instruction')) {
+    return ['Техническая инструкция', 'Редактирование технического описания операции.'] as const;
+  }
+  if (pathname === routes.operations) {
+    return ['Операции', 'Справочник производственных операций.'] as const;
+  }
+  if (pathname === routes.processPrompt) {
+    return ['Промпт для техпроцесса', 'Промпт для формирования JSON технологического процесса.'] as const;
+  }
+  if (pathname.startsWith(routes.processes)) {
+    return ['Технологические процессы', 'Версии, графы и операции технологических процессов.'] as const;
+  }
+  if (pathname === routes.personnel) {
+    return ['Персонал', 'Сотрудники, выполненные работы и начисления.'] as const;
+  }
+  if (pathname === routes.sales) return ['Продажи', 'Журнал продаж готовой продукции.'] as const;
+  if (pathname === routes.finance) return ['Финансы', 'Доходы, расходы и финансовая сводка.'] as const;
+  if (pathname === routes.analytics) return ['Аналитика', 'Показатели производства и склада.'] as const;
+  return ['Страница не найдена', 'Запрошенная страница не существует.'] as const;
+}
+
+function AppLayout({ session }: { session: AuthSession }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [pageTitle, pageDescription] = getPageMetadata(location.pathname);
+  usePageMetadata(pageTitle, pageDescription);
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: authKeys.session });
+      window.location.assign("/");
+    },
+  });
   return (
     <div className={styles.app}>
       <header className={styles.topbar}>
@@ -136,6 +187,19 @@ function AppLayout() {
             Аналитика
           </Button> */}
         </nav>
+        <div className={styles.user}>
+          <Icon data={Person} size={18} />
+          <Text ellipsis>{session.username}</Text>
+          <Button
+            view="flat"
+            loading={logoutMutation.isPending}
+            onClick={() => logoutMutation.mutate()}
+            aria-label="Выйти"
+            title="Выйти"
+          >
+            <Icon data={ArrowRightFromSquare} />
+          </Button>
+        </div>
       </header>
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>
@@ -196,6 +260,45 @@ function AppLayout() {
   );
 }
 
+function AuthenticatedApp() {
+  const queryClient = useQueryClient();
+  const sessionQuery = useAuthSessionQuery();
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      void queryClient.invalidateQueries({ queryKey: authKeys.session });
+    };
+    window.addEventListener("webstorage:unauthorized", handleUnauthorized);
+    return () =>
+      window.removeEventListener("webstorage:unauthorized", handleUnauthorized);
+  }, [queryClient]);
+
+  if (sessionQuery.isPending) {
+    return <div className={styles.fullPageLoader}>Проверяем доступ…</div>;
+  }
+  if (sessionQuery.isError) {
+    if (sessionQuery.error instanceof ApiError && sessionQuery.error.status === 401) {
+      return (
+        <LoginPage
+          onAuthenticated={(session) =>
+            queryClient.setQueryData(authKeys.session, session)
+          }
+        />
+      );
+    }
+    return (
+      <div className={styles.authError}>
+        <Alert
+          theme="danger"
+          title="Не удалось проверить доступ"
+          message={getErrorMessage(sessionQuery.error)}
+          actions={<Button onClick={() => sessionQuery.refetch()}>Повторить</Button>}
+        />
+      </div>
+    );
+  }
+  return <AppLayout session={sessionQuery.data} />;
+}
+
 function AppRouter() {
   return (
     <BrowserRouter>
@@ -208,7 +311,7 @@ function AppRouter() {
             </Suspense>
           }
         />
-        <Route path="*" element={<AppLayout />} />
+        <Route path="*" element={<AuthenticatedApp />} />
       </Routes>
     </BrowserRouter>
   );

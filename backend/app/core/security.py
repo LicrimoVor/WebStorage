@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Annotated
 
-from fastapi import Header
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.errors import AuthenticationError, AuthorizationError
+from app.core.database import get_session
+from app.core.errors import AuthorizationError
 
 
 class Role(StrEnum):
@@ -22,17 +25,18 @@ class Actor:
 
 
 async def get_current_actor(
-    authorization: str | None = Header(default=None),
+    request: Request,
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> Actor:
     settings = get_settings()
     if settings.auth_disabled:
         return Actor(subject="local-development", roles=frozenset({Role.ADMIN}))
 
-    scheme, _, token = (authorization or "").partition(" ")
-    expected = settings.development_token.get_secret_value()
-    if scheme.lower() != "bearer" or not token or token != expected:
-        raise AuthenticationError("A valid bearer token is required")
-    return Actor(subject="configured-service-user", roles=frozenset({Role.ADMIN}))
+    from app.modules.auth.service import actor_for_token
+
+    return await actor_for_token(
+        session, request.cookies.get(settings.session_cookie_name)
+    )
 
 
 def require_any_role(actor: Actor, *allowed: Role) -> None:
