@@ -3,6 +3,7 @@ import uuid
 from collections import defaultdict, deque
 from datetime import UTC, datetime
 
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,6 +36,65 @@ from app.modules.technological_processes.schemas import (
     ProcessVersionRead,
     ProcessVersionSummary,
 )
+
+
+async def validate_recipes(
+    session: AsyncSession, document: ProcessGraphDocument, process_id: uuid.UUID | None = None
+) -> None:
+    # Serialize recipe changes so two drafts cannot claim a semi-finished item concurrently.
+    await session.execute(text("SELECT pg_advisory_xact_lock(781654221)"))
+    ids = [
+        node.reference_id
+        for node in document.nodes
+        if node.type in {ProcessNodeType.MANUFACTURED_ITEM, ProcessNodeType.OUTPUT}
+        and node.reference_id is not None
+    ]
+    if document.output_item_id and document.output_item_id not in ids:
+        ids.append(document.output_item_id)
+    items = list(
+        (await session.scalars(select(ManufacturedItem).where(ManufacturedItem.id.in_(ids)))).all()
+    )
+    semi_ids = {item.id for item in items if not item.is_product}
+    for item in items:
+        if item.id in semi_ids and ids.count(item.id) > 1:
+            raise ConflictError(
+                f"Полуфабрикат '{item.name}' повторяется: допустим только один рецепт"
+            )
+        if item.id in semi_ids and document.output_item_id:
+            output = await session.get(ManufacturedItem, document.output_item_id)
+            owner = (
+                output.id if output and output.is_product else output.product_id if output else None
+            )
+            if item.product_id and owner and item.product_id != owner:
+                raise ConflictError(f"Полуфабрикат '{item.name}' принадлежит другому продукту")
+    if not semi_ids:
+        return
+    query = (
+        select(TechnologicalProcess.name)
+        .join(
+            TechnologicalProcessVersion,
+            TechnologicalProcessVersion.process_id == TechnologicalProcess.id,
+        )
+        .join(
+            TechnologicalProcessNode,
+            TechnologicalProcessNode.version_id == TechnologicalProcessVersion.id,
+        )
+        .where(
+            TechnologicalProcessNode.reference_id.in_(semi_ids),
+            TechnologicalProcessNode.node_type.in_(["manufactured_item", "output"]),
+            TechnologicalProcessVersion.status.in_(["draft", "active"]),
+            TechnologicalProcess.archived.is_(False),
+        )
+    )
+    outputs = select(TechnologicalProcess.name).where(
+        TechnologicalProcess.output_item_id.in_(semi_ids), TechnologicalProcess.archived.is_(False)
+    )
+    if process_id:
+        query = query.where(TechnologicalProcess.id != process_id)
+        outputs = outputs.where(TechnologicalProcess.id != process_id)
+    conflict = await session.scalar(query.limit(1)) or await session.scalar(outputs.limit(1))
+    if conflict:
+        raise ConflictError(f"Полуфабрикат уже используется в техпроцессе '{conflict}'")
 
 
 def _clean_name(name: str) -> str:
@@ -190,6 +250,7 @@ async def create(
     session: AsyncSession, payload: ProcessCreate, *, created_by: str
 ) -> ProcessImportResult:
     output = await _get_output_item(session, payload.output_item_id)
+    await validate_recipes(session, ProcessGraphDocument(name=payload.name, outputItemId=output.id))
     process = TechnologicalProcess(name=_clean_name(payload.name), output_item_id=output.id)
     try:
         await repository.create_process(session, process)
@@ -235,6 +296,7 @@ async def create(
 async def import_document(
     session: AsyncSession, document: ProcessGraphDocument, *, created_by: str
 ) -> ProcessImportResult:
+    await validate_recipes(session, document)
     if document.output_item_id is not None:
         await _get_output_item(session, document.output_item_id)
     process = TechnologicalProcess(
@@ -320,6 +382,11 @@ async def update_process(
             for version in await repository.list_versions(session, process.id)
         ):
             raise ConflictError("Output of a process with an active version cannot change")
+        await validate_recipes(
+            session,
+            ProcessGraphDocument(name=process.name, outputItemId=output_item_id),
+            process.id,
+        )
         process.output_item_id = (await _get_output_item(session, output_item_id)).id
     try:
         await session.commit()
@@ -377,6 +444,7 @@ async def create_version(
         await repository.create_version(session, version)
         source_nodes, source_edges = await repository.get_graph(session, source.id)
         document = _graph_document(process, source, source_nodes, source_edges)
+        await validate_recipes(session, document, process.id)
         nodes, edges = _graph_entities(version.id, document)
         await repository.add_graph(session, nodes=nodes, edges=edges)
         await session.commit()
@@ -434,6 +502,7 @@ async def _replace_draft_graph(
         raise DomainValidationError("Document outputItemId must match the process output")
     if expected_revision is not None and version.revision != expected_revision:
         raise ConflictError("Draft was changed in another session; reload it before saving")
+    await validate_recipes(session, document, process.id)
     nodes, edges = _graph_entities(version.id, document)
     await repository.replace_graph(session, version_id=version.id, nodes=nodes, edges=edges)
     version.revision += 1
@@ -492,6 +561,20 @@ async def _activation_errors(
     nodes: list[TechnologicalProcessNode],
     edges: list[TechnologicalProcessEdge],
 ) -> list[str]:
+    await validate_recipes(
+        session,
+        ProcessGraphDocument(
+            name=process.name,
+            outputItemId=process.output_item_id,
+            nodes=[
+                GraphNode(
+                    id=n.external_id, type=ProcessNodeType(n.node_type), referenceId=n.reference_id
+                )
+                for n in nodes
+            ],
+        ),
+        process.id,
+    )
     errors: list[str] = []
     if process.output_item_id is None:
         errors.append("final output is not mapped")

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainValidationError
 from app.core.query import AvailabilityFilter, SortOrder
+from app.modules.business.model import FundingSource
 from app.modules.employees.model import Employee
 from app.modules.exports.schemas import ExportDataset, ExportFilters
 from app.modules.finance.repository import entry_union
@@ -570,11 +571,13 @@ async def sales(
     return await limited_rows(session, statement)
 
 
-async def finance_entries(
-    session: AsyncSession, filters: ExportFilters
-) -> list[dict[str, Any]]:
+async def finance_entries(session: AsyncSession, filters: ExportFilters) -> list[dict[str, Any]]:
     entries = entry_union()
-    statement = select(entries)
+    statement = select(entries, FundingSource.name.label("funding_source_name")).outerjoin(
+        FundingSource, FundingSource.id == entries.c.funding_source_id
+    )
+    if filters.funding_source_id is not None:
+        statement = statement.where(entries.c.funding_source_id == filters.funding_source_id)
     if filters.source != FinanceSource.ALL:
         statement = statement.where(entries.c.source_type == filters.source.value)
     if filters.direction is not None:
@@ -584,13 +587,9 @@ async def finance_entries(
         statement = statement.where(
             entries.c.category.ilike(search) | entries.c.description.ilike(search)
         )
-    statement = apply_period(
-        statement, entries.c.occurred_at, filters.date_from, filters.date_to
-    )
+    statement = apply_period(statement, entries.c.occurred_at, filters.date_from, filters.date_to)
     statement = apply_ids(statement, entries.c.id, filters.ids)
-    statement = statement.order_by(
-        direction(filters)(entries.c.occurred_at), entries.c.id
-    )
+    statement = statement.order_by(direction(filters)(entries.c.occurred_at), entries.c.id)
     return await limited_rows(session, statement)
 
 

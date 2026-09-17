@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import embedded_process, owner_product
 
 
 async def create_material(
@@ -34,6 +35,7 @@ async def create_item(
         json={
             "name": name,
             "is_product": is_product,
+            "product_id": None if is_product else await owner_product(client),
             "unit": "pcs",
             "initial_quantity": stock,
             "group_ids": group_ids or [],
@@ -114,6 +116,7 @@ async def test_groups_product_filters_and_stock_revision(client: AsyncClient) ->
         client, name="Revision steel", stock="10", group_ids=[group["id"]]
     )
     unrelated = await create_material(client, name="Unrelated paint", stock="3")
+    product = await create_item(client, name="Revision table", is_product=True)
     semi = await create_item(
         client,
         name="Revision frame",
@@ -121,28 +124,12 @@ async def test_groups_product_filters_and_stock_revision(client: AsyncClient) ->
         stock="2",
         group_ids=[group["id"]],
     )
-    product = await create_item(client, name="Revision table", is_product=True)
-    await activate_process(
-        client,
-        name="Revision frame recipe",
-        output=semi,
-        inputs=[("material", material["id"])],
-    )
-    await activate_process(
-        client,
-        name="Revision table recipe",
-        output=product,
-        inputs=[("manufactured_item", semi["id"])],
-    )
+    await embedded_process(client, product, semi, [("material", material["id"], "1")], "1")
 
-    materials = await client.get(
-        "/api/v1/materials", params={"product_id": product["id"]}
-    )
+    materials = await client.get("/api/v1/materials", params={"product_id": product["id"]})
     assert materials.status_code == 200, materials.text
     assert [row["id"] for row in materials.json()["items"]] == [material["id"]]
-    grouped_materials = await client.get(
-        "/api/v1/materials", params={"group_id": group["id"]}
-    )
+    grouped_materials = await client.get("/api/v1/materials", params={"group_id": group["id"]})
     assert [row["id"] for row in grouped_materials.json()["items"]] == [material["id"]]
 
     semis = await client.get(
@@ -152,16 +139,14 @@ async def test_groups_product_filters_and_stock_revision(client: AsyncClient) ->
     assert semis.status_code == 200, semis.text
     assert [row["id"] for row in semis.json()["items"]] == [semi["id"]]
     assert semis.json()["items"][0]["groups"] == [
-        {"id": group["id"], "name": group["name"]}
+        {"id": group["id"], "name": group["name"], "parent_id": None}
     ]
 
     revision_rows = await client.get("/api/v1/warehouse/revision")
     assert revision_rows.status_code == 200, revision_rows.text
     rows = {row["id"]: row for row in revision_rows.json()}
     assert {material["id"], unrelated["id"], semi["id"], product["id"]} <= rows.keys()
-    assert rows[material["id"]]["products"] == [
-        {"id": product["id"], "name": product["name"]}
-    ]
+    assert rows[material["id"]]["products"] == [{"id": product["id"], "name": product["name"]}]
     assert rows[semi["id"]]["groups"][0]["id"] == group["id"]
 
     saved = await client.post(

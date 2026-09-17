@@ -1,7 +1,9 @@
 import math
+import uuid
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainValidationError
@@ -47,6 +49,7 @@ def period_timestamp(value: datetime | None) -> datetime | None:
 def to_transaction_read(transaction: FinancialTransaction) -> FinancialTransactionRead:
     return FinancialTransactionRead(
         id=transaction.id,
+        funding_source_id=transaction.funding_source_id,
         transaction_type=FinancialDirection(transaction.transaction_type),
         amount=transaction.amount,
         occurred_at=transaction.occurred_at,
@@ -63,7 +66,11 @@ async def create_manual_transaction(
     payload: FinancialTransactionCreate,
     created_by: str,
 ) -> FinancialTransactionRead:
+    from app.modules.business.service import validate_funding
+
+    await validate_funding(session, payload.funding_source_id)
     transaction = FinancialTransaction(
+        funding_source_id=payload.funding_source_id,
         transaction_type=payload.transaction_type.value,
         amount=money(payload.amount),
         occurred_at=timestamp(payload.occurred_at),
@@ -87,6 +94,7 @@ async def list_entries(
     date_from: datetime | None,
     date_to: datetime | None,
     sort_order: SortOrder,
+    funding_source_id: uuid.UUID | None = None,
 ) -> FinanceEntryList:
     date_from = period_timestamp(date_from)
     date_to = period_timestamp(date_to)
@@ -100,11 +108,13 @@ async def list_entries(
         date_from=date_from,
         date_to=date_to,
         sort_order=sort_order,
+        funding_source_id=funding_source_id,
     )
     return FinanceEntryList(
         items=[
             FinanceEntryRead(
                 id=row.id,
+                funding_source_id=row.funding_source_id,
                 source_id=row.source_id,
                 source_type=FinanceSource(row.source_type),
                 direction=FinancialDirection(row.direction),
@@ -129,15 +139,35 @@ async def get_summary(
     *,
     date_from: datetime | None,
     date_to: datetime | None,
+    funding_source_id: uuid.UUID | None = None,
 ) -> FinanceSummary:
     date_from = period_timestamp(date_from)
     date_to = period_timestamp(date_to)
     validate_period(date_from, date_to)
-    sales, materials, labour, manual_income, manual_expense, incomplete = (
-        await repository.summary_values(
-            session, date_from=date_from, date_to=date_to
-        )
+    (
+        sales,
+        materials,
+        labour,
+        manual_income,
+        manual_expense,
+        incomplete,
+    ) = await repository.summary_values(
+        session, date_from=date_from, date_to=date_to, funding_source_id=funding_source_id
     )
+    repair_statement = repository.with_period(
+        select(func.coalesce(func.sum(FinancialTransaction.amount), Decimal("0"))).where(
+            FinancialTransaction.category == "Ремонт",
+            FinancialTransaction.transaction_type == "expense",
+        ),
+        FinancialTransaction.occurred_at,
+        date_from,
+        date_to,
+    )
+    if funding_source_id is not None:
+        repair_statement = repair_statement.where(
+            FinancialTransaction.funding_source_id == funding_source_id
+        )
+    repair_expense = Decimal((await session.execute(repair_statement)).scalar_one())
     total_income = money(sales + manual_income)
     total_expense = money(materials + labour + manual_expense)
     return FinanceSummary(
@@ -148,6 +178,7 @@ async def get_summary(
         material_expense=money(materials),
         labour_expense=money(labour),
         manual_income=money(manual_income),
-        manual_expense=money(manual_expense),
+        manual_expense=money(manual_expense - repair_expense),
+        repair_expense=money(repair_expense),
         incomplete_material_movements=incomplete,
     )

@@ -13,7 +13,7 @@ from app.modules.production_plans.model import (
     ProductionPlan,
     ProductionPlanMaterialRequirement,
 )
-from app.modules.warehouse.model import InventoryGroupMaterial
+from app.modules.warehouse.model import InventoryGroup, InventoryGroupMaterial
 
 
 def balance_expression() -> ColumnElement[Decimal]:
@@ -63,10 +63,17 @@ def _apply_filters(
     if allowed_ids is not None:
         statement = statement.where(Material.id.in_(allowed_ids))
     if group_id is not None:
-        statement = statement.join(
-            InventoryGroupMaterial,
-            InventoryGroupMaterial.material_id == Material.id,
-        ).where(InventoryGroupMaterial.group_id == group_id)
+        statement = statement.where(
+            Material.id.in_(
+                select(InventoryGroupMaterial.material_id).where(
+                    InventoryGroupMaterial.group_id.in_(
+                        select(InventoryGroup.id).where(
+                            (InventoryGroup.id == group_id) | (InventoryGroup.parent_id == group_id)
+                        )
+                    )
+                )
+            )
+        )
 
     balance = balance_expression()
     if availability == AvailabilityFilter.IN_STOCK:

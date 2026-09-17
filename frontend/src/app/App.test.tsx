@@ -34,12 +34,15 @@ vi.mock('@/pages/LoginPage', () => ({
 it('removes the previous user’s business data before accepting a new session', () => {
   queryClient.setQueryData(['finance'], {balance: '100000'});
   queryClient.setQueryData(['materials'], [{name: 'Private material'}]);
+  queryClient.setQueryData(authKeys.profile, {username: 'previous-user', roles: ['admin']});
   try {
     render(<App />);
     fireEvent.click(screen.getByRole('button', {name: 'Войти'}));
     expect(queryClient.getQueryData(['finance'])).toBeUndefined();
     expect(queryClient.getQueryData(['materials'])).toBeUndefined();
+    expect(queryClient.getQueryData(authKeys.profile)).toBeUndefined();
     expect(queryClient.getQueryData(authKeys.session)).toEqual(nextSession);
+    expect(window.location.pathname).toBe("/production-plans");
   } finally {
     queryClient.clear();
   }

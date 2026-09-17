@@ -1,6 +1,7 @@
 export const routes = {
+  profile: '/profile',
   procurement: '/procurement',
-  audit: '/audit',
+  audit: '/settings/audit',
   productionPlans: '/production-plans',
   warehouse: '/warehouse',
   stockRevision: '/warehouse/revision',

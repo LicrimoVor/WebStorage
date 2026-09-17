@@ -9,6 +9,7 @@ from app.modules.inventory.types import ManualMovementType
 
 
 class InventoryMovementCreate(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     movement_type: ManualMovementType
     quantity: Quantity
     comment: str | None = Field(default=None, max_length=2000)
@@ -22,6 +23,7 @@ class InventoryMovementCreate(BaseModel):
 
 
 class InventoryMovementRead(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     material_id: uuid.UUID
     movement_type: str

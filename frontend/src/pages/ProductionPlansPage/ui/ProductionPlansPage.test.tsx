@@ -1,5 +1,4 @@
-import {screen, waitFor} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import {screen} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {useManufacturedItemsQuery} from '@/entities/ManufacturedItem';
@@ -106,26 +105,10 @@ describe('ProductionPlansPage production execution', () => {
     });
   });
 
-  it('registers a product output from an active plan', async () => {
-    const user = userEvent.setup();
+  it('shows the plan without production commands', () => {
     renderWithProviders(<ProductionPlansPage />, '/production-plans');
-
-    await user.click(
-      screen.getByRole('button', {name: 'Зарегистрировать выпуск'}),
-    );
-    await user.type(
-      screen.getByRole('textbox', {name: 'Количество произведённой позиции'}),
-      '2',
-    );
-    const submit = screen.getByRole('button', {name: 'Провести'});
-    await waitFor(() => expect(submit).toBeEnabled());
-    await user.click(submit);
-
-    await waitFor(() => expect(registerProduction).toHaveBeenCalledTimes(1));
-    expect(registerProduction).toHaveBeenCalledWith(
-      plan.id,
-      {item_id: plan.product_id, quantity: '2', comment: null},
-      expect.stringMatching(/^[0-9a-f-]{36}$/),
-    );
+    expect(screen.getByText(plan.product_name)).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Зарегистрировать выпуск'})).not.toBeInTheDocument();
+    expect(registerProduction).not.toHaveBeenCalled();
   });
 });

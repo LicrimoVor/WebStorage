@@ -1,3 +1,4 @@
+import {FundingSelect, useFundingSources} from '@/entities/Funding';
 import {Archive} from '@gravity-ui/icons';
 import {
   Alert,
@@ -39,6 +40,7 @@ const sourceOptions: Array<{value: FinanceSource; content: string}> = [
   {value: 'sale', content: 'Продажи'},
   {value: 'material', content: 'Материалы'},
   {value: 'labour', content: 'Оплата труда'},
+  {value: 'repair', content: 'Ремонт'},
   {value: 'manual', content: 'Ручные операции'},
 ];
 
@@ -54,6 +56,7 @@ const sourceLabels: Record<FinanceSource, string> = {
   material: 'Материал',
   labour: 'Оплата труда',
   manual: 'Вручную',
+  repair: 'Ремонт',
 };
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -86,6 +89,7 @@ function AddTransactionButton() {
   const [occurredAt, setOccurredAt] = useState(currentDateTime);
   const [category, setCategory] = useState('');
   const [comment, setComment] = useState('');
+  const [fundingSource, setFundingSource] = useState('');
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -107,6 +111,7 @@ function AddTransactionButton() {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     if (!isMoney(amount)) {
       setValidationError('Укажите положительную сумму с точностью до копеек.');
       return;
@@ -126,6 +131,7 @@ function AddTransactionButton() {
       occurred_at: new Date(occurredAt).toISOString(),
       category: category.trim(),
       comment: comment.trim() || null,
+      funding_source_id: fundingSource,
     });
   };
   return (
@@ -179,6 +185,7 @@ function AddTransactionButton() {
                 onChange={(event) => setOccurredAt(event.target.value)}
               />
             </label>
+            <FundingSelect value={fundingSource} onChange={setFundingSource} />
             <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
             <Alert
               theme="warning"
@@ -226,6 +233,7 @@ const columns: TableColumnConfig<FinanceEntry>[] = [
 ];
 
 export function FinancePage() {
+  const fundingSources = useFundingSources();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get('page'), 1);
   const pageSize = positiveInteger(searchParams.get('page_size'), 20);
@@ -239,6 +247,7 @@ export function FinancePage() {
   const dateTo = searchParams.get('date_to') ?? '';
   const sortOrder = searchParams.get('sort_order') === 'asc' ? 'asc' : 'desc';
   const dateFilters = {
+    ...(searchParams.get("funding_source_id") ? {funding_source_id: searchParams.get("funding_source_id")!} : {}),
     ...(dateFrom ? {date_from: startIso(dateFrom)!} : {}),
     ...(dateTo ? {date_to: endIso(dateTo)!} : {}),
   };
@@ -305,6 +314,7 @@ export function FinancePage() {
           <Label size="m">Материалы: {formatMoney(summary.data.material_expense)}</Label>
           <Label size="m">Оплата труда: {formatMoney(summary.data.labour_expense)}</Label>
           <Label size="m">Прочие доходы: {formatMoney(summary.data.manual_income)}</Label>
+          <Label size="m">Ремонт: {formatMoney(summary.data.repair_expense ?? "0")}</Label>
           <Label size="m">Прочие расходы: {formatMoney(summary.data.manual_expense)}</Label>
         </div>
       ) : null}
@@ -312,11 +322,12 @@ export function FinancePage() {
         <Alert
           theme="warning"
           title="Расчёт материалов неполный"
-          message={`${summary.data.incomplete_material_movements} расходных движений не имеют исторической цены.`}
+          message={`${summary.data.incomplete_material_movements} приходных движений не имеют исторической цены.`}
         />
       ) : null}
       <Card className={styles.tableCard} view="outlined">
         <div className={styles.filters}>
+            <Select label="Финансирование" placeholder="Все источники финансирования" hasClear value={searchParams.get("funding_source_id") ? [searchParams.get("funding_source_id")!] : []} options={(fundingSources.data ?? []).map((s) => ({value: s.id, content: s.name}))} onUpdate={(ids) => updateUrl({funding_source_id: ids[0] ?? "", page: 1})} />
           <Select
             label="Источник"
             options={sourceOptions}
@@ -383,7 +394,7 @@ export function FinancePage() {
             <div className={styles.tableWrap}>
               <Table
                 data={query.data.items}
-                columns={columns}
+                columns={[...columns, {id: "funding_source_id", name: "Источник финансирования", template: (entry) => fundingSources.data?.find((s) => s.id === entry.funding_source_id)?.name ?? "Не указан (история)"}]}
                 getRowId={(entry) => `${entry.source_type}-${entry.id}`}
                 verticalAlign="middle"
               />

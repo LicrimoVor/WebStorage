@@ -9,6 +9,7 @@ from app.modules.exports.schemas import ExportDataset
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
+from tests.integration.helpers import funding_source
 
 NS = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
@@ -95,6 +96,7 @@ async def test_sales_export_preserves_numeric_cells_and_human_names(
         "/api/v1/sales",
         headers={"Idempotency-Key": "export-sale"},
         json={
+            "funding_source_id": await funding_source(client),
             "product_id": product["id"],
             "quantity": "2.125",
             "unit_price": "12.34",
@@ -112,22 +114,16 @@ async def test_sales_export_preserves_numeric_cells_and_human_names(
         },
     )
     assert response.status_code == 200, response.text
-    assert "sales_2026-08-20_2026-08-20.xlsx" in response.headers[
-        "content-disposition"
-    ]
+    assert "sales_2026-08-20_2026-08-20.xlsx" in response.headers["content-disposition"]
     root = worksheet(response.content)
     data_cells = rows(root)[1].findall("x:c", NS)
     assert data_cells[0].get("s") == "3"
     assert inline_text(data_cells[1]) == "Export finished product"
     assert product["id"] not in response.content.decode("latin1")
     assert data_cells[2].get("s") == "5"
-    assert Decimal(data_cells[2].findtext("x:v", namespaces=NS) or "0") == Decimal(
-        "2.125"
-    )
+    assert Decimal(data_cells[2].findtext("x:v", namespaces=NS) or "0") == Decimal("2.125")
     assert data_cells[4].get("s") == "4"
-    assert Decimal(data_cells[4].findtext("x:v", namespaces=NS) or "0") == Decimal(
-        "12.34"
-    )
+    assert Decimal(data_cells[4].findtext("x:v", namespaces=NS) or "0") == Decimal("12.34")
 
 
 @pytest.mark.asyncio

@@ -16,6 +16,8 @@ class SaleSortField(StrEnum):
 
 
 class SaleCreate(BaseModel):
+    serial_numbers: list[str] = Field(default_factory=list, max_length=10000)
+    funding_source_id: uuid.UUID
     product_id: uuid.UUID
     quantity: Quantity = Field(gt=0)
     unit_price: Money
@@ -29,6 +31,7 @@ class SaleCreate(BaseModel):
 
 
 class SaleRead(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     product_id: uuid.UUID
     product_name: str

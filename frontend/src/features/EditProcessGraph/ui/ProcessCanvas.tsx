@@ -1006,12 +1006,12 @@ export const ProcessCanvas = forwardRef<
                     Расчёт использует активный рецепт и сначала расходует доступные
                     полуфабрикаты со склада.
                   </Text>
-                  <ProduceManufacturedItemButton
+                  {nodeDialog.type === "output" ? <Button href="/production" view="action">Открыть выпуск продукции</Button> : <ProduceManufacturedItemButton
                     itemId={nodeDialog.referenceId}
                     itemName={nodeDialog.label || "Позиция"}
                     size="l"
                     view="action"
-                  />
+                  />}
                 </div>
               ) : nodeDialog.type === "output" ? (
                 <Text color="secondary">

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy import ForeignKey as FundingForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -104,13 +105,14 @@ class EmployeePayment(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "employee_payments"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
-        CheckConstraint(
-            "allocation_mode IN ('fifo', 'manual')", name="allocation_mode_valid"
-        ),
+        CheckConstraint("allocation_mode IN ('fifo', 'manual')", name="allocation_mode_valid"),
         Index("ix_employee_payments_employee_paid", "employee_id", "paid_at"),
         Index("ix_employee_payments_paid_at", "paid_at"),
     )
 
+    funding_source_id: Mapped[uuid.UUID | None] = mapped_column(
+        FundingForeignKey("funding_sources.id"), nullable=True
+    )
     id: Mapped[uuid.UUID]
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

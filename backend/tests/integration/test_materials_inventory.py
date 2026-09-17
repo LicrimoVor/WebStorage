@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import funding_source
 
 
 async def create_material(
@@ -61,7 +62,12 @@ async def test_receipt_consumption_and_history(client: AsyncClient) -> None:
 
     receipt = await client.post(
         f"/api/v1/materials/{material_id}/movements",
-        json={"movement_type": "receipt", "quantity": "1.250000", "comment": "Поставка"},
+        json={
+            "funding_source_id": await funding_source(client),
+            "movement_type": "receipt",
+            "quantity": "1.250000",
+            "comment": "Поставка",
+        },
     )
     assert receipt.status_code == 201
     assert Decimal(str(receipt.json()["balance_after"])) == Decimal("3.750000")

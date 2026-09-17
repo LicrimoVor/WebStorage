@@ -27,6 +27,11 @@ vi.mock('@/entities/Finance', async (importOriginal) => {
   };
 });
 
+vi.mock('@/entities/Funding', () => ({
+  useFundingSources: () => ({data: [{id: 'account', name: 'Счёт'}]}),
+  FundingSelect: ({value, onChange}: {value: string; onChange: (value: string) => void}) => <select aria-label="Источник финансирования" value={value} onChange={(e) => onChange(e.target.value)}><option value="">Выберите</option><option value="account">Счёт</option></select>,
+}));
+
 describe('FinancePage', () => {
   beforeEach(() => {
     vi.mocked(useFinanceEntriesQuery).mockReturnValue({
@@ -59,6 +64,7 @@ describe('FinancePage', () => {
     await user.click(screen.getByRole('button', {name: 'Добавить операцию'}));
     await user.type(screen.getByLabelText('Сумма операции'), '30');
     await user.type(screen.getByLabelText('Категория операции'), 'Аренда');
+    await user.selectOptions(screen.getByLabelText('Источник финансирования'), 'account');
     await user.click(screen.getByRole('button', {name: 'Провести'}));
     await waitFor(() =>
       expect(createFinancialTransaction).toHaveBeenCalledWith(

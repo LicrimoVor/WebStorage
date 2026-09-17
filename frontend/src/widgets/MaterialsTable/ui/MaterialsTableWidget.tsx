@@ -22,7 +22,6 @@ import {
   type MaterialSortField,
   type SortOrder,
 } from "@/entities/Material";
-import { useInventoryGroupsQuery } from "@/entities/InventoryGroup";
 import { useProductOptionsQuery } from "@/entities/ManufacturedItem";
 import { AdjustStockButton } from "@/features/AdjustStock";
 import { ArchiveMaterialButton } from "@/features/ArchiveMaterial";
@@ -68,7 +67,6 @@ export function MaterialsTableWidget() {
   const productId = searchParams.get("product_id") ?? "";
   const groupId = searchParams.get("group_id") ?? "";
   const productsQuery = useProductOptionsQuery();
-  const groupsQuery = useInventoryGroupsQuery();
 
   const params: MaterialListParams = {
     page,
@@ -151,20 +149,7 @@ export function MaterialsTableWidget() {
           size="l"
           aria-label="Фильтр материалов по продукту"
         />
-        <Select
-          options={(groupsQuery.data ?? []).map((group) => ({
-            value: group.id,
-            content: group.name,
-          }))}
-          value={groupId ? [groupId] : []}
-          onUpdate={(values) => updateUrl({ group_id: values[0] ?? "", page: 1 })}
-          placeholder="Любая группа"
-          hasClear
-          filterable
-          width="max"
-          size="l"
-          aria-label="Фильтр материалов по группе"
-        />
+
         <Select
           options={availabilityOptions}
           value={[availability]}

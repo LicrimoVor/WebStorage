@@ -19,9 +19,11 @@ class FinanceSource(StrEnum):
     LABOUR = "labour"
     SALE = "sale"
     MANUAL = "manual"
+    REPAIR = "repair"
 
 
 class FinancialTransactionCreate(BaseModel):
+    funding_source_id: uuid.UUID
     transaction_type: FinancialDirection
     amount: Money = Field(gt=0)
     occurred_at: datetime | None = None
@@ -43,6 +45,7 @@ class FinancialTransactionCreate(BaseModel):
 
 
 class FinancialTransactionRead(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     transaction_type: FinancialDirection
     amount: Money
@@ -54,6 +57,7 @@ class FinancialTransactionRead(BaseModel):
 
 
 class FinanceEntryRead(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     source_id: uuid.UUID
     source_type: FinanceSource
@@ -81,6 +85,7 @@ class FinanceSummary(BaseModel):
     sales_income: Money = Decimal("0")
     material_expense: Money = Decimal("0")
     labour_expense: Money = Decimal("0")
+    repair_expense: Money = Decimal("0")
     manual_income: Money = Decimal("0")
     manual_expense: Money = Decimal("0")
     incomplete_material_movements: int = 0

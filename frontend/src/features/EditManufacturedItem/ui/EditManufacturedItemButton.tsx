@@ -32,6 +32,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
       updateManufacturedItem(item.id, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
+      await queryClient.invalidateQueries({queryKey: ["stock-revision"]});
       await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
     },
@@ -53,6 +54,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
     mutation.mutate({
       name: form.name.trim(),
       is_product: form.isProduct,
+      product_id: form.isProduct ? null : form.productId || null,
       unit: form.unit.trim(),
       image: form.image || null,
       group_ids: form.groupIds,

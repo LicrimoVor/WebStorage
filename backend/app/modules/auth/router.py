@@ -2,15 +2,22 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit_context import set_actor
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.core.errors import AuthenticationError, ProblemDetail
+from app.core.errors import AuthenticationError, DomainValidationError, ProblemDetail
 from app.core.security import Actor, get_current_actor
 from app.modules.auth import service
-from app.modules.auth.schemas import AuthSessionRead, LoginRequest
+from app.modules.auth.model import UserAccount
+from app.modules.auth.schemas import (
+    AuthProfileRead,
+    AuthSessionRead,
+    ChangePasswordRequest,
+    LoginRequest,
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -51,6 +58,40 @@ async def login(
 @router.get("/session", response_model=AuthSessionRead, operation_id="getAuthSession")
 async def get_auth_session(actor: ActorDependency) -> AuthSessionRead:
     return AuthSessionRead(username=actor.subject, roles=sorted(actor.roles), expires_at=None)
+
+
+@router.get("/profile", response_model=AuthProfileRead, operation_id="getAuthProfile")
+async def get_auth_profile(actor: ActorDependency, session: Session) -> AuthProfileRead:
+    if get_settings().auth_disabled:
+        return AuthProfileRead(
+            username=actor.subject, roles=sorted(actor.roles), can_change_password=False
+        )
+    user = await session.scalar(select(UserAccount).where(UserAccount.username == actor.subject))
+    if user is None:
+        raise AuthenticationError("Authentication is required")
+    return AuthProfileRead(
+        username=user.username,
+        roles=sorted(actor.roles),
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+        can_change_password=True,
+    )
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT, operation_id="changePassword")
+async def change_password(
+    payload: ChangePasswordRequest, request: Request, actor: ActorDependency, session: Session
+) -> None:
+    del actor
+    settings = get_settings()
+    if settings.auth_disabled:
+        raise DomainValidationError("Вход по паролю отключён")
+    await service.change_own_password(
+        session,
+        token=request.cookies.get(settings.session_cookie_name),
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
 
 
 @router.post(

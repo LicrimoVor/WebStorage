@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import owner_product
 
 
 async def create_item(
@@ -16,6 +17,7 @@ async def create_item(
         json={
             "name": name,
             "is_product": is_product,
+            "product_id": None if is_product else await owner_product(client),
             "unit": "шт",
             "initial_quantity": initial,
             "image": "https://example.com/item.png",
@@ -54,7 +56,7 @@ async def test_update_archive_and_reject_movement_for_archived_item(
     created = await create_item(client)
     response = await client.patch(
         f"/api/v1/manufactured-items/{created['id']}",
-        json={"name": "Готовый корпус", "is_product": True, "image": None},
+        json={"name": "Готовый корпус", "is_product": True, "product_id": None, "image": None},
     )
     assert response.status_code == 200
     assert response.json()["name"] == "Готовый корпус"
@@ -65,7 +67,7 @@ async def test_update_archive_and_reject_movement_for_archived_item(
     assert archived.status_code == 200
     assert archived.json()["archived"] is True
     listed = await client.get("/api/v1/manufactured-items")
-    assert listed.json()["total"] == 0
+    assert all(row["id"] != created["id"] for row in listed.json()["items"])
 
     movement = await client.post(
         f"/api/v1/manufactured-items/{created['id']}/movements",
@@ -133,6 +135,7 @@ async def test_duplicate_name_is_case_insensitive_conflict(client: AsyncClient) 
         json={
             "name": "вал ВЕДУЩИЙ",
             "is_product": False,
+            "product_id": await owner_product(client),
             "unit": "шт",
         },
     )

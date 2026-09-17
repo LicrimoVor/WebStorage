@@ -5,6 +5,7 @@ import pytest
 from app.core.database import engine
 from httpx import AsyncClient
 from sqlalchemy import event
+from tests.integration.helpers import funding_source
 
 
 async def create_analytics_scenario(client: AsyncClient) -> dict[str, Any]:
@@ -85,7 +86,11 @@ async def create_analytics_scenario(client: AsyncClient) -> dict[str, Any]:
     production = await client.post(
         f"/api/v1/production-plans/{plan['id']}/production-records",
         headers={"Idempotency-Key": "analytics-production"},
-        json={"item_id": product["id"], "quantity": "2"},
+        json={
+            "serial_numbers": ["unit-89-" + str(i) for i in range(2)],
+            "item_id": product["id"],
+            "quantity": "2",
+        },
     )
     assert production.status_code == 201, production.text
 
@@ -93,9 +98,11 @@ async def create_analytics_scenario(client: AsyncClient) -> dict[str, Any]:
         "/api/v1/sales",
         headers={"Idempotency-Key": "analytics-sale"},
         json={
+            "funding_source_id": await funding_source(client),
             "product_id": product["id"],
             "quantity": "1",
             "unit_price": "12",
+            "serial_numbers": ["unit-89-0"],
             "sold_at": "2026-08-20T08:00:00Z",
         },
     )
@@ -126,7 +133,11 @@ async def create_analytics_scenario(client: AsyncClient) -> dict[str, Any]:
     assert work.status_code == 201, work.text
     payment = await client.post(
         f"/api/v1/employees/{employee['id']}/payments",
-        json={"amount": "20", "paid_at": "2026-08-20T10:00:00Z"},
+        json={
+            "funding_source_id": await funding_source(client),
+            "amount": "20",
+            "paid_at": "2026-08-20T10:00:00Z",
+        },
     )
     assert payment.status_code == 201, payment.text
     return {"material": material, "product": product, "employee": employee}

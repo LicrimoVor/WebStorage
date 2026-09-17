@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import embedded_process, owner_product
 
 
 async def create_material(
@@ -29,6 +30,7 @@ async def create_item(
         json={
             "name": name,
             "is_product": is_product,
+            "product_id": None if is_product else await owner_product(client),
             "unit": "pcs",
             "initial_quantity": stock,
         },
@@ -117,6 +119,7 @@ async def activate_embedded_semi_recipe(
     output: dict[str, Any],
     semi: dict[str, Any],
     material: dict[str, Any],
+    expect_conflict: bool = False,
 ) -> None:
     created = await client.post(
         "/api/v1/technological-processes",
@@ -170,6 +173,9 @@ async def activate_embedded_semi_recipe(
         f"/api/v1/technological-processes/{process_id}/versions/{version_id}/graph",
         json=graph,
     )
+    if expect_conflict:
+        assert saved.status_code == 409, saved.text
+        return
     assert saved.status_code == 200, saved.text
     activated = await client.post(
         f"/api/v1/technological-processes/{process_id}/versions/{version_id}/activate"
@@ -182,8 +188,8 @@ async def test_atomic_product_registration_posts_components_and_progress(
     client: AsyncClient,
 ) -> None:
     material = await create_material(client, name="Plate", stock="20")
-    semi = await create_item(client, name="Bracket", is_product=False, stock="10")
     product = await create_item(client, name="Assembly", is_product=True)
+    semi = await create_item(client, name="Bracket", is_product=False, stock="10")
     version = await activate_process(
         client,
         name="Assemble product",
@@ -198,7 +204,12 @@ async def test_atomic_product_registration_posts_components_and_progress(
     response = await client.post(
         f"/api/v1/production-plans/{plan['id']}/production-records",
         headers={"Idempotency-Key": "production-success-1"},
-        json={"item_id": product["id"], "quantity": "2", "comment": "Shift 1"},
+        json={
+            "serial_numbers": ["unit-203-" + str(i) for i in range(2)],
+            "item_id": product["id"],
+            "quantity": "2",
+            "comment": "Shift 1",
+        },
     )
     assert response.status_code == 201, response.text
     record = response.json()
@@ -224,9 +235,7 @@ async def test_atomic_product_registration_posts_components_and_progress(
     plan_read = await client.get(f"/api/v1/production-plans/{plan['id']}")
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("2")
     assert Decimal(plan_read.json()["remaining_quantity"]) == Decimal("3")
-    history = await client.get(
-        f"/api/v1/production-plans/{plan['id']}/production-records"
-    )
+    history = await client.get(f"/api/v1/production-plans/{plan['id']}/production-records")
     assert history.status_code == 200
     assert history.json()["total"] == 1
     assert history.json()["items"][0]["id"] == record["id"]
@@ -234,7 +243,11 @@ async def test_atomic_product_registration_posts_components_and_progress(
     completed = await client.post(
         f"/api/v1/production-plans/{plan['id']}/production-records",
         headers={"Idempotency-Key": "production-success-2"},
-        json={"item_id": product["id"], "quantity": "3"},
+        json={
+            "serial_numbers": ["unit-239-" + str(i) for i in range(3)],
+            "item_id": product["id"],
+            "quantity": "3",
+        },
     )
     assert completed.status_code == 201, completed.text
     completed_plan = await client.get(f"/api/v1/production-plans/{plan['id']}")
@@ -250,8 +263,8 @@ async def test_insufficient_component_rolls_back_every_posting(
     client: AsyncClient,
 ) -> None:
     material = await create_material(client, name="Tube", stock="20")
-    semi = await create_item(client, name="Insert", is_product=False, stock="10")
     product = await create_item(client, name="Unit", is_product=True)
+    semi = await create_item(client, name="Insert", is_product=False, stock="10")
     await activate_process(
         client,
         name="Make unit",
@@ -271,7 +284,11 @@ async def test_insufficient_component_rolls_back_every_posting(
     failed = await client.post(
         f"/api/v1/production-plans/{plan['id']}/production-records",
         headers={"Idempotency-Key": "production-rollback-1"},
-        json={"item_id": product["id"], "quantity": "2"},
+        json={
+            "serial_numbers": ["unit-276-" + str(i) for i in range(2)],
+            "item_id": product["id"],
+            "quantity": "2",
+        },
     )
     assert failed.status_code == 409, failed.text
     assert "negative" in failed.json()["detail"]
@@ -281,9 +298,7 @@ async def test_insufficient_component_rolls_back_every_posting(
     assert Decimal(material_read.json()["free_quantity"]) == Decimal("20")
     assert Decimal(product_read.json()["free_quantity"]) == Decimal("0")
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("0")
-    history = await client.get(
-        f"/api/v1/production-plans/{plan['id']}/production-records"
-    )
+    history = await client.get(f"/api/v1/production-plans/{plan['id']}/production-records")
     assert history.json()["total"] == 0
 
 
@@ -301,7 +316,11 @@ async def test_idempotency_replay_returns_one_record_and_one_output(
     )
     plan = await create_product_plan(client, product_id=product["id"])
     path = f"/api/v1/production-plans/{plan['id']}/production-records"
-    payload = {"item_id": product["id"], "quantity": "1"}
+    payload = {
+        "serial_numbers": ["unit-306-" + str(i) for i in range(1)],
+        "item_id": product["id"],
+        "quantity": "1",
+    }
     headers = {"Idempotency-Key": "production-replay-1"}
     first = await client.post(path, headers=headers, json=payload)
     replay = await client.post(path, headers=headers, json=payload)
@@ -311,7 +330,11 @@ async def test_idempotency_replay_returns_one_record_and_one_output(
     conflict = await client.post(
         path,
         headers=headers,
-        json={"item_id": product["id"], "quantity": "2"},
+        json={
+            "serial_numbers": ["unit-316-" + str(i) for i in range(2)],
+            "item_id": product["id"],
+            "quantity": "2",
+        },
     )
     assert conflict.status_code == 409
     product_read = await client.get(f"/api/v1/manufactured-items/{product['id']}")
@@ -325,20 +348,12 @@ async def test_intermediate_production_reduces_recursive_requirement(
     client: AsyncClient,
 ) -> None:
     material = await create_material(client, name="Bar", stock="20")
-    semi = await create_item(client, name="Shaft", is_product=False)
     product = await create_item(client, name="Gearbox", is_product=True)
-    semi_version = await activate_process(
-        client,
-        name="Make shaft",
-        output=semi,
-        inputs=[("material", material["id"], "3")],
+    semi = await create_item(client, name="Shaft", is_product=False)
+    embedded = await embedded_process(
+        client, product, semi, [("material", material["id"], "3")], "2"
     )
-    await activate_process(
-        client,
-        name="Make gearbox",
-        output=product,
-        inputs=[("manufactured_item", semi["id"], "2")],
-    )
+    semi_version = embedded["version"]
     plan = await create_product_plan(client, product_id=product["id"], quantity="2")
     response = await client.post(
         f"/api/v1/production-plans/{plan['id']}/production-records",
@@ -349,9 +364,7 @@ async def test_intermediate_production_reduces_recursive_requirement(
     assert response.json()["process_version_id"] == semi_version["id"]
     plan_read = await client.get(f"/api/v1/production-plans/{plan['id']}")
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("0")
-    assert Decimal(plan_read.json()["materials"][0]["required_quantity"]) == Decimal(
-        "6"
-    )
+    assert Decimal(plan_read.json()["materials"][0]["required_quantity"]) == Decimal("6")
     semi_requirement = next(
         item
         for item in plan_read.json()["manufactured_items"]
@@ -379,12 +392,20 @@ async def test_concurrent_production_cannot_exceed_plan_remaining(
         client.post(
             path,
             headers={"Idempotency-Key": "production-concurrent-1"},
-            json={"item_id": product["id"], "quantity": "3"},
+            json={
+                "serial_numbers": ["unit-384-" + str(i) for i in range(3)],
+                "item_id": product["id"],
+                "quantity": "3",
+            },
         ),
         client.post(
             path,
             headers={"Idempotency-Key": "production-concurrent-2"},
-            json={"item_id": product["id"], "quantity": "3"},
+            json={
+                "serial_numbers": ["unit-389-" + str(i) for i in range(3)],
+                "item_id": product["id"],
+                "quantity": "3",
+            },
         ),
     )
     assert sorted(response.status_code for response in responses) == [201, 422]
@@ -399,10 +420,8 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
     client: AsyncClient,
 ) -> None:
     material = await create_material(client, name="Direct bar", stock="20")
-    semi = await create_item(
-        client, name="Direct shaft", is_product=False, stock="1"
-    )
     product = await create_item(client, name="Direct gearbox", is_product=True)
+    semi = await create_item(client, name="Direct shaft", is_product=False, stock="1")
     cut = (
         await client.post(
             "/api/v1/operations",
@@ -415,23 +434,13 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
             json={"name": "Direct assembly", "time_norm": "10", "price_per_operation": "8"},
         )
     ).json()
-    await activate_process(
+    await embedded_process(
         client,
-        name="Direct shaft recipe",
-        output=semi,
-        inputs=[
-            ("material", material["id"], "2"),
-            ("operation", cut["id"], "1"),
-        ],
-    )
-    await activate_process(
-        client,
-        name="Direct gearbox recipe",
-        output=product,
-        inputs=[
-            ("manufactured_item", semi["id"], "2"),
-            ("operation", assembly["id"], "1"),
-        ],
+        product,
+        semi,
+        [("material", material["id"], "2"), ("operation", cut["id"], "1")],
+        "2",
+        [("operation", assembly["id"], "1")],
     )
     employee = (
         await client.post(
@@ -456,8 +465,7 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
     assert Decimal(child["stock_used_quantity"]) == Decimal("1")
     assert Decimal(child["to_produce_quantity"]) == Decimal("3")
     operations = {
-        row["operation_id"]: Decimal(row["required_quantity"])
-        for row in preview["operations"]
+        row["operation_id"]: Decimal(row["required_quantity"]) for row in preview["operations"]
     }
     assert operations == {
         cut["id"]: Decimal("3"),
@@ -468,6 +476,7 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
         f"/api/v1/manufactured-items/{product['id']}/produce",
         headers={"Idempotency-Key": "direct-recursive-production-1"},
         json={
+            "serial_numbers": ["direct-" + str(i) for i in range(2)],
             "quantity": "2",
             "operation_assignments": [
                 {"operation_id": assembly["id"], "employee_id": employee["id"]}
@@ -483,6 +492,7 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
         f"/api/v1/manufactured-items/{product['id']}/produce",
         headers={"Idempotency-Key": "direct-recursive-production-1"},
         json={
+            "serial_numbers": ["direct-" + str(i) for i in range(2)],
             "quantity": "2",
             "operation_assignments": [
                 {"operation_id": assembly["id"], "employee_id": employee["id"]}
@@ -495,6 +505,7 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
         f"/api/v1/manufactured-items/{product['id']}/produce",
         headers={"Idempotency-Key": "direct-recursive-production-1"},
         json={
+            "serial_numbers": ["direct-" + str(i) for i in range(2)],
             "quantity": "2",
             "operation_assignments": [
                 {"operation_id": cut["id"], "employee_id": employee["id"]},
@@ -504,37 +515,33 @@ async def test_direct_production_recursively_builds_missing_stock_and_records_wo
     )
     assert changed_assignment.status_code == 409
     assert Decimal(
-        (await client.get(f"/api/v1/materials/{material['id']}")).json()[
-            "free_quantity"
-        ]
+        (await client.get(f"/api/v1/materials/{material['id']}")).json()["free_quantity"]
     ) == Decimal("14")
     assert Decimal(
-        (await client.get(f"/api/v1/manufactured-items/{semi['id']}")).json()[
-            "free_quantity"
-        ]
+        (await client.get(f"/api/v1/manufactured-items/{semi['id']}")).json()["free_quantity"]
     ) == Decimal("0")
 
-    assembly_work = (
-        await client.get(f"/api/v1/operations/{assembly['id']}/work-entries")
-    ).json()["items"][0]
+    assembly_work = (await client.get(f"/api/v1/operations/{assembly['id']}/work-entries")).json()[
+        "items"
+    ][0]
     assert assembly_work["employee_id"] == employee["id"]
     assert assembly_work["input_mode"] == "time"
     assert Decimal(assembly_work["accrued_amount"]) == Decimal("200")
-    anonymous_work = (
-        await client.get(f"/api/v1/operations/{cut['id']}/work-entries")
-    ).json()["items"][0]
+    anonymous_work = (await client.get(f"/api/v1/operations/{cut['id']}/work-entries")).json()[
+        "items"
+    ][0]
     assert anonymous_work["employee_id"] is None
     assert anonymous_work["employee_name"] == "Анонимно"
     assert anonymous_work["accrued_amount"] is None
 
 
 @pytest.mark.asyncio
-async def test_direct_semi_production_rejects_multiple_active_embedded_recipes(
+async def test_second_embedded_recipe_is_rejected_before_production(
     client: AsyncClient,
 ) -> None:
     material = await create_material(client, name="Ambiguous raw", stock="10")
-    semi = await create_item(client, name="Ambiguous semi", is_product=False)
     first = await create_item(client, name="Ambiguous product A", is_product=True)
+    semi = await create_item(client, name="Ambiguous semi", is_product=False)
     second = await create_item(client, name="Ambiguous product B", is_product=True)
     await activate_embedded_semi_recipe(
         client,
@@ -545,6 +552,7 @@ async def test_direct_semi_production_rejects_multiple_active_embedded_recipes(
     )
     await activate_embedded_semi_recipe(
         client,
+        expect_conflict=True,
         name="Ambiguous recipe B",
         output=second,
         semi=semi,
@@ -555,5 +563,5 @@ async def test_direct_semi_production_rejects_multiple_active_embedded_recipes(
         f"/api/v1/manufactured-items/{semi['id']}/production-preview",
         json={"quantity": "1"},
     )
-    assert response.status_code == 422
-    assert "Several active recipes" in response.json()["detail"]
+    assert response.status_code == 200
+    assert response.json()["can_produce"] is True

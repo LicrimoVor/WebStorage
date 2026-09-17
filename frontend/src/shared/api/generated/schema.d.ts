@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Auth Profile */
+        get: operations["getAuthProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Password */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -49,6 +83,92 @@ export interface paths {
         put?: never;
         /** Logout */
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/funding-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sources */
+        get: operations["sources_api_v1_funding_sources_get"];
+        put?: never;
+        /** Create Source */
+        post: operations["create_source_api_v1_funding_sources_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/warehouse/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receipt */
+        post: operations["receipt_api_v1_warehouse_receipts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Repair */
+        post: operations["repair_api_v1_repairs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/business-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_v1_business_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product-units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Units */
+        get: operations["units_api_v1_product_units_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1228,6 +1348,19 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** AuthProfileRead */
+        AuthProfileRead: {
+            /** Username */
+            username: string;
+            /** Roles */
+            roles: components["schemas"]["Role"][];
+            /** Created At */
+            created_at?: string | null;
+            /** Last Login At */
+            last_login_at?: string | null;
+            /** Can Change Password */
+            can_change_password: boolean;
+        };
         /** AuthSessionRead */
         AuthSessionRead: {
             /** Username */
@@ -1242,6 +1375,13 @@ export interface components {
          * @enum {string}
          */
         AvailabilityFilter: "all" | "in_stock" | "out_of_stock";
+        /** ChangePasswordRequest */
+        ChangePasswordRequest: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
         /** DemandedMaterialRow */
         DemandedMaterialRow: {
             /**
@@ -1261,6 +1401,10 @@ export interface components {
         };
         /** DirectProductionCreate */
         DirectProductionCreate: {
+            /** Serial Numbers */
+            serial_numbers?: string[];
+            /** Photo */
+            photo?: string | null;
             /** Quantity */
             quantity: number | string;
             /** Operation Assignments */
@@ -1545,6 +1689,8 @@ export interface components {
         };
         /** FinanceEntryRead */
         FinanceEntryRead: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1577,7 +1723,7 @@ export interface components {
          * FinanceSource
          * @enum {string}
          */
-        FinanceSource: "all" | "material" | "labour" | "sale" | "manual";
+        FinanceSource: "all" | "material" | "labour" | "sale" | "manual" | "repair";
         /** FinanceSummary */
         FinanceSummary: {
             /**
@@ -1611,6 +1757,11 @@ export interface components {
              */
             labour_expense: string;
             /**
+             * Repair Expense
+             * @default 0
+             */
+            repair_expense: string;
+            /**
              * Manual Income
              * @default 0
              */
@@ -1633,6 +1784,11 @@ export interface components {
         FinancialDirection: "income" | "expense";
         /** FinancialTransactionCreate */
         FinancialTransactionCreate: {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
             transaction_type: components["schemas"]["FinancialDirection"];
             /** Amount */
             amount: number | string;
@@ -1645,6 +1801,8 @@ export interface components {
         };
         /** FinancialTransactionRead */
         FinancialTransactionRead: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1669,6 +1827,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** FundingSourceCreate */
+        FundingSourceCreate: {
+            /** Name */
+            name: string;
+        };
+        /** FundingSourceRead */
+        FundingSourceRead: {
+            /** Name */
+            name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** GraphEdge */
         "GraphEdge-Input": {
@@ -1858,11 +2031,15 @@ export interface components {
         };
         /** InventoryGroupCreate */
         InventoryGroupCreate: {
+            /** Parent Id */
+            parent_id?: string | null;
             /** Name */
             name: string;
         };
         /** InventoryGroupRead */
         InventoryGroupRead: {
+            /** Parent Id */
+            parent_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1893,6 +2070,8 @@ export interface components {
         };
         /** InventoryGroupSummary */
         InventoryGroupSummary: {
+            /** Parent Id */
+            parent_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1903,11 +2082,15 @@ export interface components {
         };
         /** InventoryGroupUpdate */
         InventoryGroupUpdate: {
+            /** Parent Id */
+            parent_id?: string | null;
             /** Name */
             name: string;
         };
         /** InventoryMovementCreate */
         InventoryMovementCreate: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             movement_type: components["schemas"]["ManualMovementType"];
             /** Quantity */
             quantity: number | string;
@@ -1929,6 +2112,8 @@ export interface components {
         };
         /** InventoryMovementRead */
         InventoryMovementRead: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1979,6 +2164,8 @@ export interface components {
         ManualMovementType: "receipt" | "consumption" | "adjustment" | "write_off";
         /** ManufacturedItemCreate */
         ManufacturedItemCreate: {
+            /** Product Id */
+            product_id?: string | null;
             /** Name */
             name: string;
             /** Is Product */
@@ -2064,6 +2251,8 @@ export interface components {
         };
         /** ManufacturedItemRead */
         ManufacturedItemRead: {
+            /** Product Id */
+            product_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -2113,6 +2302,8 @@ export interface components {
         ManufacturedItemSortField: "name" | "free_quantity" | "created_at";
         /** ManufacturedItemUpdate */
         ManufacturedItemUpdate: {
+            /** Product Id */
+            product_id?: string | null;
             /** Name */
             name?: string | null;
             /** Is Product */
@@ -2357,6 +2548,11 @@ export interface components {
         };
         /** PaymentCreate */
         PaymentCreate: {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
             /** Amount */
             amount: number | string;
             /** Paid At */
@@ -2381,6 +2577,8 @@ export interface components {
         };
         /** PaymentRead */
         PaymentRead: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -3025,6 +3223,10 @@ export interface components {
         };
         /** ProductionRecordCreate */
         ProductionRecordCreate: {
+            /** Serial Numbers */
+            serial_numbers?: string[];
+            /** Photo */
+            photo?: string | null;
             /**
              * Item Id
              * Format: uuid
@@ -3050,6 +3252,10 @@ export interface components {
         };
         /** ProductionRecordRead */
         ProductionRecordRead: {
+            /** Serial Numbers */
+            serial_numbers?: string[];
+            /** Photo */
+            photo?: string | null;
             /**
              * Id
              * Format: uuid
@@ -3154,6 +3360,93 @@ export interface components {
             /** Qr Url */
             qr_url?: string | null;
         };
+        /** ReceiptCreate */
+        ReceiptCreate: {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /** Entries */
+            entries: components["schemas"]["ReceiptLine"][];
+        };
+        /** ReceiptLine */
+        ReceiptLine: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /**
+             * Defective Quantity
+             * @default 0
+             */
+            defective_quantity: number | string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        /** RepairCreate */
+        RepairCreate: {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Serial Number */
+            serial_number: string;
+            /** Replacement Serial Number */
+            replacement_serial_number?: string | null;
+            /** Comment */
+            comment: string;
+            /** Copied From Id */
+            copied_from_id?: string | null;
+            /** Materials */
+            materials: components["schemas"]["RepairMaterial"][];
+            /** Operations */
+            operations: components["schemas"]["RepairOperation"][];
+            /**
+             * Service Cost
+             * @default 0
+             */
+            service_cost: number | string;
+        };
+        /** RepairMaterial */
+        RepairMaterial: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** RepairOperation */
+        RepairOperation: {
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
         /**
          * Role
          * @enum {string}
@@ -3161,6 +3454,13 @@ export interface components {
         Role: "admin" | "production" | "warehouse" | "manager" | "finance";
         /** SaleCreate */
         SaleCreate: {
+            /** Serial Numbers */
+            serial_numbers?: string[];
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
             /**
              * Product Id
              * Format: uuid
@@ -3194,6 +3494,8 @@ export interface components {
         };
         /** SaleRead */
         SaleRead: {
+            /** Funding Source Id */
+            funding_source_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -3710,6 +4012,84 @@ export interface operations {
             };
         };
     };
+    getAuthProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthProfileRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -3742,6 +4122,195 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    sources_api_v1_funding_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundingSourceRead"][];
+                };
+            };
+        };
+    };
+    create_source_api_v1_funding_sources_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FundingSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundingSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receipt_api_v1_warehouse_receipts_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    repair_api_v1_repairs_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepairCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_api_v1_business_documents_get: {
+        parameters: {
+            query: {
+                kind: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    units_api_v1_product_units_get: {
+        parameters: {
+            query?: {
+                product_id?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6805,6 +7374,7 @@ export interface operations {
                 date_from?: string | null;
                 date_to?: string | null;
                 sort_order?: components["schemas"]["SortOrder"];
+                funding_source_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -6837,6 +7407,7 @@ export interface operations {
             query?: {
                 date_from?: string | null;
                 date_to?: string | null;
+                funding_source_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -6916,6 +7487,7 @@ export interface operations {
                 operation_id?: string | null;
                 plan_id?: string | null;
                 source?: components["schemas"]["FinanceSource"];
+                funding_source_id?: string | null;
                 direction?: components["schemas"]["FinancialDirection"] | null;
                 sort_by?: string | null;
                 sort_order?: components["schemas"]["SortOrder"];

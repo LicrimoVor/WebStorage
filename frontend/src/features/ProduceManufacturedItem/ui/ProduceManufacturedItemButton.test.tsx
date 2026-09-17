@@ -65,7 +65,7 @@ describe('ProduceManufacturedItemButton', () => {
     vi.mocked(registerDirectProduction).mockResolvedValue({} as never);
     const user = userEvent.setup();
     renderWithProviders(
-      <ProduceManufacturedItemButton itemId="product-id" itemName="Редуктор" />,
+      <ProduceManufacturedItemButton itemId="product-id" itemName="Редуктор" serialized />,
     );
 
     await user.click(screen.getByRole('button', {name: 'Произвести'}));
@@ -73,11 +73,14 @@ describe('ProduceManufacturedItemButton', () => {
     expect(within(dialog).getByText('Поддерево производства')).toBeInTheDocument();
     expect(within(dialog).getByText('Сталь')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', {name: 'Произвести'}));
+    expect(registerDirectProduction).not.toHaveBeenCalled();
+    await user.type(screen.getByPlaceholderText('Номера изделий — каждый с новой строки'), 'N1');
+    await user.click(within(dialog).getByRole('button', {name: 'Произвести'}));
 
     await waitFor(() =>
       expect(registerDirectProduction).toHaveBeenCalledWith(
         'product-id',
-        {quantity: '1', operation_assignments: [], comment: null},
+        {quantity: '1', operation_assignments: [], comment: null, serial_numbers: ["N1"], photo: null},
         expect.any(String),
       ),
     );

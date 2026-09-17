@@ -1,6 +1,7 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {ThemeProvider} from '@gravity-ui/uikit';
-import type {PropsWithChildren} from 'react';
+import {useState, type PropsWithChildren} from 'react';
+import {ThemeContext} from './themeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,10 +15,18 @@ const queryClient = new QueryClient({
 });
 
 export function AppProviders({children}: PropsWithChildren) {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {return localStorage.getItem('webstorage-theme') === 'dark' ? 'dark' : 'light';}
+    catch {return 'light';}
+  });
+  const toggle = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    try {localStorage.setItem('webstorage-theme', next);} catch { /* Theme remains usable. */ }
+  };
   return (
-    <ThemeProvider theme="system">
+    <ThemeContext.Provider value={{theme, toggle}}><ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </ThemeProvider>
+    </ThemeProvider></ThemeContext.Provider>
   );
 }
-

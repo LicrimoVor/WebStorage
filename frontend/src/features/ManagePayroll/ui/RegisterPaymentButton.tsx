@@ -1,3 +1,4 @@
+import {FundingSelect} from '@/entities/Funding';
 import {
   Alert,
   Button,
@@ -42,6 +43,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
   const [amount, setAmount] = useState('');
   const [paidAt, setPaidAt] = useState(currentDateTime);
   const [comment, setComment] = useState('');
+  const [fundingSource, setFundingSource] = useState('');
   const [manual, setManual] = useState(false);
   const [allocationAmounts, setAllocationAmounts] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string>();
@@ -77,6 +79,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     if (!isMoney(amount)) {
       setValidationError('Укажите положительную сумму с точностью до копеек.');
       return;
@@ -111,6 +114,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
       amount: normalizeDecimal(amount),
       paid_at: new Date(paidAt).toISOString(),
       comment: comment.trim() || null,
+      funding_source_id: fundingSource,
       allocations,
     });
   };
@@ -195,6 +199,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
                 onChange={(event) => setPaidAt(event.target.value)}
               />
             </label>
+            <FundingSelect value={fundingSource} onChange={setFundingSource} />
             <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
             <Switch checked={manual} onUpdate={setManual} size="l">
               Распределить вручную

@@ -112,7 +112,7 @@ export function ManufacturedItemsSection({
   };
   const renderActions = (item: ManufacturedItem) => (
     <div className={styles.actions}>
-      <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />
+      {!item.is_product && <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />}
       <ManufacturedInventoryHistoryButton item={item} />
       <EditManufacturedItemButton item={item} />
       <ArchiveManufacturedItemButton item={item} />

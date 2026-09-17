@@ -30,6 +30,9 @@ class ManufacturedItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     id: Mapped[uuid.UUID]
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("manufactured_items.id", ondelete="RESTRICT"), nullable=True
+    )
     is_product: Mapped[bool] = mapped_column(Boolean, nullable=False)
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
     image: Mapped[str | None] = mapped_column(Text, nullable=True)

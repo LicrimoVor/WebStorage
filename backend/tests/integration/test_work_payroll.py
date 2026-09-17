@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import funding_source
 
 
 async def create_operation(
@@ -148,13 +149,16 @@ async def test_fifo_and_manual_partial_payments_allocate_exactly(
     )
     fifo = await client.post(
         f"/api/v1/employees/{employee['id']}/payments",
-        json={"amount": "25", "comment": "Advance"},
+        json={
+            "funding_source_id": await funding_source(client),
+            "amount": "25",
+            "comment": "Advance",
+        },
     )
     assert fifo.status_code == 201, fifo.text
     assert fifo.json()["allocation_mode"] == "fifo"
     actual_allocations = [
-        (item["work_entry_id"], Decimal(item["amount"]))
-        for item in fifo.json()["allocations"]
+        (item["work_entry_id"], Decimal(item["amount"])) for item in fifo.json()["allocations"]
     ]
     assert actual_allocations == [
         (first["id"], Decimal("20")),
@@ -164,15 +168,14 @@ async def test_fifo_and_manual_partial_payments_allocate_exactly(
     manual = await client.post(
         f"/api/v1/employees/{employee['id']}/payments",
         json={
+            "funding_source_id": await funding_source(client),
             "amount": "10",
             "allocations": [{"work_entry_id": second["id"], "amount": "10"}],
         },
     )
     assert manual.status_code == 201, manual.text
     assert manual.json()["allocation_mode"] == "manual"
-    summary = await client.get(
-        f"/api/v1/employees/{employee['id']}/payroll-summary"
-    )
+    summary = await client.get(f"/api/v1/employees/{employee['id']}/payroll-summary")
     assert summary.status_code == 200
     assert Decimal(summary.json()["accrued_total"]) == Decimal("50")
     assert Decimal(summary.json()["paid_total"]) == Decimal("35")
@@ -195,18 +198,15 @@ async def test_paid_work_is_protected_and_unpaid_work_can_be_voided(
         value="1",
     )
     payment = await client.post(
-        f"/api/v1/employees/{employee['id']}/payments", json={"amount": "5"}
+        f"/api/v1/employees/{employee['id']}/payments",
+        json={"funding_source_id": await funding_source(client), "amount": "5"},
     )
     assert payment.status_code == 201
     assert (
-        await client.patch(
-            f"/api/v1/work-entries/{paid['id']}", json={"input_value": "2"}
-        )
+        await client.patch(f"/api/v1/work-entries/{paid['id']}", json={"input_value": "2"})
     ).status_code == 409
     assert (
-        await client.post(
-            f"/api/v1/work-entries/{paid['id']}/void", json={"reason": "mistake"}
-        )
+        await client.post(f"/api/v1/work-entries/{paid['id']}/void", json={"reason": "mistake"})
     ).status_code == 409
 
     unpaid = await record_work(
@@ -226,9 +226,7 @@ async def test_paid_work_is_protected_and_unpaid_work_can_be_voided(
         params={"include_voided": "true"},
     )
     assert history.json()["total"] == 2
-    active_history = await client.get(
-        f"/api/v1/employees/{employee['id']}/work-entries"
-    )
+    active_history = await client.get(f"/api/v1/employees/{employee['id']}/work-entries")
     assert active_history.json()["total"] == 1
 
 
@@ -244,7 +242,8 @@ async def test_payment_cannot_exceed_payable_amount(client: AsyncClient) -> None
         value="1",
     )
     response = await client.post(
-        f"/api/v1/employees/{employee['id']}/payments", json={"amount": "10.01"}
+        f"/api/v1/employees/{employee['id']}/payments",
+        json={"funding_source_id": await funding_source(client), "amount": "10.01"},
     )
     assert response.status_code == 422
 
@@ -263,9 +262,7 @@ async def test_hourly_employee_is_paid_by_time_and_tracks_paid_equivalent(
     )
     assert employee_response.status_code == 201, employee_response.text
     employee = employee_response.json()
-    operation = await create_operation(
-        client, name="Hourly assembly", time_norm="5", rate="999"
-    )
+    operation = await create_operation(client, name="Hourly assembly", time_norm="5", rate="999")
 
     rejected = await client.post(
         f"/api/v1/operations/{operation['id']}/work-entries",
@@ -290,17 +287,14 @@ async def test_hourly_employee_is_paid_by_time_and_tracks_paid_equivalent(
     assert Decimal(entry["accrued_amount"]) == Decimal("300")
 
     payment = await client.post(
-        f"/api/v1/employees/{employee['id']}/payments", json={"amount": "150"}
+        f"/api/v1/employees/{employee['id']}/payments",
+        json={"funding_source_id": await funding_source(client), "amount": "150"},
     )
     assert payment.status_code == 201, payment.text
-    summary = (
-        await client.get(f"/api/v1/employees/{employee['id']}/payroll-summary")
-    ).json()
+    summary = (await client.get(f"/api/v1/employees/{employee['id']}/payroll-summary")).json()
     assert Decimal(summary["completed_operations"]) == Decimal("6")
     assert Decimal(summary["paid_operations_equivalent"]) == Decimal("3")
-    assert Decimal(summary["operations"][0]["paid_quantity_equivalent"]) == Decimal(
-        "3"
-    )
+    assert Decimal(summary["operations"][0]["paid_quantity_equivalent"]) == Decimal("3")
     employee_read = (await client.get(f"/api/v1/employees/{employee['id']}")).json()
     assert employee_read["compensation_type"] == "hourly"
     assert Decimal(employee_read["paid_operations_equivalent"]) == Decimal("3")

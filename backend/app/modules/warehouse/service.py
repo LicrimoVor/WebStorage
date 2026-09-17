@@ -45,6 +45,7 @@ def _group_read(
 ) -> InventoryGroupRead:
     return InventoryGroupRead(
         id=group.id,
+        parent_id=group.parent_id,
         name=group.name,
         material_count=material_count,
         semi_finished_count=item_count,
@@ -58,10 +59,9 @@ async def list_groups(session: AsyncSession) -> list[InventoryGroupRead]:
     return [_group_read(*row) for row in rows]
 
 
-async def create_group(
-    session: AsyncSession, payload: InventoryGroupCreate
-) -> InventoryGroupRead:
-    group = InventoryGroup(name=payload.name)
+async def create_group(session: AsyncSession, payload: InventoryGroupCreate) -> InventoryGroupRead:
+    await validate_parent(session, payload.parent_id)
+    group = InventoryGroup(name=payload.name, parent_id=payload.parent_id)
     session.add(group)
     try:
         await session.commit()
@@ -78,6 +78,8 @@ async def update_group(
     group = await session.get(InventoryGroup, group_id)
     if group is None:
         raise NotFoundError("Inventory group was not found")
+    await validate_parent(session, payload.parent_id, group_id)
+    group.parent_id = payload.parent_id
     group.name = payload.name
     try:
         await session.commit()
@@ -93,6 +95,8 @@ async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
     group = await session.get(InventoryGroup, group_id)
     if group is None:
         raise NotFoundError("Inventory group was not found")
+    if await session.scalar(select(InventoryGroup.id).where(InventoryGroup.parent_id == group_id)):
+        raise ConflictError("Сначала удалите подгруппы")
     await session.delete(group)
     await session.commit()
 
@@ -110,7 +114,16 @@ async def list_revision_rows(
     if product_id is not None:
         components = await product_components(session, product_id)
         component_material_ids = components.material_ids
-        component_item_ids = {*components.manufactured_item_ids, product_id}
+        component_item_ids = set(
+            (
+                await session.scalars(
+                    select(ManufacturedItem.id).where(
+                        (ManufacturedItem.product_id == product_id)
+                        | (ManufacturedItem.id == product_id)
+                    )
+                )
+            ).all()
+        )
 
     material_balance = (
         select(func.coalesce(func.sum(InventoryMovement.quantity), Decimal("0")))
@@ -130,9 +143,7 @@ async def list_revision_rows(
     )
     if search:
         material_statement = material_statement.where(Material.name.ilike(f"%{search.strip()}%"))
-        item_statement = item_statement.where(
-            ManufacturedItem.name.ilike(f"%{search.strip()}%")
-        )
+        item_statement = item_statement.where(ManufacturedItem.name.ilike(f"%{search.strip()}%"))
     if component_material_ids is not None:
         material_statement = material_statement.where(Material.id.in_(component_material_ids))
         item_statement = item_statement.where(ManufacturedItem.id.in_(component_item_ids or set()))
@@ -140,7 +151,13 @@ async def list_revision_rows(
         material_statement = material_statement.join(
             InventoryGroupMaterial,
             InventoryGroupMaterial.material_id == Material.id,
-        ).where(InventoryGroupMaterial.group_id == group_id)
+        ).where(
+            InventoryGroupMaterial.group_id.in_(
+                select(InventoryGroup.id).where(
+                    (InventoryGroup.id == group_id) | (InventoryGroup.parent_id == group_id)
+                )
+            )
+        )
         item_statement = item_statement.join(
             InventoryGroupManufacturedItem,
             InventoryGroupManufacturedItem.manufactured_item_id == ManufacturedItem.id,
@@ -155,14 +172,26 @@ async def list_revision_rows(
         material_statement = material_statement.where(false())
         item_statement = item_statement.where(ManufacturedItem.is_product.is_(True))
 
-    material_rows = (await session.execute(material_statement.order_by(Material.name))).all()
+    material_rows = (
+        await session.execute(material_statement.distinct().order_by(Material.name))
+    ).all()
     item_rows = (await session.execute(item_statement.order_by(ManufacturedItem.name))).all()
     material_groups = await repository.material_group_map(
         session, (row[0].id for row in material_rows)
     )
     item_groups = await repository.item_group_map(session, (row[0].id for row in item_rows))
-    material_products, item_products = await all_product_memberships(session)
+    material_products, _item_products = await all_product_memberships(session)
 
+    product_names = {
+        row[0]: row[1]
+        for row in (
+            await session.execute(
+                select(ManufacturedItem.id, ManufacturedItem.name).where(
+                    ManufacturedItem.is_product.is_(True)
+                )
+            )
+        ).all()
+    }
     rows: list[StockRevisionRow] = []
     for material, balance in material_rows:
         rows.append(
@@ -194,7 +223,11 @@ async def list_revision_rows(
                 unit=item.unit,
                 products=[
                     StockRevisionCatalogRef(id=ref_id, name=name)
-                    for ref_id, name in item_products.get(item.id, [])
+                    for ref_id, name in (
+                        [(item.product_id, product_names[item.product_id])]
+                        if item.product_id in product_names
+                        else []
+                    )
                 ],
                 groups=item_groups.get(item.id, []),
                 current_quantity=Decimal(balance),
@@ -314,3 +347,18 @@ async def create_revision(
         created_at=revision.created_at,
         entries=reads,
     )
+
+
+async def validate_parent(
+    session: AsyncSession, parent_id: uuid.UUID | None, group_id: uuid.UUID | None = None
+) -> None:
+    # Lock the hierarchy to serialize competing reparent operations.
+    await session.execute(select(InventoryGroup.id).order_by(InventoryGroup.id).with_for_update())
+    if parent_id is not None:
+        parent = await session.get(InventoryGroup, parent_id)
+        if parent is None or parent.parent_id is not None or parent_id == group_id:
+            raise DomainValidationError("Допускаются только группа и один уровень подгрупп")
+        if group_id and await session.scalar(
+            select(InventoryGroup.id).where(InventoryGroup.parent_id == group_id)
+        ):
+            raise DomainValidationError("Группу с подгруппами нельзя сделать подгруппой")  # noqa: RUF001

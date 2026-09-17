@@ -6,6 +6,7 @@ export function validateManufacturedItemForm(
   value: ManufacturedItemFormValue,
   includeInitialQuantity: boolean,
 ): string | null {
+  if (!value.isProduct && !value.productId) return 'Выберите продукт для полуфабриката.';
   if (!value.name.trim()) return 'Укажите название.';
   if (!value.unit.trim()) return 'Укажите единицу измерения.';
   if (includeInitialQuantity && !isDecimal(value.initialQuantity)) {

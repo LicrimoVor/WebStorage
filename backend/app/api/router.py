@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from app.core.security import Actor, get_current_actor
 from app.modules.analytics.router import router as analytics_router
 from app.modules.audit.router import router as audit_router
+from app.modules.business.router import router as business_router
 from app.modules.employees.router import router as employees_router
 from app.modules.exports.router import router as exports_router
 from app.modules.finance.router import router as finance_router
@@ -30,6 +31,8 @@ from app.modules.technological_processes.router import (
 from app.modules.warehouse.router import groups_router, warehouse_router
 
 api_router = APIRouter(dependencies=[Depends(get_current_actor)])
+
+api_router.include_router(business_router)
 api_router.include_router(materials_router)
 api_router.include_router(media_router)
 api_router.include_router(inventory_router)

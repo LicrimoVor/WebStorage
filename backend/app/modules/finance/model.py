@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, DateTime, Index, Numeric, String, Text, func
+from sqlalchemy import ForeignKey as FundingForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UUIDPrimaryKeyMixin
@@ -20,6 +21,9 @@ class FinancialTransaction(UUIDPrimaryKeyMixin, Base):
         Index("ix_financial_transactions_type_category", "transaction_type", "category"),
     )
 
+    funding_source_id: Mapped[uuid.UUID | None] = mapped_column(
+        FundingForeignKey("funding_sources.id"), nullable=True
+    )
     id: Mapped[uuid.UUID]
     transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(20, 2), nullable=False)

@@ -343,6 +343,7 @@ def to_payment_read(
 ) -> PaymentRead:
     return PaymentRead(
         id=payment.id,
+        funding_source_id=payment.funding_source_id,
         employee_id=payment.employee_id,
         employee_name=employee_name,
         amount=payment.amount,
@@ -381,9 +382,7 @@ async def create_payment(
     }
     available = money(sum((value[1] for value in outstanding_by_id.values()), Decimal("0")))
     if payload.amount > available:
-        raise DomainValidationError(
-            f"Payment exceeds the employee payable amount ({available})"
-        )
+        raise DomainValidationError(f"Payment exceeds the employee payable amount ({available})")
     requested: list[tuple[WorkEntry, Decimal]] = []
     allocation_mode = "manual" if payload.allocations is not None else "fifo"
     if payload.allocations is not None:
@@ -411,7 +410,11 @@ async def create_payment(
         if remaining != 0:
             raise ConflictError("Payment allocation could not be completed")
     now = datetime.now(UTC)
+    from app.modules.business.service import validate_funding
+
+    await validate_funding(session, payload.funding_source_id)
     payment = EmployeePayment(
+        funding_source_id=payload.funding_source_id,
         employee_id=employee.id,
         amount=money(payload.amount),
         paid_at=timestamp(payload.paid_at),

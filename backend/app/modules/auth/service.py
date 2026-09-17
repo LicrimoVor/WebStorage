@@ -8,7 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit_context import set_actor
-from app.core.errors import AuthenticationError, ConflictError, NotFoundError
+from app.core.errors import AuthenticationError, ConflictError, DomainValidationError, NotFoundError
 from app.core.security import Actor, Role
 from app.modules.auth.model import AuthSession, UserAccount
 from app.modules.auth.passwords import DUMMY_PASSWORD_HASH, hash_password, verify_password
@@ -112,6 +112,12 @@ async def actor_for_token(session: AsyncSession, token: str | None) -> Actor:
         await session.delete(auth_session)
         await session.commit()
         raise AuthenticationError("Authentication is required")
+    from app.core.config import get_settings
+
+    ttl = timedelta(hours=get_settings().session_ttl_hours)
+    if auth_session.expires_at - now < ttl / 2:
+        auth_session.expires_at = now + ttl
+        await session.commit()
     return Actor(subject=user.username, roles=frozenset(_roles(user.roles)))
 
 
@@ -121,6 +127,50 @@ async def revoke_session(session: AsyncSession, token: str | None) -> None:
             delete(AuthSession).where(AuthSession.token_hash == _token_hash(token))
         )
         await session.commit()
+
+
+async def change_own_password(
+    session: AsyncSession, *, token: str | None, current_password: str, new_password: str
+) -> None:
+    if not token:
+        raise AuthenticationError("Authentication is required")
+    now = datetime.now(UTC)
+    user = await session.scalar(
+        select(UserAccount)
+        .join(AuthSession, AuthSession.user_id == UserAccount.id)
+        .where(
+            AuthSession.token_hash == _token_hash(token),
+            AuthSession.expires_at > now,
+            UserAccount.active.is_(True),
+        )
+        .with_for_update(of=UserAccount)
+    )
+    if user is None:
+        raise AuthenticationError("Authentication is required")
+    if user.locked_until is not None and user.locked_until > now:
+        raise DomainValidationError("Слишком много попыток. Повторите через 15 минут.")
+    valid, _ = await asyncio.to_thread(verify_password, current_password, user.password_hash)
+    if not valid:
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+            user.failed_login_attempts = 0
+            user.locked_until = now + LOCK_DURATION
+        await session.commit()
+        raise DomainValidationError("Текущий пароль указан неверно")
+    if new_password == current_password:
+        raise DomainValidationError("Новый пароль должен отличаться от текущего")
+    if not new_password.strip():
+        raise DomainValidationError("Новый пароль не должен состоять из пробелов")
+    user.password_hash = await asyncio.to_thread(hash_password, new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    await session.execute(
+        delete(AuthSession).where(
+            AuthSession.user_id == user.id,
+            AuthSession.token_hash != _token_hash(token),
+        )
+    )
+    await session.commit()
 
 
 async def create_user(

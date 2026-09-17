@@ -246,6 +246,13 @@ export function StockRevisionPage() {
     },
   ];
 
+  const groupedRows = new Map<string, StockRevisionRow[]>();
+  for (const row of rowsQuery.data ?? []) {
+    const group = groupsQuery.data?.find((g) => g.id === row.groups?.[0]?.id);
+    const parent = groupsQuery.data?.find((g) => g.id === group?.parent_id);
+    const title = parent ? `${parent.name} / ${group?.name}` : group?.name ?? "Без группы";
+    groupedRows.set(title, [...(groupedRows.get(title) ?? []), row]);
+  }
   return (
     <main className={styles.root}>
       <header className={styles.header}>
@@ -329,13 +336,13 @@ export function StockRevisionPage() {
           <Alert theme="info" message="По выбранным фильтрам позиций нет." />
         ) : (
           <div className={styles.tableWrap}>
-            <Table
-              data={rowsQuery.data}
+            {[...groupedRows].sort(([a], [b]) => a.localeCompare(b)).map(([title, rows]) => <section key={title}><h3>{title}</h3><Table
+              data={rows}
               className={styles.table}
               columns={columns}
               getRowId={rowKey}
               verticalAlign="middle"
-            />
+            /></section>)}
           </div>
         )}
 

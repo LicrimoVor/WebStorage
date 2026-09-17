@@ -20,6 +20,7 @@ export const financeSummaryFixture: FinanceSummary = {
   sales_income: '24.68',
   material_expense: '10.00',
   labour_expense: '15.00',
+  repair_expense: '0.00',
   manual_income: '100.00',
   manual_expense: '20.00',
   incomplete_material_movements: 0,

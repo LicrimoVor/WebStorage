@@ -6,6 +6,7 @@ import pytest
 from app.core.errors import AuthorizationError
 from app.core.security import Actor, Role, require_any_role
 from httpx import AsyncClient
+from tests.integration.helpers import funding_source
 
 
 async def create_item(
@@ -38,6 +39,7 @@ async def register_sale(
     sold_at: str | None = "2026-08-20T08:00:00Z",
 ) -> Any:
     payload: dict[str, Any] = {
+        "funding_source_id": await funding_source(client),
         "product_id": product_id,
         "quantity": quantity,
         "unit_price": price,
@@ -45,9 +47,7 @@ async def register_sale(
     }
     if sold_at is not None:
         payload["sold_at"] = sold_at
-    return await client.post(
-        "/api/v1/sales", headers={"Idempotency-Key": key}, json=payload
-    )
+    return await client.post("/api/v1/sales", headers={"Idempotency-Key": key}, json=payload)
 
 
 @pytest.mark.asyncio
@@ -175,19 +175,19 @@ async def test_material_cost_uses_movement_price_snapshot(client: AsyncClient) -
     material_id = material.json()["id"]
     consumed = await client.post(
         f"/api/v1/materials/{material_id}/movements",
-        json={"movement_type": "consumption", "quantity": "2"},
+        json={
+            "movement_type": "receipt",
+            "quantity": "2",
+            "funding_source_id": await funding_source(client),
+        },
     )
     assert consumed.status_code == 201, consumed.text
     assert Decimal(consumed.json()["unit_price_snapshot"]) == Decimal("2.50")
     assert Decimal(consumed.json()["total_amount_snapshot"]) == Decimal("5.00")
-    updated = await client.patch(
-        f"/api/v1/materials/{material_id}", json={"price": "4.00"}
-    )
+    updated = await client.patch(f"/api/v1/materials/{material_id}", json={"price": "4.00"})
     assert updated.status_code == 200
 
-    finance = await client.get(
-        "/api/v1/finance/entries", params={"source": "material"}
-    )
+    finance = await client.get("/api/v1/finance/entries", params={"source": "material"})
     assert finance.status_code == 200, finance.text
     assert finance.json()["total"] == 1
     assert Decimal(finance.json()["items"][0]["amount"]) == Decimal("5.00")
@@ -197,9 +197,7 @@ async def test_material_cost_uses_movement_price_snapshot(client: AsyncClient) -
 
 @pytest.mark.asyncio
 async def test_manual_finance_and_labour_are_aggregated(client: AsyncClient) -> None:
-    employee = await client.post(
-        "/api/v1/employees", json={"full_name": "Finance Worker"}
-    )
+    employee = await client.post("/api/v1/employees", json={"full_name": "Finance Worker"})
     operation = await client.post(
         "/api/v1/operations",
         json={"name": "Finance operation", "price_per_operation": "10"},
@@ -215,12 +213,13 @@ async def test_manual_finance_and_labour_are_aggregated(client: AsyncClient) -> 
     assert work.status_code == 201, work.text
     payment = await client.post(
         f"/api/v1/employees/{employee.json()['id']}/payments",
-        json={"amount": "15"},
+        json={"funding_source_id": await funding_source(client), "amount": "15"},
     )
     assert payment.status_code == 201, payment.text
     income = await client.post(
         "/api/v1/finance/transactions",
         json={
+            "funding_source_id": await funding_source(client),
             "transaction_type": "income",
             "amount": "100",
             "occurred_at": "2026-08-20T08:00:00Z",
@@ -230,6 +229,7 @@ async def test_manual_finance_and_labour_are_aggregated(client: AsyncClient) -> 
     expense = await client.post(
         "/api/v1/finance/transactions",
         json={
+            "funding_source_id": await funding_source(client),
             "transaction_type": "expense",
             "amount": "30",
             "occurred_at": "2026-08-20T09:00:00Z",

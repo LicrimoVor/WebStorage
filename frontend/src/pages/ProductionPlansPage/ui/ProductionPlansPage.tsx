@@ -13,12 +13,10 @@ import {
   TextInput,
 } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import {
-  productionKeys,
-  registerProduction,
   useProductionRecordsQuery,
   type ProductionRecord,
 } from "@/entities/Production";
@@ -266,157 +264,6 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
   );
 }
 
-function RegisterProductionButton({ plan }: { plan: ProductionPlan }) {
-  const [open, setOpen] = useState(false);
-  const [itemId, setItemId] = useState(plan.product_id);
-  const [quantity, setQuantity] = useState("");
-  const [comment, setComment] = useState("");
-  const commandKey = useRef(crypto.randomUUID());
-  const queryClient = useQueryClient();
-  const candidates = [
-    {
-      id: plan.product_id,
-      name: plan.product_name,
-      unit: plan.product_unit,
-      remaining: plan.remaining_quantity,
-      kind: "Продукт",
-    },
-    ...plan.manufactured_items
-      .filter(
-        (item) =>
-          !item.is_plan_output &&
-          item.process_version_id !== null &&
-          Number(item.to_produce_quantity) > 0,
-      )
-      .map((item) => ({
-        id: item.manufactured_item_id,
-        name: item.name,
-        unit: item.unit,
-        remaining: item.to_produce_quantity,
-        kind: "Полуфабрикат",
-      })),
-  ];
-  const selected = candidates.find((candidate) => candidate.id === itemId);
-  const mutation = useMutation({
-    mutationFn: () =>
-      registerProduction(
-        plan.id,
-        {
-          item_id: itemId,
-          quantity: quantity.replace(",", "."),
-          comment: comment.trim() || null,
-        },
-        commandKey.current,
-      ),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: productionPlanKeys.all });
-      await queryClient.invalidateQueries({ queryKey: productionKeys.all });
-      await queryClient.invalidateQueries({ queryKey: ["materials"] });
-      await queryClient.invalidateQueries({ queryKey: ["manufactured-items"] });
-      await queryClient.invalidateQueries({ queryKey: ["operations"] });
-      setOpen(false);
-      setQuantity("");
-      setComment("");
-      setItemId(plan.product_id);
-      commandKey.current = crypto.randomUUID();
-    },
-  });
-  const numericQuantity = Number(quantity.replace(",", "."));
-  const valid =
-    selected !== undefined &&
-    numericQuantity > 0 &&
-    numericQuantity <= Number(selected.remaining);
-  const close = () => {
-    if (!mutation.isPending) {
-      mutation.reset();
-      setOpen(false);
-    }
-  };
-  return (
-    <>
-      <Button
-        view="action"
-        onClick={() => {
-          commandKey.current = crypto.randomUUID();
-          setOpen(true);
-        }}
-      >
-        Зарегистрировать выпуск
-      </Button>
-      <Dialog open={open} onClose={close} maxWidth="m" fullWidth>
-        <Dialog.Header caption="Регистрация производства" />
-        <Dialog.Body>
-          <div className={styles.form}>
-            <Select
-              options={candidates.map((candidate) => ({
-                value: candidate.id,
-                content: `${candidate.name} · ${candidate.kind}`,
-              }))}
-              value={[itemId]}
-              onUpdate={(values) => {
-                setItemId(values[0] ?? plan.product_id);
-                setQuantity("");
-                commandKey.current = crypto.randomUUID();
-              }}
-              label="Произведённая позиция"
-              width="max"
-              size="l"
-              aria-label="Произведённая позиция"
-            />
-            <TextInput
-              value={quantity}
-              onUpdate={(value) => {
-                setQuantity(value);
-                commandKey.current = crypto.randomUUID();
-              }}
-              label={`Количество${selected ? `, ${selected.unit}` : ""}`}
-              placeholder="0,00"
-              size="l"
-              controlProps={{
-                inputMode: "decimal",
-                "aria-label": "Количество произведённой позиции",
-              }}
-              {...(numericQuantity > Number(selected?.remaining ?? 0)
-                ? {
-                    validationState: "invalid" as const,
-                    errorMessage: `По плану осталось ${amount(selected?.remaining ?? "0")}`,
-                  }
-                : {})}
-            />
-            <TextInput
-              value={comment}
-              onUpdate={(value) => {
-                setComment(value);
-                commandKey.current = crypto.randomUUID();
-              }}
-              label="Комментарий"
-              size="l"
-              controlProps={{ "aria-label": "Комментарий производства" }}
-            />
-            {selected ? (
-              <Alert
-                theme="info"
-                message={`Будет проведено не более ${amount(selected.remaining, ` ${selected.unit}`)}. Компоненты спишутся автоматически.`}
-              />
-            ) : null}
-            {mutation.error ? (
-              <Alert theme="danger" message={getErrorMessage(mutation.error)} />
-            ) : null}
-          </div>
-        </Dialog.Body>
-        <Dialog.Footer
-          textButtonApply="Провести"
-          textButtonCancel="Отмена"
-          onClickButtonApply={() => mutation.mutate()}
-          onClickButtonCancel={close}
-          loading={mutation.isPending}
-          propsButtonApply={{ disabled: !valid }}
-        />
-      </Dialog>
-    </>
-  );
-}
-
 function ProductionRecordRow({ record }: { record: ProductionRecord }) {
   return (
     <li>
@@ -504,9 +351,6 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
         <div className={styles.planActions}>
           {plan.status === "active" || plan.status === "draft" ? (
             <>
-              {plan.status === "active" ? (
-                <RegisterProductionButton plan={plan} />
-              ) : null}
               <Button
                 view="outlined"
                 loading={recalculate.isPending}
@@ -562,7 +406,7 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
       ) : null}
       <details className={styles.details}>
         <summary>Показать рассчитанные потребности</summary>
-        <RequirementTable plan={plan} />
+        <details><summary>Потребности в материалах и операциях</summary><RequirementTable plan={plan} /></details>
       </details>
       <details
         className={styles.details}

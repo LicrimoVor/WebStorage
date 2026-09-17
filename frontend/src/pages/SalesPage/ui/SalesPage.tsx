@@ -1,3 +1,5 @@
+import {apiRequest} from '@/shared/api';
+import {FundingSelect} from '@/entities/Funding';
 import {Archive} from '@gravity-ui/icons';
 import {
   Alert,
@@ -13,7 +15,7 @@ import {
   TextInput,
   type TableColumnConfig,
 } from '@gravity-ui/uikit';
-import {useMutation, useQueryClient} from '@tanstack/react-query';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {useRef, useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 
@@ -76,10 +78,13 @@ function isMoney(value: string): boolean {
 function RegisterSaleButton() {
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState('');
+  const [serialNumbers, setSerialNumbers] = useState<string[]>([]);
+  const units = useQuery({queryKey: ['sale-units', productId], enabled: Boolean(productId), queryFn: async () => {const all: {serial_number: string; sale_id: string | null; issued_for_repair_id: string | null}[] = []; for (let offset = 0; ; offset += 500) {const batch = await apiRequest<{serial_number: string; sale_id: string | null; issued_for_repair_id: string | null}[]>(`/product-units?product_id=${productId}&limit=500&offset=${offset}`); all.push(...batch); if (batch.length < 500) return all;}}});
   const [quantity, setQuantity] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [soldAt, setSoldAt] = useState(currentDateTime);
   const [comment, setComment] = useState('');
+  const [fundingSource, setFundingSource] = useState('');
   const [validationError, setValidationError] = useState<string>();
   const commandKey = useRef(crypto.randomUUID());
   const queryClient = useQueryClient();
@@ -99,6 +104,8 @@ function RegisterSaleButton() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({queryKey: saleKeys.all}),
+          queryClient.invalidateQueries({queryKey: ["sale-units"]}),
+          queryClient.invalidateQueries({queryKey: ["product-units"]}),
         queryClient.invalidateQueries({queryKey: financeKeys.all}),
         queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all}),
       ]);
@@ -118,6 +125,7 @@ function RegisterSaleButton() {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     const normalizedQuantity = normalizeDecimal(quantity);
     if (!productId) {
       setValidationError('Выберите продукт.');
@@ -146,6 +154,8 @@ function RegisterSaleButton() {
       unit_price: normalizeDecimal(unitPrice),
       sold_at: new Date(soldAt).toISOString(),
       comment: comment.trim() || null,
+      funding_source_id: fundingSource,
+      serial_numbers: serialNumbers,
     });
   };
   const total =
@@ -174,7 +184,7 @@ function RegisterSaleButton() {
                 content: `${item.name} · доступно ${formatDecimal(item.free_quantity)} ${item.unit}`,
               }))}
               value={productId ? [productId] : []}
-              onUpdate={(values) => setProductId(values[0] ?? '')}
+              onUpdate={(values) => {setProductId(values[0] ?? ''); setSerialNumbers([]);}}
               loading={products.isPending}
               width="max"
               size="l"
@@ -206,6 +216,8 @@ function RegisterSaleButton() {
                 onChange={(event) => setSoldAt(event.target.value)}
               />
             </label>
+            <Select label="Номера изделий" multiple filterable width="max" value={serialNumbers} options={(units.data ?? []).filter((unit) => !unit.sale_id && !unit.issued_for_repair_id).map((unit) => ({value: unit.serial_number, content: unit.serial_number}))} onUpdate={(ids) => {setSerialNumbers(ids); if (ids.length) setQuantity(String(ids.length));}} />
+            <FundingSelect value={fundingSource} onChange={setFundingSource} />
             <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
             <Alert
               theme="info"

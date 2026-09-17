@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UUIDPrimaryKeyMixin
@@ -19,6 +19,10 @@ class ProductionRecord(UUIDPrimaryKeyMixin, Base):
         Index("ix_production_records_created_at", "created_at"),
     )
 
+    serial_numbers: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    photo: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     id: Mapped[uuid.UUID]
     production_plan_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

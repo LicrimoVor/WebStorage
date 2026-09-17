@@ -644,6 +644,8 @@ async def _same_direct_request(
         and record.item_id == item_id
         and record.quantity == _quantity(payload.quantity)
         and record.comment == payload.comment
+        and record.serial_numbers == payload.serial_numbers
+        and record.photo == payload.photo
     )
     if not same_core:
         return False
@@ -655,9 +657,7 @@ async def _same_direct_request(
             )
         )
     ).all()
-    actual: dict[uuid.UUID, uuid.UUID] = {
-        row[0]: row[1] for row in rows if row[1] is not None
-    }
+    actual: dict[uuid.UUID, uuid.UUID] = {row[0]: row[1] for row in rows if row[1] is not None}
     requested = {
         assignment.operation_id: assignment.employee_id
         for assignment in payload.operation_assignments
@@ -692,11 +692,11 @@ async def _execute(
     overview = _preview(context, root)
     deficits = [row for row in overview.materials if row.deficit_quantity > 0]
     if deficits:
-        details = ", ".join(
-            f"{row.name}: {row.deficit_quantity} {row.unit}" for row in deficits
-        )
+        details = ", ".join(f"{row.name}: {row.deficit_quantity} {row.unit}" for row in deficits)
         raise DomainValidationError(f"Insufficient materials: {details}")
     record = ProductionRecord(
+        serial_numbers=payload.serial_numbers,
+        photo=payload.photo,
         id=uuid.uuid4(),
         production_plan_id=None,
         item_id=root.item.id,
@@ -707,6 +707,16 @@ async def _execute(
         comment=payload.comment,
     )
     await repository.create_record(session, record)
+    from app.modules.business.service import register_units
+
+    await register_units(
+        session,
+        item_id=root.item.id,
+        record_id=record.id,
+        quantity=record.quantity,
+        serial_numbers=payload.serial_numbers,
+        photo=payload.photo,
+    )
     comment = payload.comment or f"Производство {root.item.name}"
     await _execute_step(session, step=root, record=record, comment=comment)
     await _record_operations(

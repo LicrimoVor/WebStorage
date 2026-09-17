@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import embedded_process, owner_product
 
 
 async def create_material(
@@ -33,6 +34,7 @@ async def create_item(
         json={
             "name": name,
             "is_product": is_product,
+            "product_id": None if is_product else await owner_product(client),
             "unit": "pcs",
             "initial_quantity": stock,
         },
@@ -140,31 +142,18 @@ async def activate_process(
 async def test_nested_requirements_use_semi_finished_stock_and_aggregate_cost(
     client: AsyncClient,
 ) -> None:
-    material = await create_material(
-        client, name="Steel", stock="100", price="2.50"
-    )
+    material = await create_material(client, name="Steel", stock="100", price="2.50")
     operation = await create_operation(client, name="Cut")
-    semi = await create_item(
-        client, name="Blank", is_product=False, stock="4"
-    )
     product = await create_item(client, name="Frame", is_product=True)
-    semi_process = await activate_process(
+    semi = await create_item(client, name="Blank", is_product=False, stock="4")
+    product_process = await embedded_process(
         client,
-        name="Make blank",
-        output=semi,
-        input_type="material",
-        input_id=material["id"],
-        input_quantity="3",
-        operation_id=operation["id"],
+        product,
+        semi,
+        [("material", material["id"], "3"), ("operation", operation["id"], "1")],
+        "2",
     )
-    product_process = await activate_process(
-        client,
-        name="Make frame",
-        output=product,
-        input_type="manufactured_item",
-        input_id=semi["id"],
-        input_quantity="2",
-    )
+    semi_process = product_process
 
     response = await client.post(
         "/api/v1/production-plans",
@@ -179,9 +168,7 @@ async def test_nested_requirements_use_semi_finished_stock_and_aggregate_cost(
     assert plan["calculation_complete"] is True
 
     semi_requirement = next(
-        item
-        for item in plan["manufactured_items"]
-        if item["manufactured_item_id"] == semi["id"]
+        item for item in plan["manufactured_items"] if item["manufactured_item_id"] == semi["id"]
     )
     assert Decimal(semi_requirement["required_quantity"]) == Decimal("10")
     assert Decimal(semi_requirement["stock_used_quantity"]) == Decimal("4")
@@ -221,22 +208,18 @@ async def test_nested_requirements_use_semi_finished_stock_and_aggregate_cost(
         json={"product_id": product["id"], "planned_quantity": "1"},
     )
     assert later_plan.status_code == 201, later_plan.text
-    assert Decimal(later_plan.json()["materials"][0]["required_quantity"]) == Decimal(
-        "10"
-    )
+    assert Decimal(later_plan.json()["materials"][0]["required_quantity"]) == Decimal("10")
     pinned_plan = await client.get(f"/api/v1/production-plans/{plan['id']}")
-    assert Decimal(pinned_plan.json()["materials"][0]["required_quantity"]) == Decimal(
-        "18"
-    )
+    assert Decimal(pinned_plan.json()["materials"][0]["required_quantity"]) == Decimal("18")
 
     explicitly_recalculated = await client.post(
         f"/api/v1/production-plans/{plan['id']}/recalculate",
         json={"use_latest_process_version": True},
     )
     assert explicitly_recalculated.status_code == 200, explicitly_recalculated.text
-    assert Decimal(
-        explicitly_recalculated.json()["materials"][0]["required_quantity"]
-    ) == Decimal("30")
+    assert Decimal(explicitly_recalculated.json()["materials"][0]["required_quantity"]) == Decimal(
+        "30"
+    )
 
 
 @pytest.mark.asyncio
@@ -245,24 +228,14 @@ async def test_active_plans_allocate_stock_fifo_and_recalculate_after_cancel(
 ) -> None:
     material = await create_material(client, name="Sheet", stock="100", price="1")
     operation = await create_operation(client, name="Stamp")
-    semi = await create_item(client, name="Shell", is_product=False, stock="4")
     product = await create_item(client, name="Box", is_product=True)
-    await activate_process(
+    semi = await create_item(client, name="Shell", is_product=False, stock="4")
+    await embedded_process(
         client,
-        name="Make shell",
-        output=semi,
-        input_type="material",
-        input_id=material["id"],
-        input_quantity="3",
-        operation_id=operation["id"],
-    )
-    await activate_process(
-        client,
-        name="Make box",
-        output=product,
-        input_type="manufactured_item",
-        input_id=semi["id"],
-        input_quantity="2",
+        product,
+        semi,
+        [("material", material["id"], "3"), ("operation", operation["id"], "1")],
+        "2",
     )
     first = await client.post(
         "/api/v1/production-plans",
@@ -281,9 +254,7 @@ async def test_active_plans_allocate_stock_fifo_and_recalculate_after_cancel(
         json={"status": "cancelled"},
     )
     assert cancelled.status_code == 200, cancelled.text
-    recalculated_second = await client.get(
-        f"/api/v1/production-plans/{second.json()['id']}"
-    )
+    recalculated_second = await client.get(f"/api/v1/production-plans/{second.json()['id']}")
     assert recalculated_second.status_code == 200
     assert recalculated_second.json()["materials"] == []
     semi_requirement = next(

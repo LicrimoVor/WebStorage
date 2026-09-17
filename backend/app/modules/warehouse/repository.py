@@ -117,6 +117,7 @@ async def material_group_map(
                 InventoryGroupMaterial.material_id,
                 InventoryGroup.id,
                 InventoryGroup.name,
+                InventoryGroup.parent_id,
             )
             .join(InventoryGroup, InventoryGroup.id == InventoryGroupMaterial.group_id)
             .where(InventoryGroupMaterial.material_id.in_(ids))
@@ -124,9 +125,9 @@ async def material_group_map(
         )
     ).all()
     result: dict[uuid.UUID, list[InventoryGroupSummary]] = {}
-    for material_id, group_id, name in rows:
+    for material_id, group_id, name, parent_id in rows:
         result.setdefault(material_id, []).append(
-            InventoryGroupSummary(id=group_id, name=name)
+            InventoryGroupSummary(id=group_id, name=name, parent_id=parent_id)
         )
     return result
 
@@ -143,6 +144,7 @@ async def item_group_map(
                 InventoryGroupManufacturedItem.manufactured_item_id,
                 InventoryGroup.id,
                 InventoryGroup.name,
+                InventoryGroup.parent_id,
             )
             .join(
                 InventoryGroup,
@@ -153,8 +155,8 @@ async def item_group_map(
         )
     ).all()
     result: dict[uuid.UUID, list[InventoryGroupSummary]] = {}
-    for item_id, group_id, name in rows:
+    for item_id, group_id, name, parent_id in rows:
         result.setdefault(item_id, []).append(
-            InventoryGroupSummary(id=group_id, name=name)
+            InventoryGroupSummary(id=group_id, name=name, parent_id=parent_id)
         )
     return result

@@ -83,11 +83,15 @@ async def _direct_components(
     output_quantity: Decimal,
 ) -> list[ComponentDemand]:
     process = await session.get(TechnologicalProcess, version.process_id)
-    if process is None or process.output_item_id != item_id:
+    if process is None:
         raise DomainValidationError("The process version does not produce this item")
     nodes, edges = await process_repository.get_graph(session, version.id)
     node_map = {node.external_id: node for node in nodes}
-    outputs = [node for node in nodes if node.node_type == "output"]
+    outputs = [
+        node
+        for node in nodes
+        if node.reference_id == item_id and node.node_type in {"output", "manufactured_item"}
+    ]
     if len(outputs) != 1 or outputs[0].reference_id != item_id:
         raise DomainValidationError("The pinned process has no valid output")
     incoming: dict[str, list[TechnologicalProcessEdge]] = defaultdict(list)
@@ -95,29 +99,28 @@ async def _direct_components(
         incoming[edge.target_node_id].append(edge)
     demand: dict[str, Decimal] = defaultdict(lambda: ZERO)
     demand[outputs[0].external_id] = _quantity(output_quantity)
-    totals: dict[tuple[ProductionComponentKind, uuid.UUID], Decimal] = defaultdict(
-        lambda: ZERO
-    )
+    totals: dict[tuple[ProductionComponentKind, uuid.UUID], Decimal] = defaultdict(lambda: ZERO)
 
     for node_id in reversed(_topological_order(nodes, edges)):
         node = node_map[node_id]
         required = _quantity(demand[node_id])
         if required <= 0:
             continue
-        if node.node_type in {"material", "manufactured_item"}:
+        if (
+            node.node_type in {"material", "manufactured_item"}
+            and node_id != outputs[0].external_id
+        ):
             if node.reference_id is None:
                 raise DomainValidationError("A production component is not mapped")
             kind = ProductionComponentKind(node.node_type)
             key = (kind, node.reference_id)
             totals[key] = _quantity(totals[key] + required)
             continue
-        if node.node_type not in {"operation", "output"}:
+        if node.node_type not in {"operation", "output"} and node_id != outputs[0].external_id:
             raise DomainValidationError("The pinned process has an unknown node type")
         for edge in incoming[node_id]:
             if edge.quantity is None or edge.quantity <= 0:
-                raise DomainValidationError(
-                    "A production connection has no positive quantity"
-                )
+                raise DomainValidationError("A production connection has no positive quantity")
             demand[edge.source_node_id] = _quantity(
                 demand[edge.source_node_id] + required * edge.quantity
             )
@@ -140,12 +143,12 @@ def _same_request(
         and record.item_id == payload.item_id
         and record.quantity == _quantity(payload.quantity)
         and record.comment == payload.comment
+        and record.serial_numbers == payload.serial_numbers
+        and record.photo == payload.photo
     )
 
 
-async def _read(
-    session: AsyncSession, record: ProductionRecord
-) -> ProductionRecordRead:
+async def _read(session: AsyncSession, record: ProductionRecord) -> ProductionRecordRead:
     item = await session.get(ManufacturedItem, record.item_id)
     version = await session.get(TechnologicalProcessVersion, record.process_version_id)
     if item is None or version is None:
@@ -165,8 +168,7 @@ async def _read(
             select(ManufacturedItemMovement, ManufacturedItem)
             .join(
                 ManufacturedItem,
-                ManufacturedItem.id
-                == ManufacturedItemMovement.manufactured_item_id,
+                ManufacturedItem.id == ManufacturedItemMovement.manufactured_item_id,
             )
             .where(
                 ManufacturedItemMovement.production_record_id == record.id,
@@ -218,6 +220,8 @@ async def _read(
         ).scalars()
     )
     return ProductionRecordRead(
+        serial_numbers=record.serial_numbers,
+        photo=record.photo,
         id=record.id,
         production_plan_id=record.production_plan_id,
         item_id=item.id,
@@ -258,9 +262,7 @@ async def _execute(
 
     if item.id == plan.product_id:
         version_id = plan.process_version_id
-        available_to_produce = _quantity(
-            plan.planned_quantity - plan.produced_quantity
-        )
+        available_to_produce = _quantity(plan.planned_quantity - plan.produced_quantity)
     else:
         requirement = await plan_repository.item_requirement(
             session, plan_id=plan.id, item_id=item.id
@@ -273,9 +275,7 @@ async def _execute(
         available_to_produce = requirement.to_produce_quantity
     quantity = _quantity(payload.quantity)
     if quantity > available_to_produce:
-        raise DomainValidationError(
-            "Production quantity exceeds the remaining plan requirement"
-        )
+        raise DomainValidationError("Production quantity exceeds the remaining plan requirement")
     version = await session.get(TechnologicalProcessVersion, version_id)
     if version is None:
         raise DomainValidationError("The pinned process version was not found")
@@ -287,6 +287,8 @@ async def _execute(
     )
 
     record = ProductionRecord(
+        serial_numbers=payload.serial_numbers,
+        photo=payload.photo,
         id=uuid.uuid4(),
         production_plan_id=plan.id,
         item_id=item.id,
@@ -297,6 +299,16 @@ async def _execute(
         comment=payload.comment,
     )
     await repository.create_record(session, record)
+    from app.modules.business.service import register_units
+
+    await register_units(
+        session,
+        item_id=item.id,
+        record_id=record.id,
+        quantity=record.quantity,
+        serial_numbers=payload.serial_numbers,
+        photo=payload.photo,
+    )
 
     material_ids = sorted(
         (

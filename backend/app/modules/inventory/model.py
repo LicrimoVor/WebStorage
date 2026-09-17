@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy import ForeignKey as FundingForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -43,6 +44,9 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         Index("ix_inventory_movements_created_at", "created_at"),
     )
 
+    funding_source_id: Mapped[uuid.UUID | None] = mapped_column(
+        FundingForeignKey("funding_sources.id"), nullable=True
+    )
     id: Mapped[uuid.UUID]
     material_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -61,12 +65,8 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         ForeignKey("production_records.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    unit_price_snapshot: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 2), nullable=True
-    )
-    total_amount_snapshot: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 2), nullable=True
-    )
+    unit_price_snapshot: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
+    total_amount_snapshot: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

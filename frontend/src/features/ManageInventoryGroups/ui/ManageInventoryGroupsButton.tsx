@@ -1,4 +1,4 @@
-import {Alert, Button, Dialog, Loader, Text, TextInput} from '@gravity-ui/uikit';
+import {Alert, Button, Dialog, Select, Loader, Text, TextInput} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 
@@ -16,6 +16,7 @@ import styles from './ManageInventoryGroupsButton.module.scss';
 export function ManageInventoryGroupsButton() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
+  const [parentId, setParentId] = useState('');
   const [editingId, setEditingId] = useState<string>();
   const queryClient = useQueryClient();
   const query = useInventoryGroupsQuery();
@@ -23,8 +24,8 @@ export function ManageInventoryGroupsButton() {
     mutationFn: async () => {
       const cleaned = name.trim();
       if (!cleaned) throw new Error('Введите название группы');
-      if (editingId) return updateInventoryGroup(editingId, {name: cleaned});
-      return createInventoryGroup({name: cleaned});
+      if (editingId) return updateInventoryGroup(editingId, {name: cleaned, parent_id: parentId || null});
+      return createInventoryGroup({name: cleaned, parent_id: parentId || null});
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
@@ -50,6 +51,7 @@ export function ManageInventoryGroupsButton() {
         <Dialog.Body>
           <div className={styles.root}>
             <div className={styles.createRow}>
+              <Select label="Родительская группа" value={parentId ? [parentId] : []} hasClear placeholder="Верхний уровень" options={(query.data ?? []).filter((g) => !g.parent_id && g.id !== editingId).map((g) => ({value: g.id, content: g.name}))} onUpdate={(ids) => setParentId(ids[0] ?? "")} />
               <TextInput
                 value={name}
                 onUpdate={setName}
@@ -91,7 +93,7 @@ export function ManageInventoryGroupsButton() {
                 {query.data.map((group) => (
                   <div className={styles.group} key={group.id}>
                     <div>
-                      <Text variant="subheader-2">{group.name}</Text>
+                      <Text variant="subheader-2">{group.parent_id ? "↳ " : ""}{group.name}</Text>
                       <Text color="secondary" variant="body-1">
                         Материалов: {group.material_count}; полуфабрикатов:{' '}
                         {group.semi_finished_count}
@@ -103,6 +105,7 @@ export function ManageInventoryGroupsButton() {
                         onClick={() => {
                           setEditingId(group.id);
                           setName(group.name);
+                          setParentId(group.parent_id ?? "");
                         }}
                       >
                         Переименовать

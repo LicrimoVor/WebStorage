@@ -4,12 +4,18 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from tests.integration.helpers import owner_product
 
 
 async def create_item(client: AsyncClient, *, name: str, is_product: bool = True) -> dict[str, Any]:
     response = await client.post(
         "/api/v1/manufactured-items",
-        json={"name": name, "is_product": is_product, "unit": "шт"},
+        json={
+            "name": name,
+            "is_product": is_product,
+            "product_id": None if is_product else await owner_product(client),
+            "unit": "шт",
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -315,26 +321,11 @@ async def test_activation_rejects_local_and_interprocess_cycles(
         await client.post(f"/api/v1/technological-processes/{a_id}/versions/{a_version}/activate")
     ).status_code == 200
 
-    process_b = await create_process(client, name="Процесс B", output_item_id=item_b["id"])
-    graph_b = graph(
-        name="Процесс B",
-        output_item_id=item_b["id"],
-        output_name="Узел B",
-        manufactured_item_id=item_a["id"],
+    rejected = await client.post(
+        "/api/v1/technological-processes",
+        json={"name": "Процесс B", "output_item_id": item_b["id"]},
     )
-    b_id = process_b["process"]["id"]
-    b_version = process_b["version"]["id"]
-    assert (
-        await client.put(
-            f"/api/v1/technological-processes/{b_id}/versions/{b_version}/graph",
-            json=graph_b,
-        )
-    ).status_code == 200
-    cross_activation = await client.post(
-        f"/api/v1/technological-processes/{b_id}/versions/{b_version}/activate"
-    )
-    assert cross_activation.status_code == 422
-    assert "dependency cycle" in cross_activation.json()["detail"]
+    assert rejected.status_code == 409
 
 
 @pytest.mark.asyncio

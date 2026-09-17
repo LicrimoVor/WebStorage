@@ -22,3 +22,16 @@ class AuthSessionRead(BaseModel):
     username: str
     roles: list[Role]
     expires_at: datetime | None = None
+
+
+class AuthProfileRead(BaseModel):
+    username: str
+    roles: list[Role]
+    created_at: datetime | None = None
+    last_login_at: datetime | None = None
+    can_change_password: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)

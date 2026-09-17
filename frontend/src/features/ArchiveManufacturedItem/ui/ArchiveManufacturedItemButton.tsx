@@ -23,6 +23,7 @@ export function ArchiveManufacturedItemButton({
     mutationFn: () => archiveManufacturedItem(item.id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
+      await queryClient.invalidateQueries({queryKey: ["stock-revision"]});
       setOpen(false);
     },
   });

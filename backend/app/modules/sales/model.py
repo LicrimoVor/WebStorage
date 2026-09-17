@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, Text, func
+from sqlalchemy import ForeignKey as FundingForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +21,9 @@ class Sale(UUIDPrimaryKeyMixin, Base):
         Index("ux_sales_idempotency_key", "idempotency_key", unique=True),
     )
 
+    funding_source_id: Mapped[uuid.UUID | None] = mapped_column(
+        FundingForeignKey("funding_sources.id"), nullable=True
+    )
     id: Mapped[uuid.UUID]
     product_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

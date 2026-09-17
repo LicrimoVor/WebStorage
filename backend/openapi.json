@@ -98,6 +98,91 @@
         }
       }
     },
+    "/api/v1/auth/profile": {
+      "get": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Get Auth Profile",
+        "operationId": "getAuthProfile",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthProfileRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Change Password",
+        "operationId": "changePassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "tags": [
@@ -125,6 +210,317 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funding-sources": {
+      "get": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Sources",
+        "operationId": "sources_api_v1_funding_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FundingSourceRead"
+                  },
+                  "type": "array",
+                  "title": "Response Sources Api V1 Funding Sources Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Create Source",
+        "operationId": "create_source_api_v1_funding_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundingSourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingSourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/warehouse/receipts": {
+      "post": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Receipt",
+        "operationId": "receipt_api_v1_warehouse_receipts_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Receipt Api V1 Warehouse Receipts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/repairs": {
+      "post": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Repair",
+        "operationId": "repair_api_v1_repairs_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepairCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Repair Api V1 Repairs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/business-documents": {
+      "get": {
+        "tags": [
+          "business"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_business_documents_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(receipt|repair)$",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response History Api V1 Business Documents Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product-units": {
+      "get": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Units",
+        "operationId": "units_api_v1_product_units_get",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Units Api V1 Product Units Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5027,6 +5423,23 @@
               "$ref": "#/components/schemas/SortOrder",
               "default": "desc"
             }
+          },
+          {
+            "name": "funding_source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Funding Source Id"
+            }
           }
         ],
         "responses": {
@@ -5093,6 +5506,23 @@
                 }
               ],
               "title": "Date To"
+            }
+          },
+          {
+            "name": "funding_source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Funding Source Id"
             }
           }
         ],
@@ -5423,6 +5853,23 @@
             "schema": {
               "$ref": "#/components/schemas/FinanceSource",
               "default": "all"
+            }
+          },
+          {
+            "name": "funding_source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Funding Source Id"
             }
           },
           {
@@ -6426,6 +6873,56 @@
         ],
         "title": "AuditEventRead"
       },
+      "AuthProfileRead": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "last_login_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Login At"
+          },
+          "can_change_password": {
+            "type": "boolean",
+            "title": "Can Change Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "roles",
+          "can_change_password"
+        ],
+        "title": "AuthProfileRead"
+      },
       "AuthSessionRead": {
         "properties": {
           "username": {
@@ -6468,6 +6965,28 @@
         ],
         "title": "AvailabilityFilter"
       },
+      "ChangePasswordRequest": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ChangePasswordRequest"
+      },
       "DemandedMaterialRow": {
         "properties": {
           "material_id": {
@@ -6500,6 +7019,26 @@
       },
       "DirectProductionCreate": {
         "properties": {
+          "serial_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Serial Numbers"
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo"
+          },
           "quantity": {
             "anyOf": [
               {
@@ -7249,6 +7788,18 @@
       },
       "FinanceEntryRead": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -7321,7 +7872,8 @@
           "material",
           "labour",
           "sale",
-          "manual"
+          "manual",
+          "repair"
         ],
         "title": "FinanceSource"
       },
@@ -7363,6 +7915,12 @@
             "title": "Labour Expense",
             "default": "0"
           },
+          "repair_expense": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Repair Expense",
+            "default": "0"
+          },
           "manual_income": {
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
@@ -7394,6 +7952,11 @@
       },
       "FinancialTransactionCreate": {
         "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
           "transaction_type": {
             "$ref": "#/components/schemas/FinancialDirection"
           },
@@ -7444,6 +8007,7 @@
         },
         "type": "object",
         "required": [
+          "funding_source_id",
           "transaction_type",
           "amount",
           "category"
@@ -7452,6 +8016,18 @@
       },
       "FinancialTransactionRead": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -7507,6 +8083,42 @@
           "created_at"
         ],
         "title": "FinancialTransactionRead"
+      },
+      "FundingSourceCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FundingSourceCreate"
+      },
+      "FundingSourceRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "FundingSourceRead"
       },
       "GraphEdge-Input": {
         "properties": {
@@ -8018,6 +8630,18 @@
       },
       "InventoryGroupCreate": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -8033,6 +8657,18 @@
       },
       "InventoryGroupRead": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -8074,6 +8710,18 @@
       },
       "InventoryGroupSummary": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -8093,6 +8741,18 @@
       },
       "InventoryGroupUpdate": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -8108,6 +8768,18 @@
       },
       "InventoryMovementCreate": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "movement_type": {
             "$ref": "#/components/schemas/ManualMovementType"
           },
@@ -8181,6 +8853,18 @@
       },
       "InventoryMovementRead": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -8338,6 +9022,18 @@
       },
       "ManufacturedItemCreate": {
         "properties": {
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -8593,6 +9289,18 @@
       },
       "ManufacturedItemRead": {
         "properties": {
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -8700,6 +9408,18 @@
       },
       "ManufacturedItemUpdate": {
         "properties": {
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
           "name": {
             "anyOf": [
               {
@@ -9426,6 +10146,11 @@
       },
       "PaymentCreate": {
         "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
           "amount": {
             "anyOf": [
               {
@@ -9481,6 +10206,7 @@
         },
         "type": "object",
         "required": [
+          "funding_source_id",
           "amount"
         ],
         "title": "PaymentCreate"
@@ -9523,6 +10249,18 @@
       },
       "PaymentRead": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -11136,6 +11874,26 @@
       },
       "ProductionRecordCreate": {
         "properties": {
+          "serial_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Serial Numbers"
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo"
+          },
           "item_id": {
             "type": "string",
             "format": "uuid",
@@ -11212,6 +11970,24 @@
       },
       "ProductionRecordRead": {
         "properties": {
+          "serial_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Serial Numbers"
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -11467,6 +12243,246 @@
         ],
         "title": "PublicLinkRead"
       },
+      "ReceiptCreate": {
+        "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptLine"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "funding_source_id",
+          "occurred_at",
+          "entries"
+        ],
+        "title": "ReceiptCreate"
+      },
+      "ReceiptLine": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "defective_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Defective Quantity",
+            "default": "0"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "quantity",
+          "unit_price"
+        ],
+        "title": "ReceiptLine"
+      },
+      "RepairCreate": {
+        "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "serial_number": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Serial Number"
+          },
+          "replacement_serial_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Serial Number"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Comment"
+          },
+          "copied_from_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copied From Id"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/RepairMaterial"
+            },
+            "type": "array",
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Materials"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/RepairOperation"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Operations"
+          },
+          "service_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Service Cost",
+            "default": "0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "funding_source_id",
+          "occurred_at",
+          "serial_number",
+          "comment",
+          "materials",
+          "operations"
+        ],
+        "title": "RepairCreate"
+      },
+      "RepairMaterial": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "quantity"
+        ],
+        "title": "RepairMaterial"
+      },
+      "RepairOperation": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "quantity"
+        ],
+        "title": "RepairOperation"
+      },
       "Role": {
         "type": "string",
         "enum": [
@@ -11480,6 +12496,19 @@
       },
       "SaleCreate": {
         "properties": {
+          "serial_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Serial Numbers"
+          },
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
           "product_id": {
             "type": "string",
             "format": "uuid",
@@ -11538,6 +12567,7 @@
         },
         "type": "object",
         "required": [
+          "funding_source_id",
           "product_id",
           "quantity",
           "unit_price"
@@ -11594,6 +12624,18 @@
       },
       "SaleRead": {
         "properties": {
+          "funding_source_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funding Source Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",

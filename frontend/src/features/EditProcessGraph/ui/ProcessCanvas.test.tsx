@@ -269,7 +269,7 @@ describe('ProcessCanvas', () => {
 
     fireEvent.doubleClick(node);
 
-    expect(screen.getByRole('button', {name: 'Произвести'})).toBeInTheDocument();
+    expect(screen.getByRole('link', {name: 'Открыть выпуск продукции'})).toBeInTheDocument();
     expect(screen.getByText('Активная версия')).toBeInTheDocument();
 
     fireEvent.dragStart(node, {

@@ -22,6 +22,7 @@ class ManufacturedItemKind(StrEnum):
 
 
 class ManufacturedItemCreate(BaseModel):
+    product_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
     is_product: bool
     unit: str = Field(min_length=1, max_length=32)
@@ -39,6 +40,7 @@ class ManufacturedItemCreate(BaseModel):
 
 
 class ManufacturedItemUpdate(BaseModel):
+    product_id: uuid.UUID | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     is_product: bool | None = None
     unit: str | None = Field(default=None, min_length=1, max_length=32)
@@ -57,6 +59,7 @@ class ManufacturedItemUpdate(BaseModel):
 
 
 class ManufacturedItemRead(BaseModel):
+    product_id: uuid.UUID | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID

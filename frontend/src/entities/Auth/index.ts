@@ -1,8 +1,10 @@
 export {
   authKeys,
+  changePassword,
   getAuthSession,
   login,
   logout,
   useAuthSessionQuery,
+  useAuthProfileQuery,
 } from './api/authApi';
-export type {AuthSession, LoginRequest} from './model/types';
+export type {AuthProfile, AuthSession, ChangePasswordRequest, LoginRequest} from './model/types';

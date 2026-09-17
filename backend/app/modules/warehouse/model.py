@@ -26,6 +26,9 @@ class InventoryGroup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     id: Mapped[uuid.UUID]
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("inventory_groups.id", ondelete="RESTRICT"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
 
 

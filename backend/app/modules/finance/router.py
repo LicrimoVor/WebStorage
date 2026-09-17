@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import Annotated
 
@@ -55,6 +56,7 @@ async def list_finance_entries(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     sort_order: SortOrder = SortOrder.DESC,
+    funding_source_id: uuid.UUID | None = None,
 ) -> FinanceEntryList:
     require_any_role(actor, Role.FINANCE, Role.MANAGER)
     return await service.list_entries(
@@ -66,6 +68,7 @@ async def list_finance_entries(
         date_from=date_from,
         date_to=date_to,
         sort_order=sort_order,
+        funding_source_id=funding_source_id,
     )
 
 
@@ -75,6 +78,9 @@ async def get_finance_summary(
     actor: ActorDependency,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    funding_source_id: uuid.UUID | None = None,
 ) -> FinanceSummary:
     require_any_role(actor, Role.FINANCE, Role.MANAGER)
-    return await service.get_summary(session, date_from=date_from, date_to=date_to)
+    return await service.get_summary(
+        session, date_from=date_from, date_to=date_to, funding_source_id=funding_source_id
+    )

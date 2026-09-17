@@ -1,3 +1,4 @@
+import type * as ManufacturedItemApi from '@/entities/ManufacturedItem/api/manufacturedItemApi';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
@@ -8,6 +9,11 @@ import {manufacturedItemFixture} from '@/entities/ManufacturedItem/testing';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {CreateManufacturedItemButton} from './CreateManufacturedItemButton';
+
+vi.mock('@/entities/ManufacturedItem/api/manufacturedItemApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof ManufacturedItemApi>();
+  return {...actual, useProductOptionsQuery: () => ({data: [{id: 'owner-id', name: 'Редуктор'}]})};
+});
 
 vi.mock('@/entities/InventoryGroup', () => ({
   inventoryGroupKeys: {all: ['inventory-groups']},
@@ -37,12 +43,15 @@ describe('CreateManufacturedItemButton', () => {
       screen.getByLabelText('Начальный остаток производимой позиции'),
       '4,5',
     );
+    await user.click(screen.getByRole('combobox', {name: 'Продукт полуфабриката'}));
+    await user.click(screen.getByText('Редуктор', {exact: true}));
     await user.click(screen.getByRole('button', {name: 'Создать'}));
 
     await waitFor(() =>
       expect(createManufacturedItem).toHaveBeenCalledWith({
         name: 'Корпус редуктора',
         is_product: false,
+        product_id: "owner-id",
         unit: 'шт.',
         initial_quantity: '4.5',
         image: null,

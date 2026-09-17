@@ -14,6 +14,7 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from tests.integration.helpers import funding_source
 
 
 async def make_plan(client: AsyncClient, material_id: str, quantity: str) -> str:
@@ -53,9 +54,15 @@ async def make_plan(client: AsyncClient, material_id: str, quantity: str) -> str
 async def test_procurement_aggregates_stock_once_and_exports_all_filtered_rows(
     client: AsyncClient,
 ) -> None:
-    material = await client.post("/api/v1/materials", json={
-        "name": "Brass", "unit": "kg", "initial_quantity": "3", "price": "1.23",
-    })
+    material = await client.post(
+        "/api/v1/materials",
+        json={
+            "name": "Brass",
+            "unit": "kg",
+            "initial_quantity": "3",
+            "price": "1.23",
+        },
+    )
     material_id = material.json()["id"]
     await make_plan(client, material_id, "3")
     await make_plan(client, material_id, "2")
@@ -87,15 +94,23 @@ async def test_procurement_aggregates_stock_once_and_exports_all_filtered_rows(
         xml = archive.read("xl/worksheets/sheet1.xml").decode()
     assert "Zinc" in xml and "Brass" not in xml
 
-    receipt = await client.post(f"/api/v1/materials/{material_id}/movements", json={
-        "movement_type": "receipt", "quantity": "7",
-    })
+    receipt = await client.post(
+        f"/api/v1/materials/{material_id}/movements",
+        json={
+            "funding_source_id": await funding_source(client),
+            "movement_type": "receipt",
+            "quantity": "7",
+        },
+    )
     assert receipt.status_code == 201, receipt.text
     updated = await client.get("/api/v1/procurement", params={"search": "Brass"})
     assert updated.json()["total"] == 0
-    cancelled = await client.patch(f"/api/v1/production-plans/{zinc_plan}", json={
-        "status": "cancelled",
-    })
+    cancelled = await client.patch(
+        f"/api/v1/production-plans/{zinc_plan}",
+        json={
+            "status": "cancelled",
+        },
+    )
     assert cancelled.status_code == 200
     assert (await client.get("/api/v1/procurement")).json()["total"] == 0
 

@@ -46,6 +46,8 @@ def timestamp(value: datetime | None) -> datetime:
 
 def request_fingerprint(payload: SaleCreate) -> str:
     document = {
+        "funding_source_id": str(payload.funding_source_id),
+        "serial_numbers": sorted(payload.serial_numbers),
         "product_id": str(payload.product_id),
         "quantity": format(quantity(payload.quantity), "f"),
         "unit_price": format(money(payload.unit_price), "f"),
@@ -60,6 +62,7 @@ def to_read_model(row: repository.SaleRow) -> SaleRead:
     sale, product, movement = row
     return SaleRead(
         id=sale.id,
+        funding_source_id=sale.funding_source_id,
         product_id=product.id,
         product_name=product.name,
         product_unit=product.unit,
@@ -106,7 +109,11 @@ async def _execute(
         raise ConflictError("An archived product cannot be sold")
     sale_quantity = quantity(payload.quantity)
     unit_price = money(payload.unit_price)
+    from app.modules.business.service import validate_funding
+
+    await validate_funding(session, payload.funding_source_id)
     sale = Sale(
+        funding_source_id=payload.funding_source_id,
         product_id=product.id,
         quantity=sale_quantity,
         unit_price=unit_price,
@@ -118,6 +125,34 @@ async def _execute(
         created_by=created_by,
     )
     await repository.create_sale(session, sale)
+    from app.modules.business.model import ProductUnit
+
+    units = list(
+        (
+            await session.scalars(
+                select(ProductUnit)
+                .where(
+                    ProductUnit.product_id == product.id,
+                    ProductUnit.sale_id.is_(None),
+                    ProductUnit.issued_for_repair_id.is_(None),
+                )
+                .with_for_update()
+            )
+        ).all()
+    )
+    if payload.serial_numbers:
+        if (
+            len(payload.serial_numbers) != len(set(payload.serial_numbers))
+            or len(payload.serial_numbers) != sale_quantity
+        ):
+            raise DomainValidationError("Укажите уникальный номер каждой продаваемой единицы")
+        selected_units = [unit for unit in units if unit.serial_number in payload.serial_numbers]
+        if len(selected_units) != len(payload.serial_numbers):
+            raise ConflictError("Изделие не найдено, принадлежит другому продукту или уже продано")
+        for unit in selected_units:
+            unit.sale_id = sale.id
+    elif units:
+        raise DomainValidationError("Выберите номера продаваемых изделий")
     await movement_repository.create_movement(
         session,
         item_id=product.id,

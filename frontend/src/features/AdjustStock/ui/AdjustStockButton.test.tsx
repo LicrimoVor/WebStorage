@@ -9,7 +9,11 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {AdjustStockButton} from './AdjustStockButton';
 
-vi.mock('@/entities/Material', async (importOriginal) => {
+vi.mock('@/entities/Funding', () => ({
+  FundingSelect: ({value, onChange}: {value: string; onChange: (value: string) => void}) => <select aria-label="Источник финансирования" value={value} onChange={(e) => onChange(e.target.value)}><option value="">Выберите</option><option value="account">Счёт</option></select>,
+}));
+
+vi.mock('@/entities/Material' , async (importOriginal) => {
   const actual = await importOriginal<typeof MaterialExports>();
   return {...actual, createInventoryMovement: vi.fn()};
 });
@@ -37,12 +41,14 @@ describe('AdjustStockButton', () => {
     await user.click(screen.getByRole('button', {name: 'Остаток'}));
     await user.type(screen.getByLabelText('Количество движения'), '2,25');
     await user.type(screen.getByLabelText('Комментарий'), 'Поставка');
+    await user.selectOptions(screen.getByLabelText('Источник финансирования'), 'account');
     await user.click(screen.getByRole('button', {name: 'Провести'}));
 
     await waitFor(() =>
       expect(createInventoryMovement).toHaveBeenCalledWith(materialFixture.id, {
         movement_type: 'receipt',
         quantity: '2.25',
+        funding_source_id: 'account',
         comment: 'Поставка',
       }),
     );

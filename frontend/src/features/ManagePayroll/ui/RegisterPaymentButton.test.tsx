@@ -22,6 +22,11 @@ vi.mock('@/entities/WorkPayroll', async (importOriginal) => {
   };
 });
 
+vi.mock('@/entities/Funding', () => ({
+  useFundingSources: () => ({data: [{id: 'account', name: 'Счёт'}]}),
+  FundingSelect: ({value, onChange}: {value: string; onChange: (value: string) => void}) => <select aria-label="Источник финансирования" value={value} onChange={(e) => onChange(e.target.value)}><option value="">Выберите</option><option value="account">Счёт</option></select>,
+}));
+
 describe('RegisterPaymentButton', () => {
   beforeEach(() => {
     vi.mocked(useEmployeeWorkEntriesQuery).mockReturnValue({
@@ -38,6 +43,7 @@ describe('RegisterPaymentButton', () => {
     renderWithProviders(<RegisterPaymentButton employee={employee} />);
 
     await user.click(screen.getByRole('button', {name: 'Выплатить'}));
+    await user.selectOptions(screen.getByLabelText('Источник финансирования'), 'account');
     await user.click(screen.getByRole('button', {name: 'Провести выплату'}));
 
     await waitFor(() =>

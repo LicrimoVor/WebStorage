@@ -104,6 +104,7 @@ class PaymentAllocationCreate(BaseModel):
 
 
 class PaymentCreate(BaseModel):
+    funding_source_id: uuid.UUID
     amount: Money = Field(gt=0)
     paid_at: datetime | None = None
     comment: str | None = Field(default=None, max_length=2000)
@@ -135,6 +136,7 @@ class PaymentAllocationRead(BaseModel):
 
 
 class PaymentRead(BaseModel):
+    funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     employee_id: uuid.UUID
     employee_name: str

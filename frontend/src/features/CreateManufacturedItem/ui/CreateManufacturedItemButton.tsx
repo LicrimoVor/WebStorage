@@ -39,6 +39,7 @@ export function CreateManufacturedItemButton({
       createManufacturedItem(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all});
+      await queryClient.invalidateQueries({queryKey: ["stock-revision"]});
       await queryClient.invalidateQueries({queryKey: inventoryGroupKeys.all});
       setOpen(false);
       setForm(initialForm());
@@ -62,6 +63,7 @@ export function CreateManufacturedItemButton({
     const payload: ManufacturedItemCreate = {
       name: form.name.trim(),
       is_product: form.isProduct,
+      product_id: form.isProduct ? null : form.productId || null,
       unit: form.unit.trim(),
       initial_quantity: normalizeDecimal(form.initialQuantity),
       image: form.image || null,

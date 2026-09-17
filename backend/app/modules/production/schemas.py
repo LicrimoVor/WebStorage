@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, TypeAdapter, field_validator, model_validator
 
 from app.core.types import Quantity
 
@@ -12,7 +12,27 @@ class ProductionComponentKind(StrEnum):
     MANUFACTURED_ITEM = "manufactured_item"
 
 
-class ProductionRecordCreate(BaseModel):
+class SerializedOutput(BaseModel):
+    serial_numbers: list[str] = Field(default_factory=list, max_length=10000)
+    photo: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("serial_numbers")
+    @classmethod
+    def clean_serials(cls, values: list[str]) -> list[str]:
+        result = [value.strip() for value in values]
+        if any(not value or len(value) > 200 for value in result):
+            raise ValueError("Номер изделия должен содержать от 1 до 200 символов")
+        if len(result) != len(set(result)):
+            raise ValueError("Номера изделий должны быть уникальными")
+        return result
+
+    @field_validator("photo")
+    @classmethod
+    def safe_photo(cls, value: str | None) -> str | None:
+        return str(TypeAdapter(AnyHttpUrl).validate_python(value)) if value else None
+
+
+class ProductionRecordCreate(SerializedOutput):
     item_id: uuid.UUID
     quantity: Quantity = Field(gt=0)
     comment: str | None = Field(default=None, max_length=2000)
@@ -36,6 +56,8 @@ class ProductionComponentRead(BaseModel):
 
 
 class ProductionRecordRead(BaseModel):
+    serial_numbers: list[str] = Field(default_factory=list)
+    photo: str | None = None
     id: uuid.UUID
     production_plan_id: uuid.UUID | None
     item_id: uuid.UUID
@@ -71,11 +93,9 @@ class ProductionOperationAssignment(BaseModel):
     employee_id: uuid.UUID | None = None
 
 
-class DirectProductionCreate(BaseModel):
+class DirectProductionCreate(SerializedOutput):
     quantity: Quantity = Field(gt=0)
-    operation_assignments: list[ProductionOperationAssignment] = Field(
-        default_factory=list
-    )
+    operation_assignments: list[ProductionOperationAssignment] = Field(default_factory=list)
     comment: str | None = Field(default=None, max_length=2000)
 
     @field_validator("comment")

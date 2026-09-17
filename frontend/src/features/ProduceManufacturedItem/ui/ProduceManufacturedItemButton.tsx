@@ -1,6 +1,7 @@
-import {Alert, Button, Dialog, Select, Skeleton, Text, TextInput} from '@gravity-ui/uikit';
+import {ImageUploadField} from '@/shared/ui';
+import {Alert, Button, Dialog, Select, Skeleton, Text, TextInput, TextArea} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 
 import {employeeKeys, useEmployeesQuery} from '@/entities/Employee';
 import {manufacturedItemKeys} from '@/entities/ManufacturedItem';
@@ -20,6 +21,7 @@ import styles from './ProduceManufacturedItemButton.module.scss';
 
 interface ProduceManufacturedItemButtonProps {
   itemId: string;
+  serialized?: boolean;
   itemName: string;
   size?: 's' | 'm' | 'l' | 'xl';
   view?: 'flat-action' | 'action' | 'outlined';
@@ -51,6 +53,7 @@ function ProductionTree({node}: {node: DirectProductionTree}) {
 
 export function ProduceManufacturedItemButton({
   itemId,
+  serialized = false,
   itemName,
   size = 's',
   view = 'flat-action',
@@ -59,6 +62,9 @@ export function ProduceManufacturedItemButton({
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState('1');
   const [comment, setComment] = useState('');
+  const [numbers, setNumbers] = useState('');
+  const [photo, setPhoto] = useState('');
+  const commandKey = useRef(crypto.randomUUID());
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
@@ -85,6 +91,8 @@ export function ProduceManufacturedItemButton({
         itemId,
         {
           quantity: normalizedQuantity,
+          serial_numbers: serialized ? numbers.split(/\n/).map((n) => n.trim()).filter(Boolean) : [],
+          photo: photo || null,
           operation_assignments: (preview.data?.operations ?? [])
             .filter((operation) => Boolean(assignments[operation.operation_id]))
             .map((operation) => ({
@@ -93,7 +101,7 @@ export function ProduceManufacturedItemButton({
             })),
           comment: comment.trim() || null,
         },
-        crypto.randomUUID(),
+        commandKey.current,
       ),
     onSuccess: async () => {
       await Promise.all([
@@ -103,9 +111,13 @@ export function ProduceManufacturedItemButton({
         queryClient.invalidateQueries({queryKey: employeeKeys.all}),
         queryClient.invalidateQueries({queryKey: workPayrollKeys.all}),
         queryClient.invalidateQueries({queryKey: productionKeys.all}),
+        queryClient.invalidateQueries({queryKey: ["stock-revision"]}),
+        queryClient.invalidateQueries({queryKey: ["production-plans"]}),
       ]);
       setOpen(false);
       setQuantity('1');
+      setNumbers(''); setPhoto(''); commandKey.current = crypto.randomUUID();
+      await queryClient.invalidateQueries({queryKey: ['product-units']});
       setComment('');
       setAssignments({});
     },
@@ -119,6 +131,10 @@ export function ProduceManufacturedItemButton({
     if (!preview.data?.can_produce) {
       setValidationError('Для производства не хватает материалов.');
       return;
+    }
+    if (serialized) {
+      const ids = numbers.split(/\n/).map((n) => n.trim()).filter(Boolean);
+      if (ids.length !== Number(normalizedQuantity) || new Set(ids).size !== ids.length) {setValidationError("Введите отдельный уникальный номер для каждого изделия."); return;}
     }
     setValidationError(undefined);
     mutation.mutate();
@@ -244,6 +260,7 @@ export function ProduceManufacturedItemButton({
                 </section>
               </>
             ) : null}
+            {serialized && <><TextArea value={numbers} onUpdate={setNumbers} placeholder="Номера изделий — каждый с новой строки" /><ImageUploadField value={photo} onUpdate={setPhoto} alt="Фото выпущенных изделий" /></>}
             <TextInput
               label="Комментарий"
               value={comment}

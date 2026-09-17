@@ -15,6 +15,7 @@ export function manufacturedItemToForm(
   return {
     name: item.name,
     isProduct: item.is_product,
+    productId: item.product_id ?? "",
     unit: item.unit,
     initialQuantity: '0',
     image: item.image ?? '',

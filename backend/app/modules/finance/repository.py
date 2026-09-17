@@ -32,13 +32,17 @@ class FinanceEntryRecord:
     occurred_at: datetime
     comment: str | None
     created_by: str
+    funding_source_id: uuid.UUID | None
 
 
 def entry_union() -> Subquery:
     manual = select(
         FinancialTransaction.id.label("id"),
+        FinancialTransaction.funding_source_id.label("funding_source_id"),
         FinancialTransaction.id.label("source_id"),
-        literal(FinanceSource.MANUAL.value).label("source_type"),
+        case((FinancialTransaction.category == "Ремонт", "repair"), else_="manual").label(
+            "source_type"
+        ),
         FinancialTransaction.transaction_type.label("direction"),
         FinancialTransaction.category.label("category"),
         FinancialTransaction.category.label("description"),
@@ -49,6 +53,7 @@ def entry_union() -> Subquery:
     )
     sales = select(
         Sale.id.label("id"),
+        Sale.funding_source_id.label("funding_source_id"),
         Sale.id.label("source_id"),
         literal(FinanceSource.SALE.value).label("source_type"),
         literal(FinancialDirection.INCOME.value).label("direction"),
@@ -61,6 +66,7 @@ def entry_union() -> Subquery:
     ).join(ManufacturedItem, ManufacturedItem.id == Sale.product_id)
     labour = select(
         EmployeePayment.id.label("id"),
+        EmployeePayment.funding_source_id.label("funding_source_id"),
         EmployeePayment.id.label("source_id"),
         literal(FinanceSource.LABOUR.value).label("source_type"),
         literal(FinancialDirection.EXPENSE.value).label("direction"),
@@ -74,6 +80,7 @@ def entry_union() -> Subquery:
     materials = (
         select(
             InventoryMovement.id.label("id"),
+            InventoryMovement.funding_source_id.label("funding_source_id"),
             InventoryMovement.id.label("source_id"),
             literal(FinanceSource.MATERIAL.value).label("source_type"),
             literal(FinancialDirection.EXPENSE.value).label("direction"),
@@ -86,7 +93,8 @@ def entry_union() -> Subquery:
         )
         .join(Material, Material.id == InventoryMovement.material_id)
         .where(
-            InventoryMovement.quantity < 0,
+            InventoryMovement.movement_type == "receipt",
+            InventoryMovement.source_type.in_(["manual", "receipt"]),
             InventoryMovement.total_amount_snapshot.is_not(None),
         )
     )
@@ -111,9 +119,12 @@ async def list_entries(
     date_from: datetime | None,
     date_to: datetime | None,
     sort_order: SortOrder,
+    funding_source_id: uuid.UUID | None = None,
 ) -> tuple[list[FinanceEntryRecord], int]:
     entries = entry_union()
     statement = select(entries)
+    if funding_source_id is not None:
+        statement = statement.where(entries.c.funding_source_id == funding_source_id)
     if source != FinanceSource.ALL:
         statement = statement.where(entries.c.source_type == source.value)
     if direction is not None:
@@ -130,9 +141,7 @@ async def list_entries(
         ).scalar_one()
     )
     order = (
-        entries.c.occurred_at.asc()
-        if sort_order == SortOrder.ASC
-        else entries.c.occurred_at.desc()
+        entries.c.occurred_at.asc() if sort_order == SortOrder.ASC else entries.c.occurred_at.desc()
     )
     statement = statement.order_by(order, entries.c.id.desc())
     statement = statement.offset((page - 1) * page_size).limit(page_size)
@@ -150,6 +159,7 @@ async def list_entries(
                 occurred_at=row.occurred_at,
                 comment=row.comment,
                 created_by=row.created_by,
+                funding_source_id=row.funding_source_id,
             )
             for row in rows
         ],
@@ -175,6 +185,7 @@ async def summary_values(
     *,
     date_from: datetime | None,
     date_to: datetime | None,
+    funding_source_id: uuid.UUID | None = None,
 ) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, int]:
     sales_statement = with_period(
         select(func.coalesce(func.sum(Sale.total_amount), Decimal("0"))),
@@ -192,7 +203,8 @@ async def summary_values(
         select(
             func.coalesce(func.sum(InventoryMovement.total_amount_snapshot), Decimal("0"))
         ).where(
-            InventoryMovement.quantity < 0,
+            InventoryMovement.movement_type == "receipt",
+            InventoryMovement.source_type.in_(["manual", "receipt"]),
             InventoryMovement.total_amount_snapshot.is_not(None),
         ),
         InventoryMovement.created_at,
@@ -234,13 +246,28 @@ async def summary_values(
     )
     incomplete_statement = with_period(
         select(func.count()).where(
-            InventoryMovement.quantity < 0,
+            InventoryMovement.movement_type == "receipt",
+            InventoryMovement.source_type.in_(["manual", "receipt"]),
             InventoryMovement.total_amount_snapshot.is_(None),
         ),
         InventoryMovement.created_at,
         date_from,
         date_to,
     )
+    if funding_source_id is not None:
+        sales_statement = sales_statement.where(Sale.funding_source_id == funding_source_id)
+        labour_statement = labour_statement.where(
+            EmployeePayment.funding_source_id == funding_source_id
+        )
+        material_statement = material_statement.where(
+            InventoryMovement.funding_source_id == funding_source_id
+        )
+        manual_statement = manual_statement.where(
+            FinancialTransaction.funding_source_id == funding_source_id
+        )
+        incomplete_statement = incomplete_statement.where(
+            InventoryMovement.funding_source_id == funding_source_id
+        )
     sales_income = Decimal((await session.execute(sales_statement)).scalar_one())
     labour_expense = Decimal((await session.execute(labour_statement)).scalar_one())
     material_expense = Decimal((await session.execute(material_statement)).scalar_one())

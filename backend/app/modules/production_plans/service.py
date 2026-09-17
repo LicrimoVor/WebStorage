@@ -286,15 +286,17 @@ async def _expand_version(
             own_version: TechnologicalProcessVersion | None = None
             own_version_id = version_overrides.get(item.id, item.active_process_id)
             if own_version_id is not None:
-                own_version = await context.session.get(
-                    TechnologicalProcessVersion, own_version_id
-                )
+                own_version = await context.session.get(TechnologicalProcessVersion, own_version_id)
             await context.add_item(
                 item.id,
                 quantity=required,
                 stock_used=stock_used,
                 to_produce=to_produce,
-                process_version_id=own_version.id if own_version else None,
+                process_version_id=version.id
+                if incoming[node_id]
+                else own_version.id
+                if own_version
+                else None,
             )
             expansion_quantity = to_produce
             if not incoming[node_id] and to_produce > 0:

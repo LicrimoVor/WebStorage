@@ -2,10 +2,11 @@ import {useQuery} from '@tanstack/react-query';
 
 import {apiRequest} from '@/shared/api';
 
-import type {AuthSession, LoginRequest} from '../model/types';
+import type {AuthProfile, AuthSession, ChangePasswordRequest, LoginRequest} from '../model/types';
 
 export const authKeys = {
   session: ['auth', 'session'] as const,
+  profile: ['auth', 'profile'] as const,
 };
 
 export function getAuthSession(signal?: AbortSignal) {
@@ -30,4 +31,15 @@ export function login(payload: LoginRequest) {
 
 export function logout() {
   return apiRequest<void>('/auth/logout', {method: 'POST'});
+}
+
+export function useAuthProfileQuery() {
+  return useQuery({
+    queryKey: authKeys.profile,
+    queryFn: ({signal}) => apiRequest<AuthProfile>('/auth/profile', {signal}),
+  });
+}
+
+export function changePassword(payload: ChangePasswordRequest) {
+  return apiRequest<void>('/auth/password', {method: 'POST', body: JSON.stringify(payload)});
 }

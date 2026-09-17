@@ -1,4 +1,4 @@
-import { ArrowRightFromSquare, CircleQuestion, Person } from "@gravity-ui/icons";
+import { ArrowRightFromSquare, CircleQuestion, Gear, Person } from "@gravity-ui/icons";
 import { Alert, Button, Icon, PlaceholderContainer, Text } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect } from "react";
@@ -24,6 +24,9 @@ import { ApiError, getErrorMessage } from "@/shared/api";
 import { usePageMetadata } from "@/shared/lib";
 import { ErrorBoundary } from "@/shared/ui";
 
+import {SettingsPage, ReceiptPage, RepairsPage, ProductionPage} from "@/pages/BusinessPages";
+import {ThemeToggle} from "./providers/ThemeToggle";
+
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
 
@@ -31,9 +34,9 @@ const WarehousePage = lazy(async () => {
   const module = await import("@/pages/WarehousePage");
   return { default: module.WarehousePage };
 });
-const ProcurementPage = lazy(async () => {
-  const module = await import("@/pages/ProcurementPage");
-  return { default: module.ProcurementPage };
+const ProfilePage = lazy(async () => {
+  const module = await import("@/pages/ProfilePage");
+  return { default: module.ProfilePage };
 });
 const AuditPage = lazy(async () => {
   const module = await import("@/pages/AuditPage");
@@ -89,6 +92,11 @@ const PublicInstructionPage = lazy(async () => {
 });
 
 function getPageMetadata(pathname: string) {
+  if (pathname === routes.profile) return ["Профиль пользователя", "Учётная запись и пароль."] as const;
+  if (pathname === "/production") return ["Выпуск", "Выпуск номерных изделий."] as const;
+  if (pathname === "/repairs") return ["Ремонт", "Материалы, операции и история ремонтов."] as const;
+  if (pathname === "/settings") return ["Настройки", "Источники финансирования и журнал."] as const;
+  if (pathname === "/warehouse/receipt") return ["Приход", "Поступление материалов."] as const;
   if (pathname === routes.procurement) return ['Закупки по дефициту', 'Потребности в материалах и таблица закупок.'] as const;
   if (pathname === routes.audit) return ['Журнал событий', 'История изменений и событий системы.'] as const;
   if (pathname === routes.productionPlans) {
@@ -142,14 +150,6 @@ function AppLayout({ session }: { session: AuthSession }) {
           <Text variant="header-1">Веб-склад</Text>
         </div>
         <nav className={styles.nav} aria-label="Основная навигация">
-          {session.roles.some((role) => ['admin', 'warehouse', 'manager', 'finance'].includes(role)) && <Button
-            view="flat-action" component={NavLink} to={routes.procurement}
-            selected={location.pathname === routes.procurement}
-          >Закупки</Button>}
-          {session.roles.includes('admin') && <Button
-            view="flat-action" component={NavLink} to={routes.audit}
-            selected={location.pathname === routes.audit}
-          >Журнал</Button>}
           <Button
             view="flat-action"
             component={NavLink}
@@ -190,31 +190,20 @@ function AppLayout({ session }: { session: AuthSession }) {
           >
             Персонал
           </Button>
-          {/* <Button
-            view="flat-action"
-            onClick={() => navigate(routes.sales)}
-            selected={location.pathname === routes.sales}
-          >
-            Продажи
-          </Button> */}
-          {/* <Button
-            view="flat-action"
-            onClick={() => navigate(routes.finance)}
-            selected={location.pathname === routes.finance}
-          >
-            Финансы
-          </Button>
-          <Button
-            view="flat-action"
-            onClick={() => navigate(routes.analytics)}
-            selected={location.pathname === routes.analytics}
-          >
-            Аналитика
-          </Button> */}
+          {[['/production', 'Выпуск'], ['/repairs', 'Ремонт'], [routes.sales, 'Продажа продукции'], [routes.finance, 'Финансы']].map(([path, label]) => <Button key={path} view="flat-action" component={NavLink} to={path!} selected={location.pathname === path}>{label}</Button>)}
         </nav>
         <div className={styles.user}>
-          <Icon data={Person} size={18} />
-          <Text ellipsis>{session.username}</Text>
+          <Button view="flat" component={NavLink} to="/settings"
+            selected={location.pathname.startsWith('/settings')}
+            aria-label="Настройки" title="Настройки">
+            <Icon data={Gear} size={18} />
+          </Button>
+          <ThemeToggle />
+          <Button view="flat" component={NavLink} to={routes.profile}
+            selected={location.pathname === routes.profile}
+            aria-label="Профиль пользователя" title={`Профиль: ${session.username}`}>
+            <Icon data={Person} size={18} />
+          </Button>
           <Button
             view="flat"
             loading={logoutMutation.isPending}
@@ -228,7 +217,13 @@ function AppLayout({ session }: { session: AuthSession }) {
       </header>
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>
-          <Route path={routes.procurement} element={<ProcurementPage />} />
+          <Route path={routes.profile} element={<ProfilePage />} />
+          <Route path={routes.procurement} element={<Navigate to="/warehouse/receipt" replace />} />
+          <Route path="/production" element={<ProductionPage />} />
+          <Route path="/repairs" element={<RepairsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/warehouse/receipt" element={<ReceiptPage />} />
+          <Route path="/audit" element={<Navigate to="/settings/audit" replace />} />
           <Route path={routes.audit} element={<AuditPage />} />
           <Route
             path="/"
@@ -288,6 +283,7 @@ function AppLayout({ session }: { session: AuthSession }) {
 }
 
 function AuthenticatedApp() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const sessionQuery = useAuthSessionQuery();
   useEffect(() => {
@@ -307,8 +303,10 @@ function AuthenticatedApp() {
       return (
         <LoginPage
           onAuthenticated={(session) => {
-            queryClient.clear();
+            queryClient.removeQueries({predicate: (query) =>
+              query.queryKey[0] !== "auth" || query.queryKey[1] !== "session"});
             queryClient.setQueryData(authKeys.session, session);
+            navigate(routes.productionPlans, {replace: true});
           }}
         />
       );

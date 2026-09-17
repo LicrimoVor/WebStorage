@@ -8,11 +8,13 @@ from app.core.types import Quantity
 
 
 class InventoryGroupSummary(BaseModel):
+    parent_id: uuid.UUID | None = None
     id: uuid.UUID
     name: str
 
 
 class InventoryGroupCreate(BaseModel):
+    parent_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
 
     @field_validator("name")

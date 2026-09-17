@@ -1,0 +1,74 @@
+.page {
+  display: grid;
+  gap: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  background: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 12px;
+
+  h2,
+  p {
+    margin: 0;
+  }
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  display: grid;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  color: var(--g-color-text-brand);
+  background: var(--g-color-base-generic);
+  border-radius: 50%;
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.secondary {
+  color: var(--g-color-text-secondary);
+}
+
+.metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+
+  dt {
+    color: var(--g-color-text-secondary);
+  }
+
+  dd {
+    margin: 4px 0 0;
+  }
+}
+
+@media (width <= 600px) {
+  .page {
+    padding: 16px;
+  }
+
+  .metadata {
+    grid-template-columns: 1fr;
+  }
+}
