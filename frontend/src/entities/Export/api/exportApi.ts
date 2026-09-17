@@ -32,6 +32,7 @@ export async function downloadExcel(
 ): Promise<void> {
   const response = await fetch(
     `${API_URL}/exports/${dataset}.xlsx${buildQuery(params)}`,
+    {credentials: 'include'},
   );
   if (!response.ok) {
     let message = 'Не удалось сформировать Excel-файл.';

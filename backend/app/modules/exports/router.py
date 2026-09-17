@@ -70,6 +70,10 @@ async def export_dataset_to_excel(
         Role.WAREHOUSE,
         Role.PRODUCTION,
     )
+    if dataset == ExportDataset.FINANCE_ENTRIES:
+        require_any_role(actor, Role.FINANCE, Role.MANAGER)
+    if dataset == ExportDataset.PROCUREMENT:
+        require_any_role(actor, Role.WAREHOUSE, Role.MANAGER, Role.FINANCE)
     result = await service.create_export(
         session,
         dataset=dataset,

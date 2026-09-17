@@ -1065,6 +1065,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events */
+        get: operations["listAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/procurement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Procurement */
+        get: operations["listProcurement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -1146,6 +1180,53 @@ export interface components {
              */
             date_to: string;
             bucket: components["schemas"]["AnalyticsBucket"];
+        };
+        /** AuditEventList */
+        AuditEventList: {
+            /** Through Id */
+            through_id: number;
+            /** Items */
+            items: components["schemas"]["AuditEventRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** AuditEventRead */
+        AuditEventRead: {
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Actor */
+            actor: string;
+            /** Action */
+            action: string;
+            /** Entity */
+            entity: string;
+            /** Entity Id */
+            entity_id: string | null;
+            /** Request Id */
+            request_id: string | null;
+            /** Method */
+            method: string | null;
+            /** Status Code */
+            status_code: number | null;
+            /** Before */
+            before: {
+                [key: string]: unknown;
+            } | null;
+            /** After */
+            after: {
+                [key: string]: unknown;
+            } | null;
         };
         /** AuthSessionRead */
         AuthSessionRead: {
@@ -1448,7 +1529,7 @@ export interface components {
          * ExportDataset
          * @enum {string}
          */
-        ExportDataset: "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
+        ExportDataset: "procurement" | "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
         /** FinanceEntryList */
         FinanceEntryList: {
             /** Items */
@@ -2633,6 +2714,58 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ProcurementItemRead */
+        ProcurementItemRead: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Required Quantity */
+            required_quantity: string;
+            /** Stock Quantity */
+            stock_quantity: string;
+            /** Purchase Quantity */
+            purchase_quantity: string;
+            /** Unit Price */
+            unit_price: string | null;
+            /** Estimated Cost */
+            estimated_cost: string | null;
+            /** Target Date */
+            target_date: string | null;
+            /** Active Plans */
+            active_plans: number;
+            /** Url */
+            url: string | null;
+            /** Archived */
+            archived: boolean;
+        };
+        /** ProcurementList */
+        ProcurementList: {
+            /** Items */
+            items: components["schemas"]["ProcurementItemRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+            /** Known Cost */
+            known_cost: string;
+            /** Unpriced Positions */
+            unpriced_positions: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
         };
         /** ProductSalesRow */
         ProductSalesRow: {
@@ -7059,6 +7192,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listAuditEvents: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                through_id?: number | null;
+                search?: string | null;
+                action?: ("insert" | "update" | "delete" | "request") | null;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listProcurement: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcurementList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

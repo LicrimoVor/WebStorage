@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import secrets
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit_context import set_actor
 from app.core.errors import AuthenticationError, ConflictError, NotFoundError
 from app.core.security import Actor, Role
 from app.modules.auth.model import AuthSession, UserAccount
@@ -48,18 +50,18 @@ async def authenticate(
     ).scalar_one_or_none()
 
     if user is None:
-        verify_password(password, DUMMY_PASSWORD_HASH)
+        await asyncio.to_thread(verify_password, password, DUMMY_PASSWORD_HASH)
         raise AuthenticationError("Invalid username or password")
 
     if not user.active:
-        verify_password(password, user.password_hash)
+        await asyncio.to_thread(verify_password, password, user.password_hash)
         raise AuthenticationError("Invalid username or password")
 
     if user.locked_until is not None and user.locked_until > now:
-        verify_password(password, user.password_hash)
+        await asyncio.to_thread(verify_password, password, user.password_hash)
         raise AuthenticationError("Invalid username or password")
 
-    valid, updated_hash = verify_password(password, user.password_hash)
+    valid, updated_hash = await asyncio.to_thread(verify_password, password, user.password_hash)
     if not valid:
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
@@ -68,6 +70,7 @@ async def authenticate(
         await session.commit()
         raise AuthenticationError("Invalid username or password")
 
+    await set_actor(session, user.username)
     if updated_hash is not None:
         user.password_hash = updated_hash
     user.failed_login_attempts = 0
@@ -138,7 +141,7 @@ async def create_user(
         raise ConflictError("A user with this username already exists")
     user = UserAccount(
         username=username,
-        password_hash=hash_password(password),
+        password_hash=await asyncio.to_thread(hash_password, password),
         roles=[role.value for role in roles],
     )
     session.add(user)
@@ -159,7 +162,7 @@ async def set_user_password(
     ).scalar_one_or_none()
     if user is None:
         raise NotFoundError("User was not found")
-    user.password_hash = hash_password(password)
+    user.password_hash = await asyncio.to_thread(hash_password, password)
     user.failed_login_attempts = 0
     user.locked_until = None
     await session.execute(delete(AuthSession).where(AuthSession.user_id == user.id))

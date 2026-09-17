@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
+from app.modules.audit.model import AuditEvent  # noqa: F401
 from app.modules.auth.model import AuthSession, UserAccount  # noqa: F401
 from app.modules.employees.model import Employee  # noqa: F401
 from app.modules.finance.model import FinancialTransaction  # noqa: F401

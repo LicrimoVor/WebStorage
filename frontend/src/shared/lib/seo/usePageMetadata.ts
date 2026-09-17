@@ -21,5 +21,7 @@ export function usePageMetadata(title: string, description: string) {
     setMeta('meta[name="googlebot"]', 'name', 'googlebot', 'noindex, nofollow, noarchive');
     setMeta('meta[property="og:title"]', 'property', 'og:title', fullTitle);
     setMeta('meta[property="og:description"]', 'property', 'og:description', description);
+    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', fullTitle);
+    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
   }, [description, title]);
 }

@@ -20,7 +20,7 @@ os.environ["AUTH_DISABLED"] = "true"
 from app.main import app  # noqa: E402
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def migrated_database() -> None:
     backend_dir = Path(__file__).resolve().parents[1]
     environment = os.environ.copy()
@@ -34,12 +34,12 @@ def migrated_database() -> None:
 
 
 @pytest_asyncio.fixture
-async def database_engine() -> AsyncIterator[AsyncEngine]:
+async def database_engine(migrated_database: None) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(TEST_DATABASE_URL)
     async with engine.begin() as connection:
         await connection.execute(
             text(
-                "TRUNCATE TABLE auth_sessions, user_accounts, "
+                "TRUNCATE TABLE audit_events, auth_sessions, user_accounts, "
                 "stock_revision_entries, stock_revisions, "
                 "inventory_group_manufactured_items, inventory_group_materials, "
                 "inventory_groups, operation_instruction_public_links, "

@@ -1,4 +1,6 @@
 export const routes = {
+  procurement: '/procurement',
+  audit: '/audit',
   productionPlans: '/production-plans',
   warehouse: '/warehouse',
   stockRevision: '/warehouse/revision',

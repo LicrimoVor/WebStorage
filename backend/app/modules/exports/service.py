@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +16,7 @@ from app.modules.exports.workbook import (
     ExportSheet,
     build_workbook,
 )
+from app.modules.procurement.service import export_rows as procurement_rows
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,6 +400,30 @@ async def create_export(
     if date_from is not None and date_to is not None and date_from > date_to:
         raise DomainValidationError("date_from must not be after date_to")
     filters = filters.model_copy(update={"date_from": date_from, "date_to": date_to})
+
+    if dataset == ExportDataset.PROCUREMENT:
+        rows_to_buy = await procurement_rows(session, filters.search)
+        columns = [
+            ExportColumn("name", "Материал", width=35),
+            ExportColumn("unit", "Единица", width=12),
+            ExportColumn("required_quantity", "Потребность", QUANTITY),
+            ExportColumn("stock_quantity", "Остаток", QUANTITY),
+            ExportColumn("purchase_quantity", "К закупке", QUANTITY),  # noqa: RUF001
+            ExportColumn("unit_price", "Цена", MONEY),
+            ExportColumn("estimated_cost", "Сумма", MONEY),
+            ExportColumn("target_date", "Срок плана", DATE),
+            ExportColumn("active_plans", "Активных планов", NUMBER),
+            ExportColumn("url", "Ссылка", width=40),
+            ExportColumn("archived", "В архиве"),  # noqa: RUF001
+        ]
+        for row in rows_to_buy:
+            row["archived"] = "Да" if row["archived"] else "Нет"
+        return ExportResult(
+            filename=f"procurement_{datetime.now(UTC):%Y%m%d_%H%M%S}.xlsx",
+            content=await asyncio.to_thread(
+                build_workbook, [ExportSheet("Закупки по дефициту", columns, rows_to_buy)],
+            ),
+        )
 
     if dataset == ExportDataset.ANALYTICS:
         now = datetime.now(UTC)

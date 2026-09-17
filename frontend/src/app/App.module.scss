@@ -37,12 +37,15 @@
 
 .nav {
   display: flex;
+  min-width: 0;
+  overflow-x: auto;
   gap: var(--g-spacing-1);
   margin-left: auto;
 }
 
 .user {
   display: flex;
+  flex-shrink: 0;
   max-width: 220px;
   gap: var(--g-spacing-2);
   align-items: center;

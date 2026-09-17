@@ -4,9 +4,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit_context import set_actor
 from app.core.config import get_settings
 from app.core.database import get_session
-from app.core.errors import ProblemDetail
+from app.core.errors import AuthenticationError, ProblemDetail
 from app.core.security import Actor, get_current_actor
 from app.modules.auth import service
 from app.modules.auth.schemas import AuthSessionRead, LoginRequest
@@ -25,6 +26,7 @@ async def login(
     payload: LoginRequest, response: Response, session: Session
 ) -> AuthSessionRead:
     settings = get_settings()
+    await set_actor(session, f"login-attempt:{payload.username}")
     created = await service.authenticate(
         session,
         username=payload.username,
@@ -56,9 +58,18 @@ async def get_auth_session(actor: ActorDependency) -> AuthSessionRead:
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="logout",
 )
-async def logout(request: Request, response: Response, session: Session) -> None:
+async def logout(
+    request: Request, response: Response, session: Session,
+) -> None:
     settings = get_settings()
-    await service.revoke_session(session, request.cookies.get(settings.session_cookie_name))
+    token = request.cookies.get(settings.session_cookie_name)
+    if token:
+        try:
+            actor = await service.actor_for_token(session, token)
+            await set_actor(session, actor.subject)
+        except AuthenticationError:
+            pass  # Logout also clears an already expired or revoked cookie.
+    await service.revoke_session(session, token)
     response.delete_cookie(
         key=settings.session_cookie_name,
         path="/",

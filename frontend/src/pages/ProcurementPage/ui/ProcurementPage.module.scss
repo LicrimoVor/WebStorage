@@ -1,0 +1,40 @@
+.root {
+  display: grid;
+  gap: var(--g-spacing-5);
+  padding: var(--g-spacing-7);
+}
+
+.header,
+.filters,
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--g-spacing-4);
+  align-items: center;
+}
+
+.header {
+  justify-content: space-between;
+}
+
+.filters > :first-child {
+  width: min(420px, 100%);
+}
+
+.card {
+  display: grid;
+  gap: var(--g-spacing-2);
+  padding: var(--g-spacing-4);
+  min-width: 180px;
+}
+
+.table {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+@media (width <= 680px) {
+  .root {
+    padding: var(--g-spacing-4);
+  }
+}

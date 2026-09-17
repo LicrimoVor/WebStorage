@@ -9,7 +9,7 @@
 - контракт: FastAPI OpenAPI → pinned `openapi-typescript`;
 - качество: Ruff, mypy, pytest/httpx + PostgreSQL, ESLint, Stylelint, Vitest/Testing Library, production build.
 
-Архитектурные решения описаны в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), дальнейшие этапы — в [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Архитектурные решения описаны в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), дальнейшие этапы — в [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md). Результаты аудита, проверка SEO и предложения новых функций — в [docs/AUDIT.md](docs/AUDIT.md).
 
 ## Быстрый запуск
 
@@ -79,6 +79,10 @@ npm run dev
 Пароли хранятся только как Argon2id-хеши. После входа сервер выдаёт случайную сессию в `HttpOnly`, `SameSite=Strict` cookie; исходный токен сессии в БД не сохраняется. Сессия действует 12 часов по умолчанию (`SESSION_TTL_HOURS`, допустимо 1–24). После пяти неверных попыток учётная запись временно блокируется на 15 минут.
 
 ## Индексация и метаданные
+
+Страницы `/procurement` (закупки по дефициту с Excel) и `/audit` (постоянный журнал
+событий для администратора) описаны в [docs/PROCUREMENT_AND_AUDIT.md](docs/PROCUREMENT_AND_AUDIT.md).
+Журнал начинает сохранять изменения после миграции `20260906_0015`.
 
 Веб-склад — приватная внутренняя система, поэтому приложение, экран входа и опубликованные по токену инструкции помечены `noindex, nofollow, noarchive` в HTML и HTTP-заголовках. Это не даёт поисковикам индексировать названия, остатки и технологические данные. При этом добавлены корректные русскоязычные title/description для каждого раздела, Open Graph-метаданные, favicon и web app manifest. `robots.txt` не закрывает обход: так робот сможет увидеть директиву `noindex`. Sitemap намеренно отсутствует, поскольку индексируемых публичных страниц у приложения нет.
 

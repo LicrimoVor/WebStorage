@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
+from app.modules.audit.middleware import AuditMiddleware
 from app.modules.auth.router import router as auth_router
 from app.modules.operation_instructions.router import public_router
 
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Disposition"],
     )
     application.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -57,6 +59,7 @@ def create_app() -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
+    application.add_middleware(AuditMiddleware)
     install_error_handlers(application)
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(api_router, prefix="/api/v1")

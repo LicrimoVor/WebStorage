@@ -32,18 +32,33 @@ export async function apiRequest<T>(
     headers,
   });
   if (!response.ok) {
-    if (response.status === 401 && path !== '/auth/login') {
+    if (response.status === 401 && path !== '/auth/login' && path !== '/auth/session') {
       window.dispatchEvent(new Event('webstorage:unauthorized'));
     }
-    let problem: ProblemDetail;
+    let problem: ProblemDetail = {
+      status: response.status,
+      code: 'transport_error',
+      detail: 'Сервер вернул некорректный ответ',
+    };
     try {
-      problem = (await response.json()) as ProblemDetail;
+      const body: unknown = await response.json();
+      if (
+        typeof body === 'object' && body !== null &&
+        'code' in body && typeof body.code === 'string' &&
+        'detail' in body && typeof body.detail === 'string'
+      ) {
+        problem = {
+          status: response.status,
+          code: body.code,
+          detail: body.detail,
+          fields: 'fields' in body && Array.isArray(body.fields)
+            ? body.fields.filter((field): field is Record<string, unknown> =>
+                typeof field === 'object' && field !== null && !Array.isArray(field))
+            : null,
+        };
+      }
     } catch {
-      problem = {
-        status: response.status,
-        code: 'transport_error',
-        detail: 'Сервер вернул некорректный ответ',
-      };
+      // Keep the HTTP status even when a proxy returns HTML or an empty body.
     }
     throw new ApiError(problem);
   }

@@ -212,10 +212,14 @@ async def test_dashboard_period_boundaries_and_validation(client: AsyncClient) -
 async def test_dashboard_has_bounded_database_query_count(client: AsyncClient) -> None:
     await create_analytics_scenario(client)
     select_count = 0
+    context_count = 0
 
     def count_selects(*args: Any) -> None:
-        nonlocal select_count
+        nonlocal select_count, context_count
         statement = str(args[2]).lstrip().upper()
+        if statement.startswith("SELECT SET_CONFIG("):
+            context_count += 1
+            return
         if statement.startswith(("SELECT", "WITH")):
             select_count += 1
 
@@ -228,3 +232,4 @@ async def test_dashboard_has_bounded_database_query_count(client: AsyncClient) -
         event.remove(engine.sync_engine, "before_cursor_execute", count_selects)
     assert response.status_code == 200, response.text
     assert select_count <= 11
+    assert context_count <= 1  # One transaction-local audit context, independent of row count.

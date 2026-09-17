@@ -1,22 +1,25 @@
-import {Lock} from '@gravity-ui/icons';
-import {Alert, Button, Card, Icon, Text, TextInput} from '@gravity-ui/uikit';
-import {useMutation} from '@tanstack/react-query';
-import {type FormEvent, useState} from 'react';
+import { Lock } from "@gravity-ui/icons";
+import { Alert, Button, Card, Icon, Text, TextInput } from "@gravity-ui/uikit";
+import { useMutation } from "@tanstack/react-query";
+import { type FormEvent, useState } from "react";
 
-import {login, type AuthSession} from '@/entities/Auth';
-import {ApiError, getErrorMessage} from '@/shared/api';
-import {usePageMetadata} from '@/shared/lib';
+import { login, type AuthSession } from "@/entities/Auth";
+import { ApiError, getErrorMessage } from "@/shared/api";
+import { usePageMetadata } from "@/shared/lib";
 
-import styles from './LoginPage.module.scss';
+import styles from "./LoginPage.module.scss";
 
 interface LoginPageProps {
   onAuthenticated: (session: AuthSession) => void;
 }
 
-export function LoginPage({onAuthenticated}: LoginPageProps) {
-  usePageMetadata('Вход', 'Вход сотрудников в систему управления складом и производством.');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export function LoginPage({ onAuthenticated }: LoginPageProps) {
+  usePageMetadata(
+    "Вход",
+    "Вход сотрудников в систему управления складом и производством.",
+  );
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const mutation = useMutation({
     mutationFn: login,
     onSuccess: (session) => onAuthenticated(session),
@@ -24,11 +27,11 @@ export function LoginPage({onAuthenticated}: LoginPageProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!username.trim() || !password) return;
-    mutation.mutate({username: username.trim(), password});
+    mutation.mutate({ username: username.trim(), password });
   };
   const errorMessage =
     mutation.error instanceof ApiError && mutation.error.status === 401
-      ? 'Неверный логин или пароль.'
+      ? "Неверный логин или пароль."
       : mutation.error
         ? getErrorMessage(mutation.error)
         : undefined;
@@ -40,20 +43,21 @@ export function LoginPage({onAuthenticated}: LoginPageProps) {
           <Icon data={Lock} size={28} />
         </div>
         <div className={styles.heading}>
-          <Text as="h1" variant="display-1">Вход в Веб-склад</Text>
-          <Text color="secondary">
-            Используйте учётную запись, созданную администратором через CLI.
+          <Text as="h1" variant="display-1">
+            Вход в Веб-склад
           </Text>
         </div>
         <form className={styles.form} onSubmit={submit}>
-          {errorMessage ? <Alert theme="danger" message={errorMessage} /> : null}
+          {errorMessage ? (
+            <Alert theme="danger" message={errorMessage} />
+          ) : null}
           <TextInput
             label="Логин"
             value={username}
             onUpdate={setUsername}
             autoComplete="username"
             controlProps={{
-              'aria-label': 'Логин',
+              "aria-label": "Логин",
             }}
             autoFocus
             size="xl"
@@ -65,7 +69,7 @@ export function LoginPage({onAuthenticated}: LoginPageProps) {
             onUpdate={setPassword}
             autoComplete="current-password"
             controlProps={{
-              'aria-label': 'Пароль',
+              "aria-label": "Пароль",
             }}
             size="xl"
           />
@@ -80,9 +84,6 @@ export function LoginPage({onAuthenticated}: LoginPageProps) {
             Войти
           </Button>
         </form>
-        <Text color="secondary" variant="caption-2" className={styles.notice}>
-          Доступ предоставляется только сотрудникам организации.
-        </Text>
       </Card>
     </main>
   );

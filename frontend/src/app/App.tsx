@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
+  NavLink,
   Navigate,
   Route,
   Routes,
@@ -21,6 +22,7 @@ import {
 import { LoginPage } from "@/pages/LoginPage";
 import { ApiError, getErrorMessage } from "@/shared/api";
 import { usePageMetadata } from "@/shared/lib";
+import { ErrorBoundary } from "@/shared/ui";
 
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
@@ -28,6 +30,14 @@ import { AppProviders } from "./providers/AppProviders";
 const WarehousePage = lazy(async () => {
   const module = await import("@/pages/WarehousePage");
   return { default: module.WarehousePage };
+});
+const ProcurementPage = lazy(async () => {
+  const module = await import("@/pages/ProcurementPage");
+  return { default: module.ProcurementPage };
+});
+const AuditPage = lazy(async () => {
+  const module = await import("@/pages/AuditPage");
+  return { default: module.AuditPage };
 });
 const StockRevisionPage = lazy(async () => {
   const module = await import("@/pages/StockRevisionPage");
@@ -79,6 +89,8 @@ const PublicInstructionPage = lazy(async () => {
 });
 
 function getPageMetadata(pathname: string) {
+  if (pathname === routes.procurement) return ['Закупки по дефициту', 'Потребности в материалах и таблица закупок.'] as const;
+  if (pathname === routes.audit) return ['Журнал событий', 'История изменений и событий системы.'] as const;
   if (pathname === routes.productionPlans) {
     return ['Планирование производства', 'Планы производства, потребности и прогресс выпуска.'] as const;
   }
@@ -118,7 +130,7 @@ function AppLayout({ session }: { session: AuthSession }) {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: authKeys.session });
+      queryClient.clear();
       window.location.assign("/");
     },
   });
@@ -130,37 +142,50 @@ function AppLayout({ session }: { session: AuthSession }) {
           <Text variant="header-1">Веб-склад</Text>
         </div>
         <nav className={styles.nav} aria-label="Основная навигация">
+          {session.roles.some((role) => ['admin', 'warehouse', 'manager', 'finance'].includes(role)) && <Button
+            view="flat-action" component={NavLink} to={routes.procurement}
+            selected={location.pathname === routes.procurement}
+          >Закупки</Button>}
+          {session.roles.includes('admin') && <Button
+            view="flat-action" component={NavLink} to={routes.audit}
+            selected={location.pathname === routes.audit}
+          >Журнал</Button>}
           <Button
             view="flat-action"
-            onClick={() => navigate(routes.productionPlans)}
+            component={NavLink}
+            to={routes.productionPlans}
             selected={location.pathname === routes.productionPlans}
           >
             Планирование
           </Button>
           <Button
             view="flat-action"
-            onClick={() => navigate(routes.processes)}
+            component={NavLink}
+            to={routes.processes}
             selected={location.pathname.startsWith(routes.processes)}
           >
             Техпроцессы
           </Button>
           <Button
             view="flat-action"
-            onClick={() => navigate(routes.warehouse)}
+            component={NavLink}
+            to={routes.warehouse}
             selected={location.pathname.startsWith(routes.warehouse)}
           >
             Склад
           </Button>
           <Button
             view="flat-action"
-            onClick={() => navigate(routes.operations)}
+            component={NavLink}
+            to={routes.operations}
             selected={location.pathname === routes.operations}
           >
             Операции
           </Button>
           <Button
             view="flat-action"
-            onClick={() => navigate(routes.personnel)}
+            component={NavLink}
+            to={routes.personnel}
             selected={location.pathname === routes.personnel}
           >
             Персонал
@@ -203,6 +228,8 @@ function AppLayout({ session }: { session: AuthSession }) {
       </header>
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>
+          <Route path={routes.procurement} element={<ProcurementPage />} />
+          <Route path={routes.audit} element={<AuditPage />} />
           <Route
             path="/"
             element={<Navigate to={routes.productionPlans} replace />}
@@ -279,9 +306,10 @@ function AuthenticatedApp() {
     if (sessionQuery.error instanceof ApiError && sessionQuery.error.status === 401) {
       return (
         <LoginPage
-          onAuthenticated={(session) =>
-            queryClient.setQueryData(authKeys.session, session)
-          }
+          onAuthenticated={(session) => {
+            queryClient.clear();
+            queryClient.setQueryData(authKeys.session, session);
+          }}
         />
       );
     }
@@ -320,7 +348,9 @@ function AppRouter() {
 export function App() {
   return (
     <AppProviders>
-      <AppRouter />
+      <ErrorBoundary>
+        <AppRouter />
+      </ErrorBoundary>
     </AppProviders>
   );
 }

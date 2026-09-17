@@ -4,6 +4,7 @@ import getpass
 import re
 import sys
 
+from app.core.audit_context import AuditContext, audit_context
 from app.core.database import async_session_factory
 from app.core.errors import ApplicationError
 from app.core.security import Role
@@ -58,6 +59,14 @@ def _parser() -> argparse.ArgumentParser:
 
 
 async def _run(args: argparse.Namespace) -> None:
+    token = audit_context.set(AuditContext(actor=f"cli:{getpass.getuser()}"))
+    try:
+        await _run_command(args)
+    finally:
+        audit_context.reset(token)
+
+
+async def _run_command(args: argparse.Namespace) -> None:
     async with async_session_factory() as session:
         if args.command == "create-user":
             roles = [Role(value) for value in (args.role or [Role.ADMIN.value])]

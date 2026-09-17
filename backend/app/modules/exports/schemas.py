@@ -10,6 +10,7 @@ from app.modules.manufactured_items.schemas import ManufacturedItemKind
 
 
 class ExportDataset(StrEnum):
+    PROCUREMENT = "procurement"
     MATERIALS = "materials"
     MANUFACTURED_ITEMS = "manufactured_items"
     INVENTORY_MOVEMENTS = "inventory_movements"
