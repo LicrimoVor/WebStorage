@@ -4,9 +4,9 @@ from logging.config import fileConfig
 from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
-from app.modules.business.model import FundingSource, BusinessDocument, ProductUnit  # noqa: F401
 from app.modules.audit.model import AuditEvent  # noqa: F401
 from app.modules.auth.model import AuthSession, UserAccount  # noqa: F401
+from app.modules.business.model import BusinessDocument, FundingSource, ProductUnit  # noqa: F401
 from app.modules.employees.model import Employee  # noqa: F401
 from app.modules.finance.model import FinancialTransaction  # noqa: F401
 from app.modules.inventory.model import InventoryMovement  # noqa: F401
@@ -55,7 +55,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 

@@ -1,7 +1,7 @@
 """Funding sources, receipts, repairs, product units and inventory hierarchy."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "20260917_0016"

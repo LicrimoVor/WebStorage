@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,9 @@ from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 class FundingSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "funding_sources"
+    __table_args__ = (
+        Index("ux_funding_sources_name_lower", func.lower(text("name")), unique=True),
+    )
     name: Mapped[str] = mapped_column(String(200), unique=True)
 
 

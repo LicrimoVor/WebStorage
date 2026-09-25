@@ -3,8 +3,25 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
+  deployment-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n deploy/remote-deploy.sh && bash -n deploy/smoke-check.sh
+      - run: shellcheck deploy/remote-deploy.sh deploy/smoke-check.sh
+      - name: Validate production Compose
+        env:
+          BACKEND_IMAGE: webstorage-backend:check
+        run: docker compose --env-file deploy/production.env.example -f deploy/compose.yml config --quiet
+      - run: docker build --tag webstorage-backend:check backend
+      - run: bash deploy/smoke-check.sh
+
   backend:
     runs-on: ubuntu-latest
     services:
@@ -91,3 +108,9 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+
+  deploy:
+    needs: [backend, frontend, deployment-config]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit

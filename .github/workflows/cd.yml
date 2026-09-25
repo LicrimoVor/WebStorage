@@ -1,0 +1,81 @@
+name: CD
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webstorage-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend for the same-origin API
+        working-directory: frontend
+        env:
+          VITE_API_URL: /api/v1
+        run: |
+          npm ci
+          npm run build
+      - name: Build and package release
+        run: |
+          set -euo pipefail
+          docker build --pull --tag "webstorage-backend:$GITHUB_SHA" backend
+          mkdir -p bundle/frontend bundle/deploy
+          cp -a frontend/dist/. bundle/frontend/
+          cp deploy/compose.yml deploy/nginx.conf.template deploy/remote-deploy.sh bundle/deploy/
+          docker save "webstorage-backend:$GITHUB_SHA" | gzip > bundle/backend-image.tar.gz
+          tar -czf release.tar.gz -C bundle .
+          sha256sum release.tar.gz > release.tar.gz.sha256
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+      - name: Upload and deploy through SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          latest=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [[ "$latest" != "$GITHUB_SHA" ]]; then
+            echo 'A newer main revision exists; refusing to deploy an outdated commit.' >&2
+            exit 1
+          fi
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
+          ssh_opts=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          remote=$(ssh "${ssh_opts[@]}" -p "$DEPLOY_PORT" "$target" 'mktemp -d /tmp/webstorage.XXXXXXXXXX')
+          [[ "$remote" =~ ^/tmp/webstorage\.[a-zA-Z0-9]+$ ]]
+          trap 'ssh "${ssh_opts[@]}" -p "$DEPLOY_PORT" "$target" "rm -rf -- $remote" || true' EXIT
+          scp "${ssh_opts[@]}" -P "$DEPLOY_PORT" release.tar.gz release.tar.gz.sha256 "$target:$remote/"
+          release_id="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ssh "${ssh_opts[@]}" -p "$DEPLOY_PORT" "$target" \
+            "cd $remote && sha256sum -c release.tar.gz.sha256 && tar -xzf release.tar.gz && sudo -n bash $remote/deploy/remote-deploy.sh $remote $release_id"
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

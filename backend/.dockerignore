@@ -1,0 +1,10 @@
+*
+!pyproject.toml
+!app/
+!app/**
+!alembic.ini
+!migrations/
+!migrations/**
+!docker-entrypoint.py
+**/__pycache__/
+**/*.pyc

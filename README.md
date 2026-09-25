@@ -13,6 +13,9 @@
 
 ## Быстрый запуск
 
+Удалённый деплой через GitHub Actions, Docker Compose и nginx описан в
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Статика frontend размещается в `/var/www/html/`.
+
 Требуются Docker, Python 3.12+ и Node.js 22.12+ или 24+.
 
 ### 1. Окружение и PostgreSQL

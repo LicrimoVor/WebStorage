@@ -1,0 +1,4 @@
+# Isolated smoke checks do not expose the API on the host.
+services:
+  backend:
+    ports: !reset []
