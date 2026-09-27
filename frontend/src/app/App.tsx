@@ -1,10 +1,9 @@
-import { ArrowRightFromSquare, CircleQuestion, Gear, Person } from "@gravity-ui/icons";
-import { Alert, Button, Icon, PlaceholderContainer, Text } from "@gravity-ui/uikit";
+import {CircleQuestion} from "@gravity-ui/icons";
+import { Alert, Button, Icon, PlaceholderContainer } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
-  NavLink,
   Navigate,
   Route,
   Routes,
@@ -24,8 +23,8 @@ import { ApiError, getErrorMessage } from "@/shared/api";
 import { usePageMetadata } from "@/shared/lib";
 import { ErrorBoundary } from "@/shared/ui";
 
-import {SettingsPage, ReceiptPage, RepairsPage, ProductionPage} from "@/pages/BusinessPages";
-import {ThemeToggle} from "./providers/ThemeToggle";
+import {SettingsPage, ReceiptPage, RepairsPage} from "@/pages/BusinessPages";
+import {AppHeader} from "./AppHeader";
 
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
@@ -144,82 +143,12 @@ function AppLayout({ session }: { session: AuthSession }) {
   });
   return (
     <div className={styles.app}>
-      <header className={styles.topbar}>
-        <div className={styles.brandMark}>WS</div>
-        <div className={styles.brandText}>
-          <Text variant="header-1">Веб-склад</Text>
-        </div>
-        <nav className={styles.nav} aria-label="Основная навигация">
-          <Button
-            view="flat-action"
-            component={NavLink}
-            to={routes.productionPlans}
-            selected={location.pathname === routes.productionPlans}
-          >
-            Планирование
-          </Button>
-          <Button
-            view="flat-action"
-            component={NavLink}
-            to={routes.processes}
-            selected={location.pathname.startsWith(routes.processes)}
-          >
-            Техпроцессы
-          </Button>
-          <Button
-            view="flat-action"
-            component={NavLink}
-            to={routes.warehouse}
-            selected={location.pathname.startsWith(routes.warehouse)}
-          >
-            Склад
-          </Button>
-          <Button
-            view="flat-action"
-            component={NavLink}
-            to={routes.operations}
-            selected={location.pathname === routes.operations}
-          >
-            Операции
-          </Button>
-          <Button
-            view="flat-action"
-            component={NavLink}
-            to={routes.personnel}
-            selected={location.pathname === routes.personnel}
-          >
-            Персонал
-          </Button>
-          {[['/production', 'Выпуск'], ['/repairs', 'Ремонт'], [routes.sales, 'Продажа продукции'], [routes.finance, 'Финансы']].map(([path, label]) => <Button key={path} view="flat-action" component={NavLink} to={path!} selected={location.pathname === path}>{label}</Button>)}
-        </nav>
-        <div className={styles.user}>
-          <Button view="flat" component={NavLink} to="/settings"
-            selected={location.pathname.startsWith('/settings')}
-            aria-label="Настройки" title="Настройки">
-            <Icon data={Gear} size={18} />
-          </Button>
-          <ThemeToggle />
-          <Button view="flat" component={NavLink} to={routes.profile}
-            selected={location.pathname === routes.profile}
-            aria-label="Профиль пользователя" title={`Профиль: ${session.username}`}>
-            <Icon data={Person} size={18} />
-          </Button>
-          <Button
-            view="flat"
-            loading={logoutMutation.isPending}
-            onClick={() => logoutMutation.mutate()}
-            aria-label="Выйти"
-            title="Выйти"
-          >
-            <Icon data={ArrowRightFromSquare} />
-          </Button>
-        </div>
-      </header>
+      <AppHeader username={session.username} pending={logoutMutation.isPending} onLogout={() => logoutMutation.mutate()} />
       <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>
           <Route path={routes.profile} element={<ProfilePage />} />
           <Route path={routes.procurement} element={<Navigate to="/warehouse/receipt" replace />} />
-          <Route path="/production" element={<ProductionPage />} />
+          <Route path="/production" element={<Navigate to="/production-plans?tab=release" replace />} />
           <Route path="/repairs" element={<RepairsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/warehouse/receipt" element={<ReceiptPage />} />
@@ -288,6 +217,8 @@ function AuthenticatedApp() {
   const sessionQuery = useAuthSessionQuery();
   useEffect(() => {
     const handleUnauthorized = () => {
+      queryClient.removeQueries({predicate: (query) => query.queryKey[0] !== "auth"});
+      queryClient.removeQueries({queryKey: authKeys.profile});
       void queryClient.invalidateQueries({ queryKey: authKeys.session });
     };
     window.addEventListener("webstorage:unauthorized", handleUnauthorized);

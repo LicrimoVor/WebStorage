@@ -53,7 +53,10 @@ export function OperationsTableWidget() {
   const sortBy = (searchParams.get("sort_by") ?? "name") as OperationSortField;
   const sortOrder = (searchParams.get("sort_order") ?? "asc") as SortOrder;
   const includeArchived = searchParams.get("include_archived") === "true";
+  const groupId = searchParams.get("group_id") ?? "";
   const params: OperationListParams = {
+    group_id: groupId && groupId !== "none" ? groupId : null,
+    ungrouped: groupId === "none",
     page,
     page_size: pageSize,
     search: search || null,
@@ -90,7 +93,7 @@ export function OperationsTableWidget() {
       ) : null}
     </div>
   );
-  const hasFilters = Boolean(search) || includeArchived;
+  const hasFilters = Boolean(search) || includeArchived || Boolean(groupId);
   return (
     <Card className={styles.root} view="outlined">
       <div className={styles.heading}>
@@ -105,11 +108,13 @@ export function OperationsTableWidget() {
             params={{
               ...(search ? { search } : {}),
               include_archived: includeArchived,
+              ...(groupId && groupId !== 'none' ? {operation_group_id: groupId} : {}),
+              operations_ungrouped: groupId === 'none',
               sort_by: sortBy,
               sort_order: sortOrder,
             }}
           />
-          <CreateOperationButton />
+          <CreateOperationButton defaultGroupId={groupId === "none" ? "" : groupId} />
         </div>
       </div>
       <div className={styles.filters}>
@@ -176,7 +181,7 @@ export function OperationsTableWidget() {
               ? "Измените поиск или фильтры."
               : "Создайте первую производственную операцию."
           }
-          actions={!hasFilters ? <CreateOperationButton /> : null}
+          actions={!hasFilters ? <CreateOperationButton defaultGroupId={groupId === "none" ? "" : groupId} /> : null}
         />
       ) : (
         <div className={styles.content}>

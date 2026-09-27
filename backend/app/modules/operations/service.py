@@ -5,10 +5,10 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import ConflictError, NotFoundError
+from app.core.errors import ConflictError, DomainValidationError, NotFoundError
 from app.core.query import SortOrder
 from app.modules.operations import repository
-from app.modules.operations.model import Operation
+from app.modules.operations.model import Operation, OperationGroup
 from app.modules.operations.schemas import (
     OperationCreate,
     OperationList,
@@ -27,6 +27,7 @@ def to_read_model(
     return OperationRead(
         id=operation.id,
         name=operation.name,
+        group_id=operation.group_id,
         time_norm=operation.time_norm,
         price_per_operation=operation.price_per_operation,
         required_quantity=required_quantity,
@@ -39,6 +40,7 @@ def to_read_model(
 
 
 async def create(session: AsyncSession, payload: OperationCreate) -> OperationRead:
+    await validate_group(session, payload.group_id)
     operation = Operation(**payload.model_dump())
     try:
         await repository.create_operation(session, operation)
@@ -61,6 +63,8 @@ async def list_all(
     include_archived: bool,
     sort_by: OperationSortField,
     sort_order: SortOrder,
+    group_id: uuid.UUID | None = None,
+    ungrouped: bool = False,
 ) -> OperationList:
     items, total = await repository.list_operations(
         session,
@@ -70,6 +74,8 @@ async def list_all(
         include_archived=include_archived,
         sort_by=sort_by,
         sort_order=sort_order,
+        group_id=group_id,
+        ungrouped=ungrouped,
     )
     return OperationList(
         items=[to_read_model(*item) for item in items],
@@ -93,6 +99,7 @@ async def update(
     operation = await repository.get_operation(session, operation_id, for_update=True)
     if operation is None:
         raise NotFoundError("Operation was not found")
+    await validate_group(session, payload.group_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(operation, field, value)
     try:
@@ -116,3 +123,8 @@ async def archive(session: AsyncSession, operation_id: uuid.UUID) -> OperationRe
     projection = await repository.get_operation_with_projection(session, operation.id)
     assert projection is not None
     return to_read_model(*projection)
+
+
+async def validate_group(session: AsyncSession, group_id: uuid.UUID | None) -> None:
+    if group_id is not None and await session.get(OperationGroup, group_id) is None:
+        raise DomainValidationError("Operation group was not found")

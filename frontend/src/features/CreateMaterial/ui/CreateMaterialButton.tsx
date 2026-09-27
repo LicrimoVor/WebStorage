@@ -17,7 +17,7 @@ import {normalizeDecimal} from '@/shared/lib';
 
 const titleId = 'create-material-title';
 
-export function CreateMaterialButton() {
+export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: string}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<MaterialFormValue>(emptyMaterialForm);
   const [validationError, setValidationError] = useState<string>();
@@ -62,7 +62,7 @@ export function CreateMaterialButton() {
 
   return (
     <>
-      <Button view="action" size="l" onClick={() => setOpen(true)}>
+      <Button view="action" size="l" onClick={() => {setForm({...emptyMaterialForm, groupIds: defaultGroupId ? [defaultGroupId] : []}); setValidationError(undefined); mutation.reset(); setOpen(true);}}>
         Создать материал
       </Button>
       <Dialog

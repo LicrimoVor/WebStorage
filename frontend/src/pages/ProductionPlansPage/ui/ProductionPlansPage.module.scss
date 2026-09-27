@@ -235,3 +235,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+.tabs {
+  display: flex;
+  gap: 12px;
+  max-width: 1500px;
+  margin: 24px auto 0;
+  padding: 0 32px;
+}
+
+@media (width <= 680px) {
+  .tabs {
+    margin-top: 16px;
+    padding-inline: 12px;
+    gap: 8px;
+  }
+
+  .tabs > * {
+    flex: 1;
+  }
+
+  .headerActions {
+    flex-wrap: wrap;
+  }
+}

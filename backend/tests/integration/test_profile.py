@@ -27,10 +27,9 @@ async def test_profile_password_change_preserves_current_session_and_revokes_oth
             )
         ).status_code == 401
         login = {"username": "profile-user", "password": "initial password"}
-        assert (await client.post("/api/v1/auth/login", json=login)).status_code == 200
-        old_cookie = client.cookies.get("webstorage_session")
-        assert (await client.post("/api/v1/auth/login", json=login)).status_code == 200
-        current_cookie = client.cookies.get("webstorage_session")
+        old_pair = (await client.post("/api/v1/auth/login", json=login)).json()
+        pair = (await client.post("/api/v1/auth/login", json=login)).json()
+        client.headers["Authorization"] = f"Bearer {pair['access_token']}"
         profile = await client.get("/api/v1/auth/profile")
         assert profile.status_code == 200
         assert profile.json()["username"] == "profile-user"
@@ -57,16 +56,24 @@ async def test_profile_password_change_preserves_current_session_and_revokes_oth
         )
         assert changed.status_code == 204, changed.text
         assert (await client.get("/api/v1/auth/session")).status_code == 200
-        client.cookies.clear()
-        client.cookies.set("webstorage_session", old_cookie or "")
+        assert (
+            await client.post(
+                "/api/v1/auth/refresh",
+                json={
+                    "refresh_token": old_pair["refresh_token"],
+                },
+            )
+        ).status_code == 401
+        client.headers.pop("Authorization", None)
+        client.headers["Authorization"] = f"Bearer {old_pair['access_token']}"
         assert (await client.get("/api/v1/auth/session")).status_code == 401
-        client.cookies.clear()
+        client.headers.pop("Authorization", None)
         assert (await client.post("/api/v1/auth/login", json=login)).status_code == 401
         assert (
             await client.post("/api/v1/auth/login", json={**login, "password": "new password"})
         ).status_code == 200
-        client.cookies.clear()
-        client.cookies.set("webstorage_session", current_cookie or "")
+        client.headers.pop("Authorization", None)
+        client.headers["Authorization"] = f"Bearer {pair['access_token']}"
         assert (await client.get("/api/v1/auth/session")).status_code == 200
         # Existing sessions cannot be used to brute-force the current password indefinitely.
         for _ in range(5):

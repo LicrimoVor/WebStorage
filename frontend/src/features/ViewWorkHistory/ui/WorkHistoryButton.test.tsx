@@ -1,4 +1,4 @@
-import {screen, waitFor} from '@testing-library/react';
+import {screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -48,12 +48,22 @@ describe('WorkHistoryButton', () => {
     renderWithProviders(<WorkHistoryButton operation={operationFixture} />);
 
     await user.click(screen.getByRole('button', {name: 'История работ'}));
-    expect(screen.getByText(workEntryFixture.employee_name)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', {name: 'Изменить'}));
-    const input = screen.getByLabelText('Объём работы');
+    const historyDialog = await screen.findByRole('dialog', {
+      name: `Выполненные работы: ${operationFixture.name}`,
+    });
+    // Gravity UI activates the focus manager after the opening transition.
+    // Opening the nested dialog sooner can let the parent take focus back.
+    await waitFor(() => expect(historyDialog).toHaveFocus(), {timeout: 5000});
+    expect(within(historyDialog).getByText(workEntryFixture.employee_name)).toBeInTheDocument();
+    await user.click(within(historyDialog).getByRole('button', {name: 'Изменить'}));
+    const editDialog = await screen.findByRole('dialog', {
+      name: `Изменить работу: ${workEntryFixture.operation_name}`,
+    });
+    await waitFor(() => expect(editDialog).toHaveFocus(), {timeout: 5000});
+    const input = within(editDialog).getByLabelText('Объём работы');
     await user.clear(input);
     await user.type(input, '3,5');
-    await user.click(await screen.findByRole('button', {name: 'Сохранить'}));
+    await user.click(within(editDialog).getByRole('button', {name: 'Сохранить'}));
 
     await waitFor(() =>
       expect(updateWorkEntry).toHaveBeenCalledWith(
@@ -61,5 +71,9 @@ describe('WorkHistoryButton', () => {
         expect.objectContaining({input_value: '3.5', input_mode: 'quantity'}),
       ),
     );
+    await waitFor(() => expect(editDialog).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog', {
+      name: `Выполненные работы: ${operationFixture.name}`,
+    })).toBeInTheDocument();
   });
 });

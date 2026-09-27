@@ -31,6 +31,7 @@ export function ManufacturedItemForm({
   return (
     <div className={styles.root}>
       {error ? <Alert theme="danger" message={error} /> : null}
+      <p>Выберите тип позиции. Для полуфабриката обязательно укажите продукт, в состав которого он входит.</p>
       <TextInput
         label="Название"
         value={value.name}

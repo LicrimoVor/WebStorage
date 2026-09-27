@@ -12,6 +12,7 @@ export type SortOrder = components['schemas']['SortOrder'];
 
 export interface OperationFormValue {
   name: string;
+  groupId: string;
   timeNorm: string;
   pricePerOperation: string;
 }

@@ -28,6 +28,216 @@ a {
   color: inherit;
 }
 
+main,
+main > *,
+main section,
+main article,
+main form,
+.g-dialog-body > * {
+  min-width: 0;
+}
+
+@media (width <= 680px) {
+  html {
+    scrollbar-gutter: auto;
+  }
+
+  main {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    overflow-wrap: anywhere;
+  }
+
+  main :where(div, header, section, aside, form, nav),
+  .g-dialog-body :where(div, label) {
+    min-width: 0;
+  }
+
+  .g-placeholder-container {
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .g-placeholder-container__body,
+  .g-placeholder-container__content {
+    max-width: 100%;
+  }
+
+  .g-placeholder-container .g-placeholder-container__body {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .g-root .g-placeholder-container.g-placeholder-container_direction_row .g-placeholder-container__content {
+    text-align: center;
+    padding: 0;
+    margin: 0;
+    align-items: center;
+  }
+
+  .g-placeholder-container .g-button {
+    height: auto;
+    max-width: 100%;
+  }
+
+  .g-placeholder-container .g-button__text {
+    white-space: normal;
+    padding-block: 8px;
+  }
+
+  .g-placeholder-container__actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .g-placeholder-container__action {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .g-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  input[type='date'],
+  input[type='datetime-local'] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  main h1 {
+    font-size: 24px;
+  }
+
+  main h2 {
+    font-size: 20px;
+  }
+
+  .g-button {
+    min-height: 40px;
+  }
+
+  .g-root .g-text-input .g-text-input__control,
+  .g-root .g-text-area .g-text-area__control,
+  input[type='date'],
+  input[type='datetime-local'] {
+    font-size: 16px;
+  }
+
+  .g-root .g-text-input__content:has(> .g-text-input__label) {
+    flex-wrap: wrap;
+  }
+
+  .g-root .g-text-input .g-text-input__label {
+    position: static;
+    flex: 1 0 100%;
+
+    // UIKit sets an inline maximum for labels placed inside the control.
+    max-width: none !important;
+    padding: 6px 12px 0;
+    margin: 0;
+    white-space: normal;
+    line-height: 18px;
+  }
+
+  .g-root .g-text-input__label ~ .g-text-input__control {
+    flex-basis: 0;
+    min-width: 0;
+
+    // Override the inline offset measured for UIKit's desktop label layout.
+    padding-inline-start: 12px !important;
+  }
+
+  .g-dialog__modal {
+    --g-modal-margin: 8px;
+    --g-modal-max-width: calc(100vw - 16px);
+    --g-modal-max-height: calc(100dvh - 16px);
+  }
+
+  .g-dialog {
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+  }
+
+  .g-dialog-body {
+    padding: 16px;
+  }
+
+  .g-dialog-header {
+    padding-inline: 16px 48px;
+  }
+
+  .g-dialog-footer {
+    padding: 16px;
+  }
+
+  .g-dialog-footer__bts-wrapper {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .g-pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .g-table {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  input[type='file'] {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+main h1,
+main h2,
+main h3,
+.g-dialog h2,
+.g-dialog h3 {
+  margin-block: 0;
+  line-height: 1.3;
+}
+
+main p,
+.g-dialog p {
+  margin-block: 8px;
+  line-height: 1.6;
+}
+
+.g-text-input__label,
+.g-select-control__label {
+  margin-inline-end: 8px;
+}
+
+.g-dialog-body {
+  padding-block: 20px;
+}
+
+.g-dialog-footer {
+  padding-block-start: 20px;
+}
+
+input[type='date'],
+input[type='datetime-local'] {
+  min-height: 40px;
+  max-width: 100%;
+  padding: 8px 12px;
+  color: var(--g-color-text-primary);
+  background: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 8px;
+
+  &:focus-visible {
+    outline: 2px solid var(--g-color-line-brand);
+    outline-offset: 2px;
+  }
+}
+
 *::-webkit-scrollbar {
   width: 12px;
   height: 12px;

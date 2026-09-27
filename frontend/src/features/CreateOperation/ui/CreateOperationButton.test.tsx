@@ -14,12 +14,15 @@ vi.mock('@/entities/Operation', async (importOriginal) => {
   return {...actual, createOperation: vi.fn()};
 });
 
+vi.mock('@/entities/OperationGroup/api', () => ({useOperationGroupsQuery: () => ({data: [{id: 'group-1', name: 'Обработка'}]})}));
+
 describe('CreateOperationButton', () => {
   it('creates an operation with decimal strings', async () => {
     vi.mocked(createOperation).mockResolvedValue(operationFixture);
     const user = userEvent.setup();
-    renderWithProviders(<CreateOperationButton />);
+    renderWithProviders(<CreateOperationButton defaultGroupId="group-1" />);
     await user.click(screen.getByRole('button', {name: 'Создать операцию'}));
+    expect(screen.getByLabelText('Группа операции')).toHaveTextContent('Обработка');
     await user.type(screen.getByLabelText('Название операции'), 'Сверление');
     await user.type(screen.getByLabelText('Норма времени операции'), '3,5');
     await user.type(screen.getByLabelText('Ставка за операцию'), '12,40');
@@ -29,6 +32,7 @@ describe('CreateOperationButton', () => {
         name: 'Сверление',
         time_norm: '3.5',
         price_per_operation: '12.40',
+        group_id: 'group-1',
       }),
     );
   });

@@ -127,7 +127,9 @@ queryKey: ['repair-operations'], queryFn: async () => {
         </div>
         <label>Дата <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
-        <TextArea placeholder="Причина ремонта, описание и дополнения" value={comment} onUpdate={setComment} />
+        <label>Описание ремонта
+          <TextArea placeholder="Причина обращения, выполненные работы и дополнения" value={comment} onUpdate={setComment} controlProps={{'aria-label': 'Описание ремонта'}} />
+        </label>
         <FundingSelect value={source} onChange={setSource} />
         <h2>Потраченные материалы</h2>{lines.map((line, index) => <div className={styles.row} key={index}>
           <Select width="max" filterable placeholder="Материал" value={line.material_id ? [line.material_id] : []} options={(materials.data ?? []).map((m) => ({ value: m.id, content: `${m.name} (${m.unit})` }))} onUpdate={(ids) => setLines(lines.map((l, i) => i === index ? { ...l, material_id: ids[0] ?? '' } : l))} />
@@ -160,6 +162,7 @@ export function ProductionPage() {
   const units = useQuery({ queryKey: ['product-units', offset], queryFn: () => apiRequest<Unit[]>(`/product-units?offset=${offset}`) });
   return <main className={styles.page}>
     <h1>Выпуск продукции</h1>
+    <p>Зафиксируйте изготовление: материалы спишутся, а готовые изделия с уникальными номерами поступят на склад. Доход от покупателя учитывается отдельно в продажах.</p>
     <section className={styles.form}>
       <h2>По активным планам</h2>{plans.data?.items.map((plan) => <div className={styles.row} key={plan.id}>
         <strong>{plan.product_name}</strong>
@@ -175,7 +178,7 @@ export function ProductionPage() {
       {products.isError && <Alert theme="danger" message={getErrorMessage(products.error)} />}
     </section>
     <section className={styles.form}>
-      <h2>Выпущенные изделия</h2>{units.isError && <Alert theme="danger" message={getErrorMessage(units.error)} />}<table className={styles.table}>
+      <h2>Выпущенные изделия</h2>{units.isError && <Alert theme="danger" message={getErrorMessage(units.error)} />}<div className={styles.scroll}><table className={styles.table}>
         <thead>
           <tr>
             <th>Номер</th>
@@ -192,7 +195,7 @@ export function ProductionPage() {
           <td>{unit.photo && <a href={unit.photo} target="_blank" rel="noreferrer">Фото</a>}</td>
           <td>{unit.issued_for_repair_id ? 'Выдано по ремонту' : unit.sale_id ? 'Продано' : 'На складе'}</td>
         </tr>)}</tbody>
-      </table>
+      </table></div>
       <div className={styles.row}>
         <Button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 100))}>Назад</Button>
         <Button disabled={(units.data?.length ?? 0) < 100} onClick={() => setOffset(offset + 100)}>Далее</Button>

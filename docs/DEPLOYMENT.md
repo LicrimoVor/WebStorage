@@ -115,7 +115,7 @@ deploy ALL=(root) NOPASSWD: /usr/bin/bash
 sudo bash
 cd /opt/webstorage
 export BACKEND_IMAGE="$(cat current/image)"
-docker compose --env-file .env -f current/compose.yml exec backend \
+docker compose --env-file .env -f current/compose.yml run --rm --no-deps backend \
   python -m app.cli create-user admin
 ```
 
@@ -124,6 +124,33 @@ docker compose --env-file .env -f current/compose.yml exec backend \
 все имеющиеся миграции проекта.
 
 ## Диагностика и восстановление
+
+### Восстановление пароля
+
+На сервере выполните в интерактивном терминале:
+
+```bash
+sudo bash
+cd /opt/webstorage
+export BACKEND_IMAGE="$(cat current/image)"
+docker compose --env-file .env -f current/compose.yml run --rm --no-deps backend \
+  python -m app.cli reset-password admin
+```
+
+Замените `admin` логином пользователя. Введите новый пароль дважды (12–128
+символов); старый пароль не требуется. Пароль не передаётся аргументом команды
+и не выводится в терминал. При несовпадении ввода изменения не сохраняются.
+Для отмены нажмите Ctrl+C.
+
+Команда снимает временную блокировку и отзывает все сессии пользователя.
+Если учётная запись отключена администратором, она остаётся отключённой.
+Для просмотра логинов замените `reset-password admin` на `list-users`.
+
+Здесь используется `compose run`, чтобы Docker entrypoint настроил подключение
+к БД перед запуском CLI. PostgreSQL должен быть запущен; дополнительные
+контейнеры backend не остаются после завершения команды.
+
+### Логи и релизы
 
 Релизы: `/opt/webstorage/releases/<commit>-<run>-<attempt>`; текущий релиз:
 `/opt/webstorage/current`; резервные копии: `/opt/webstorage/backups/*.dump`.

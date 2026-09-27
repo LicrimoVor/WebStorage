@@ -1,6 +1,7 @@
 import {useQuery} from '@tanstack/react-query';
 
 import {apiRequest} from '@/shared/api';
+import {saveTokens, clearTokens, getRefreshToken, type TokenPair} from '@/shared/api/tokens';
 
 import type {AuthProfile, AuthSession, ChangePasswordRequest, LoginRequest} from '../model/types';
 
@@ -22,15 +23,21 @@ export function useAuthSessionQuery() {
   });
 }
 
-export function login(payload: LoginRequest) {
-  return apiRequest<AuthSession>('/auth/login', {
+export async function login(payload: LoginRequest) {
+  const result = await apiRequest<AuthSession & TokenPair>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  saveTokens(result);
+  return {username: result.username, roles: result.roles, expires_at: result.expires_at ?? null};
 }
 
-export function logout() {
-  return apiRequest<void>('/auth/logout', {method: 'POST'});
+export async function logout() {
+  const refresh = getRefreshToken();
+  await apiRequest<void>('/auth/logout', {method: 'POST',
+    ...(refresh ? {body: JSON.stringify({refresh_token: refresh})} : {}),
+  });
+  clearTokens();
 }
 
 export function useAuthProfileQuery() {

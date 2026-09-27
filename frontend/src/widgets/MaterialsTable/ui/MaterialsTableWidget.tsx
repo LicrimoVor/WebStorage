@@ -121,7 +121,7 @@ export function MaterialsTableWidget() {
               deficit_only: deficitOnly,
             }}
           />
-          <CreateMaterialButton />
+          <CreateMaterialButton defaultGroupId={groupId} />
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export function MaterialsTableWidget() {
           }
           actions={
             !search && !deficitOnly && !productId && !groupId ? (
-              <CreateMaterialButton />
+              <CreateMaterialButton defaultGroupId={groupId} />
             ) : null
           }
         />

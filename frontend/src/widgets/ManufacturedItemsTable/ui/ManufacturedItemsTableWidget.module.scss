@@ -67,3 +67,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (width <= 680px) {
+  .root,
+  .content,
+  .loading {
+    min-width: 0;
+  }
+
+  .heading .actions {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .heading .actions > * {
+    flex: 1 1 auto;
+  }
+}

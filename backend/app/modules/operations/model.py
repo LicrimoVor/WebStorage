@@ -1,10 +1,18 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Index, Numeric, String, func, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Numeric, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
+
+
+class OperationGroup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "operation_groups"
+    __table_args__ = (
+        Index("ux_operation_groups_name_lower", func.lower(text("name")), unique=True),
+    )
+    name: Mapped[str] = mapped_column(String(200))
 
 
 class Operation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -21,6 +29,9 @@ class Operation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     id: Mapped[uuid.UUID]
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("operation_groups.id", ondelete="SET NULL"), index=True
+    )
     time_norm: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     price_per_operation: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     archived: Mapped[bool] = mapped_column(

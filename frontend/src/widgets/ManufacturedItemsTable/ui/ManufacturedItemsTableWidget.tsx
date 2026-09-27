@@ -36,7 +36,7 @@ export function ManufacturedItemsTableWidget() {
       {rows.isError && <Alert theme="danger" message={getErrorMessage(rows.error)} actions={<Button onClick={() => rows.refetch()}>Повторить</Button>} />}
       {shown.map((product) => <section key={product.id}>
         <h2>{product.name}</h2>
-        <table className={styles.table}>
+        <div className={styles.scroll}><table className={styles.table}>
           <thead>
             <tr>
               <th>Позиция</th>
@@ -50,7 +50,7 @@ export function ManufacturedItemsTableWidget() {
             <td>{row.type === 'semi_finished' && <ProduceManufacturedItemButton itemId={row.id} itemName={row.name} />}<ItemActions id={row.id} />
             </td>
           </tr>)}</tbody>
-        </table>
+        </table></div>
       </section>)}
       {orphans.length > 0 && <section>
         <h2>Укажите продукт для существующих полуфабрикатов</h2>{orphans.map((row) => <div key={row.id} className={styles.row}>{row.name}<ItemActions id={row.id} />

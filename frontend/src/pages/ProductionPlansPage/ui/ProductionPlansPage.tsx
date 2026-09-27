@@ -14,6 +14,8 @@ import {
 } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import {useSearchParams} from 'react-router-dom';
+import {ProductionPage} from '@/pages/BusinessPages';
 
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import {
@@ -423,7 +425,7 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
   );
 }
 
-export function ProductionPlansPage() {
+function PlanningListPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState<"all" | ProductionPlanStatus>("all");
@@ -538,4 +540,16 @@ export function ProductionPlansPage() {
       )}
     </main>
   );
+}
+
+export function ProductionPlansPage() {
+  const [params, setParams] = useSearchParams();
+  const release = params.get('tab') === 'release';
+  return <>
+    <nav className={styles.tabs} aria-label="Разделы планирования">
+      <Button size="l" selected={!release} onClick={() => setParams({})}>Планы</Button>
+      <Button size="l" selected={release} onClick={() => setParams({tab: 'release'})}>Выпуск продукции</Button>
+    </nav>
+    {release ? <ProductionPage /> : <PlanningListPage />}
+  </>;
 }

@@ -44,6 +44,8 @@ async def list_operations(
     include_archived: bool = False,
     sort_by: OperationSortField = OperationSortField.NAME,
     sort_order: SortOrder = SortOrder.ASC,
+    group_id: uuid.UUID | None = None,
+    ungrouped: bool = False,
 ) -> OperationList:
     return await service.list_all(
         session,
@@ -53,6 +55,8 @@ async def list_operations(
         include_archived=include_archived,
         sort_by=sort_by,
         sort_order=sort_order,
+        group_id=group_id,
+        ungrouped=ungrouped,
     )
 
 

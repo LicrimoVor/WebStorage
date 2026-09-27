@@ -250,6 +250,10 @@ async def operations(
         statement = statement.where(Operation.archived.is_(False))
     if filters.search:
         statement = statement.where(Operation.name.ilike(f"%{filters.search.strip()}%"))
+    if filters.operation_group_id is not None:
+        statement = statement.where(Operation.group_id == filters.operation_group_id)
+    if filters.operations_ungrouped:
+        statement = statement.where(Operation.group_id.is_(None))
     statement = apply_ids(statement, Operation.id, filters.ids)
     order_columns = {
         "name": func.lower(Operation.name),

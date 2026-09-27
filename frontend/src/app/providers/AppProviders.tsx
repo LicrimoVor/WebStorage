@@ -25,7 +25,7 @@ export function AppProviders({children}: PropsWithChildren) {
     try {localStorage.setItem('webstorage-theme', next);} catch { /* Theme remains usable. */ }
   };
   return (
-    <ThemeContext.Provider value={{theme, toggle}}><ThemeProvider theme={theme}>
+    <ThemeContext.Provider value={{theme, toggle}}><ThemeProvider theme={theme} defaultProps={{TextInput: {size: 'l'}, Select: {size: 'l'}, TextArea: {size: 'l', minRows: 3}, Dialog: {contentOverflow: 'auto'}}}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ThemeProvider></ThemeContext.Provider>
   );

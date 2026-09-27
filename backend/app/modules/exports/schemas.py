@@ -27,6 +27,8 @@ class ExportDataset(StrEnum):
 
 
 class ExportFilters(BaseModel):
+    operation_group_id: uuid.UUID | None = None
+    operations_ungrouped: bool = False
     funding_source_id: uuid.UUID | None = None
     search: str | None = None
     include_archived: bool = False

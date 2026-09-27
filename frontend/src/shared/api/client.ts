@@ -1,4 +1,4 @@
-import {API_URL} from '@/shared/config';
+import {authenticatedFetch} from './tokens';
 
 import type {components} from './generated/schema';
 
@@ -26,15 +26,11 @@ export async function apiRequest<T>(
   if (init.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
+  const response = await authenticatedFetch(path, {
     ...init,
     headers,
   });
   if (!response.ok) {
-    if (response.status === 401 && path !== '/auth/login' && path !== '/auth/session') {
-      window.dispatchEvent(new Event('webstorage:unauthorized'));
-    }
     let problem: ProblemDetail = {
       status: response.status,
       code: 'transport_error',

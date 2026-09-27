@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 
 @pytest.mark.asyncio
-async def test_password_login_cookie_logout_and_password_rotation(
+async def test_password_login_tokens_logout_and_password_rotation(
     client: AsyncClient,
     database_engine: AsyncEngine,
     monkeypatch: pytest.MonkeyPatch,
@@ -60,10 +60,10 @@ async def test_password_login_cookie_logout_and_password_rotation(
             },
         )
         assert login.status_code == 200, login.text
-        cookie = login.headers["set-cookie"]
-        assert "HttpOnly" in cookie
-        assert "SameSite=strict" in cookie
-        assert "webstorage_session=" in cookie
+        pair = login.json()
+        assert pair["access_token"] != pair["refresh_token"]
+        assert "set-cookie" not in login.headers
+        client.headers["Authorization"] = f"Bearer {pair['access_token']}"
         assert login.json()["username"] == "warehouse-admin"
 
         current = await client.get("/api/v1/me")
@@ -72,7 +72,8 @@ async def test_password_login_cookie_logout_and_password_rotation(
 
         async with sessions() as session:
             stored_session = (await session.execute(select(AuthSession))).scalar_one()
-            assert stored_session.token_hash not in cookie
+            assert stored_session.token_hash not in pair.values()
+            assert stored_session.refresh_hash not in pair.values()
             await set_user_password(
                 session,
                 username="warehouse-admin",
@@ -81,6 +82,14 @@ async def test_password_login_cookie_logout_and_password_rotation(
 
         revoked = await client.get("/api/v1/me")
         assert revoked.status_code == 401
+        assert (
+            await client.post(
+                "/api/v1/auth/refresh",
+                json={
+                    "refresh_token": pair["refresh_token"],
+                },
+            )
+        ).status_code == 401
         old_password = await client.post(
             "/api/v1/auth/login",
             json={
@@ -98,7 +107,10 @@ async def test_password_login_cookie_logout_and_password_rotation(
         )
         assert new_password.status_code == 200
 
-        logout = await client.post("/api/v1/auth/logout")
+        client.headers["Authorization"] = f"Bearer {new_password.json()['access_token']}"
+        logout = await client.post(
+            "/api/v1/auth/logout", json={"refresh_token": new_password.json()["refresh_token"]}
+        )
         assert logout.status_code == 204
         assert (await client.get("/api/v1/me")).status_code == 401
 

@@ -1006,7 +1006,7 @@ export const ProcessCanvas = forwardRef<
                     Расчёт использует активный рецепт и сначала расходует доступные
                     полуфабрикаты со склада.
                   </Text>
-                  {nodeDialog.type === "output" ? <Button href="/production" view="action">Открыть выпуск продукции</Button> : <ProduceManufacturedItemButton
+                  {nodeDialog.type === "output" ? <Button href="/production-plans?tab=release" view="action">Открыть выпуск продукции</Button> : <ProduceManufacturedItemButton
                     itemId={nodeDialog.referenceId}
                     itemName={nodeDialog.label || "Позиция"}
                     size="l"

@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh */
+        post: operations["refreshTokens"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/session": {
         parameters: {
             query?: never;
@@ -385,6 +402,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operation-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Groups */
+        get: operations["list_groups_api_v1_operation_groups_get"];
+        put?: never;
+        /** Create Group */
+        post: operations["create_group_api_v1_operation_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operation-groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Group */
+        delete: operations["delete_group_api_v1_operation_groups__group_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Group */
+        patch: operations["update_group_api_v1_operation_groups__group_id__patch"];
         trace?: never;
     };
     "/api/v1/operations/{operation_id}/instruction": {
@@ -2441,10 +2494,27 @@ export interface components {
         OperationCreate: {
             /** Name */
             name: string;
+            /** Group Id */
+            group_id?: string | null;
             /** Time Norm */
             time_norm?: number | string | null;
             /** Price Per Operation */
             price_per_operation?: number | string | null;
+        };
+        /** OperationGroupRead */
+        OperationGroupRead: {
+            /** Name */
+            name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** OperationGroupWrite */
+        OperationGroupWrite: {
+            /** Name */
+            name: string;
         };
         /** OperationList */
         OperationList: {
@@ -2468,6 +2538,8 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** Group Id */
+            group_id?: string | null;
             /** Time Norm */
             time_norm: string | null;
             /** Price Per Operation */
@@ -2509,6 +2581,8 @@ export interface components {
         OperationUpdate: {
             /** Name */
             name?: string | null;
+            /** Group Id */
+            group_id?: string | null;
             /** Time Norm */
             time_norm?: number | string | null;
             /** Price Per Operation */
@@ -3397,6 +3471,11 @@ export interface components {
             /** Unit Price */
             unit_price: number | string;
         };
+        /** RefreshRequest */
+        RefreshRequest: {
+            /** Refresh Token */
+            refresh_token: string;
+        };
         /** RepairCreate */
         RepairCreate: {
             /**
@@ -3726,6 +3805,29 @@ export interface components {
             /** Current Quantity */
             current_quantity: string;
         };
+        /** TokenPairRead */
+        TokenPairRead: {
+            /** Username */
+            username: string;
+            /** Roles */
+            roles: components["schemas"]["Role"][];
+            /** Expires At */
+            expires_at?: string | null;
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /**
+             * Refresh Expires At
+             * Format: date-time
+             */
+            refresh_expires_at: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3951,7 +4053,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthSessionRead"];
+                    "application/json": components["schemas"]["TokenPairRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    refreshTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPairRead"];
                 };
             };
             /** @description Unauthorized */
@@ -4097,7 +4241,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {
@@ -4979,6 +5127,8 @@ export interface operations {
                 include_archived?: boolean;
                 sort_by?: components["schemas"]["OperationSortField"];
                 sort_order?: components["schemas"]["SortOrder"];
+                group_id?: string | null;
+                ungrouped?: boolean;
             };
             header?: never;
             path?: never;
@@ -5177,6 +5327,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    list_groups_api_v1_operation_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationGroupRead"][];
+                };
+            };
+        };
+    };
+    create_group_api_v1_operation_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationGroupWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_group_api_v1_operation_groups__group_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_group_api_v1_operation_groups__group_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationGroupWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -7485,6 +7752,8 @@ export interface operations {
                 product_id?: string | null;
                 employee_id?: string | null;
                 operation_id?: string | null;
+                operation_group_id?: string | null;
+                operations_ungrouped?: boolean;
                 plan_id?: string | null;
                 source?: components["schemas"]["FinanceSource"];
                 funding_source_id?: string | null;

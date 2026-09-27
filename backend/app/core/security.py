@@ -25,6 +25,11 @@ class Actor:
     roles: frozenset[Role]
 
 
+def bearer_token(request: Request) -> str | None:
+    scheme, _, token = request.headers.get("Authorization", "").partition(" ")
+    return token if scheme.lower() == "bearer" and token else None
+
+
 async def get_current_actor(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -36,9 +41,7 @@ async def get_current_actor(
 
     from app.modules.auth.service import actor_for_token
 
-    actor = await actor_for_token(
-        session, request.cookies.get(settings.session_cookie_name)
-    )
+    actor = await actor_for_token(session, bearer_token(request))
     await set_actor(session, actor.subject)
     return actor
 

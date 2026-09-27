@@ -11,7 +11,7 @@ import {CreateMaterialButton} from './CreateMaterialButton';
 
 vi.mock('@/entities/InventoryGroup', () => ({
   inventoryGroupKeys: {all: ['inventory-groups']},
-  useInventoryGroupsQuery: () => ({data: []}),
+  useInventoryGroupsQuery: () => ({data: [{id: 'root', name: 'Металлы', parent_id: null}, {id: 'child', name: 'Листы', parent_id: 'root'}]}),
 }));
 
 vi.mock('@/entities/Material', async (importOriginal) => {
@@ -23,9 +23,10 @@ describe('CreateMaterialButton', () => {
   it('creates a material with exact decimal strings', async () => {
     vi.mocked(createMaterial).mockResolvedValue(materialFixture);
     const user = userEvent.setup();
-    renderWithProviders(<CreateMaterialButton />);
+    renderWithProviders(<CreateMaterialButton defaultGroupId="child" />);
 
     await user.click(screen.getByRole('button', {name: 'Создать материал'}));
+    expect(screen.getByLabelText('Группы материала')).toHaveTextContent('Металлы / Листы');
     await user.type(screen.getByLabelText('Название материала'), 'Лист стали');
     await user.click(screen.getByLabelText('Единица измерения'));
     await user.click(screen.getByRole('option', {name: 'кг — килограмм'}));
@@ -41,6 +42,7 @@ describe('CreateMaterialButton', () => {
           unit: 'кг',
           initial_quantity: '10.5',
           price: '125.40',
+          group_ids: ['child'],
         }),
       ),
     );

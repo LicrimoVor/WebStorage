@@ -39,7 +39,10 @@ export function PlanRelease({ plan }: { plan: ProductionPlan }) {
           <p>Осталось по плану: {plan.remaining_quantity}. Версия техпроцесса: {plan.process_version_number}.</p>
           <p>Для сборки материалы и полуфабрикаты должны быть на складе.</p>
           <TextInput label="Количество изделий" value={quantity} onUpdate={setQuantity} />
-          <TextArea placeholder="Номера изделий — каждый с новой строки" value={serials} onUpdate={setSerials} />
+          <label>Номера изделий
+            <TextArea placeholder="Каждый номер с новой строки" value={serials} onUpdate={setSerials} controlProps={{'aria-label': 'Номера изделий'}} />
+          </label>
+          <p>Введено номеров: {numbers.length} из {quantity || '0'}. Для каждого изделия нужен отдельный уникальный номер.</p>
           <ImageUploadField value={photo} onUpdate={setPhoto} alt="Фото выпуска" />
           <TextInput label="Комментарий" value={comment} onUpdate={setComment} />
           {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}

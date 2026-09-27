@@ -1,6 +1,7 @@
 .root {
   display: grid;
-  gap: var(--g-spacing-4);
-  min-width: min(520px, 80vw);
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 

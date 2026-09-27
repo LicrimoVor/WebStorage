@@ -4,15 +4,41 @@
   min-height: 180px;
 }
 
-.createRow,
 .actions {
   display: flex;
   gap: var(--g-spacing-2);
   align-items: center;
 }
 
-.createRow > :first-child {
-  flex: 1;
+.createRow {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  background: var(--g-color-base-generic-ultralight);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.subgroup {
+  margin-left: 24px;
+  border-left: 3px solid var(--g-color-line-brand);
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.actions {
+  flex-wrap: wrap;
 }
 
 .list {
@@ -22,6 +48,7 @@
 
 .group {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--g-spacing-4);
   align-items: center;
@@ -36,6 +63,14 @@
 }
 
 @media (width <= 680px) {
+  .createRow {
+    padding: 12px;
+  }
+
+  .subgroup {
+    margin-left: 12px;
+  }
+
   .createRow,
   .group,
   .actions {

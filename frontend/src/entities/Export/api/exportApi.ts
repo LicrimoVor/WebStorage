@@ -1,4 +1,4 @@
-import {API_URL} from '@/shared/config';
+import {authenticatedFetch} from '@/shared/api/tokens';
 
 import type {ExportDataset, ExportParams} from '../model/types';
 
@@ -30,9 +30,8 @@ export async function downloadExcel(
   dataset: ExportDataset,
   params: ExportParams = {},
 ): Promise<void> {
-  const response = await fetch(
-    `${API_URL}/exports/${dataset}.xlsx${buildQuery(params)}`,
-    {credentials: 'include'},
+  const response = await authenticatedFetch(
+    `/exports/${dataset}.xlsx${buildQuery(params)}`,
   );
   if (!response.ok) {
     let message = 'Не удалось сформировать Excel-файл.';

@@ -387,6 +387,7 @@ export function SalesPage() {
           </strong>
         </Card>
       </div>
+      <p>Продажа передаёт готовые изделия покупателю: остаток склада уменьшается, сумма поступает в доходы. Изготовление изделий регистрируется в планировании на вкладке «Выпуск продукции».</p>
       <Card className={styles.tableCard} view="outlined">
         <div className={styles.filters}>
           <Select

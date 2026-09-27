@@ -14,7 +14,7 @@ import {
 import {getErrorMessage} from '@/shared/api';
 import {normalizeDecimal} from '@/shared/lib';
 
-export function CreateOperationButton() {
+export function CreateOperationButton({defaultGroupId = ""}: {defaultGroupId?: string}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<OperationFormValue>(emptyOperationForm);
   const [validationError, setValidationError] = useState<string>();
@@ -43,6 +43,7 @@ export function CreateOperationButton() {
     }
     mutation.mutate({
       name: form.name.trim(),
+      group_id: form.groupId || null,
       time_norm: form.timeNorm ? normalizeDecimal(form.timeNorm) : null,
       price_per_operation: form.pricePerOperation
         ? normalizeDecimal(form.pricePerOperation)
@@ -51,7 +52,7 @@ export function CreateOperationButton() {
   };
   return (
     <>
-      <Button view="action" size="l" onClick={() => setOpen(true)}>
+      <Button view="action" size="l" onClick={() => {setForm({...emptyOperationForm, groupId: defaultGroupId}); setValidationError(undefined); mutation.reset(); setOpen(true);}}>
         Создать операцию
       </Button>
       <Dialog open={open} onClose={close} onEnterKeyDown={submit} maxWidth="m" fullWidth>

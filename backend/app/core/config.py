@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     public_app_url: str = "http://localhost:5173"
     auth_disabled: bool = False
     session_cookie_secure: bool = False
-    session_ttl_hours: int = 12
+    access_token_ttl_minutes: int = Field(default=15, ge=1, le=60)
+    refresh_token_ttl_days: int = Field(default=30, ge=1, le=90)
     media_root: Path = Path(__file__).resolve().parents[2] / "media"
 
     model_config = SettingsConfigDict(
@@ -26,10 +27,6 @@ class Settings(BaseSettings):
     def validate_security_settings(self) -> "Settings":
         if self.environment == "production" and self.auth_disabled:
             raise ValueError("AUTH_DISABLED must be false in production")
-        if self.environment == "production" and not self.session_cookie_secure:
-            raise ValueError("SESSION_COOKIE_SECURE must be true in production")
-        if not 1 <= self.session_ttl_hours <= 24:
-            raise ValueError("SESSION_TTL_HOURS must be between 1 and 24")
         return self
 
     @property

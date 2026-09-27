@@ -8,6 +8,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit_context import set_actor
+from app.core.config import get_settings
 from app.core.errors import AuthenticationError, ConflictError, DomainValidationError, NotFoundError
 from app.core.security import Actor, Role
 from app.modules.auth.model import AuthSession, UserAccount
@@ -20,6 +21,8 @@ LOCK_DURATION = timedelta(minutes=15)
 @dataclass(frozen=True, slots=True)
 class CreatedSession:
     token: str
+    refresh_token: str
+    refresh_expires_at: datetime
     username: str
     roles: list[Role]
     expires_at: datetime
@@ -77,17 +80,23 @@ async def authenticate(
     user.locked_until = None
     user.last_login_at = now
     raw_token = secrets.token_urlsafe(32)
-    expires_at = now + session_ttl
+    expires_at = now + timedelta(minutes=get_settings().access_token_ttl_minutes)
+    refresh_token = secrets.token_urlsafe(48)
+    refresh_expires_at = now + session_ttl
     auth_session = AuthSession(
         user_id=user.id,
         token_hash=_token_hash(raw_token),
-        expires_at=expires_at,
+        expires_at=refresh_expires_at,
+        refresh_hash=_token_hash(refresh_token),
+        access_expires_at=expires_at,
     )
     session.add(auth_session)
     await session.execute(delete(AuthSession).where(AuthSession.expires_at <= now))
     await session.commit()
     return CreatedSession(
         token=raw_token,
+        refresh_token=refresh_token,
+        refresh_expires_at=refresh_expires_at,
         username=user.username,
         roles=_roles(user.roles),
         expires_at=expires_at,
@@ -112,19 +121,50 @@ async def actor_for_token(session: AsyncSession, token: str | None) -> Actor:
         await session.delete(auth_session)
         await session.commit()
         raise AuthenticationError("Authentication is required")
-    from app.core.config import get_settings
-
-    ttl = timedelta(hours=get_settings().session_ttl_hours)
-    if auth_session.expires_at - now < ttl / 2:
-        auth_session.expires_at = now + ttl
-        await session.commit()
+    if auth_session.access_expires_at is None or auth_session.access_expires_at <= now:
+        raise AuthenticationError("Access token expired")
     return Actor(subject=user.username, roles=frozenset(_roles(user.roles)))
+
+
+async def refresh_session(session: AsyncSession, token: str) -> CreatedSession:
+    row = (
+        await session.execute(
+            select(AuthSession, UserAccount)
+            .join(UserAccount, UserAccount.id == AuthSession.user_id)
+            .where(AuthSession.refresh_hash == _token_hash(token))
+            .with_for_update(of=AuthSession)
+        )
+    ).one_or_none()
+    now = datetime.now(UTC)
+    if row is None:
+        raise AuthenticationError("Invalid refresh token")
+    auth_session, user = row
+    if auth_session.expires_at <= now or not user.active:
+        raise AuthenticationError("Refresh token expired")
+    await set_actor(session, user.username)
+    access = secrets.token_urlsafe(32)
+    auth_session.token_hash = _token_hash(access)
+    auth_session.access_expires_at = now + timedelta(
+        minutes=get_settings().access_token_ttl_minutes
+    )
+    await session.commit()
+    return CreatedSession(
+        token=access,
+        refresh_token=token,
+        username=user.username,
+        roles=_roles(user.roles),
+        expires_at=auth_session.access_expires_at,
+        refresh_expires_at=auth_session.expires_at,
+    )
 
 
 async def revoke_session(session: AsyncSession, token: str | None) -> None:
     if token:
         await session.execute(
-            delete(AuthSession).where(AuthSession.token_hash == _token_hash(token))
+            delete(AuthSession).where(
+                (AuthSession.token_hash == _token_hash(token))
+                | (AuthSession.refresh_hash == _token_hash(token))
+            )
         )
         await session.commit()
 
@@ -182,9 +222,7 @@ async def create_user(
 ) -> UserAccount:
     existing = (
         await session.execute(
-            select(UserAccount.id).where(
-                func.lower(UserAccount.username) == func.lower(username)
-            )
+            select(UserAccount.id).where(func.lower(UserAccount.username) == func.lower(username))
         )
     ).scalar_one_or_none()
     if existing is not None:
@@ -200,9 +238,7 @@ async def create_user(
     return user
 
 
-async def set_user_password(
-    session: AsyncSession, *, username: str, password: str
-) -> None:
+async def set_user_password(session: AsyncSession, *, username: str, password: str) -> None:
     user = (
         await session.execute(
             select(UserAccount)
@@ -221,19 +257,13 @@ async def set_user_password(
 
 async def list_users(session: AsyncSession) -> list[UserAccount]:
     return list(
-        (
-            await session.execute(
-                select(UserAccount).order_by(func.lower(UserAccount.username))
-            )
-        )
+        (await session.execute(select(UserAccount).order_by(func.lower(UserAccount.username))))
         .scalars()
         .all()
     )
 
 
-async def set_user_active(
-    session: AsyncSession, *, username: str, active: bool
-) -> None:
+async def set_user_active(session: AsyncSession, *, username: str, active: bool) -> None:
     user = (
         await session.execute(
             select(UserAccount)

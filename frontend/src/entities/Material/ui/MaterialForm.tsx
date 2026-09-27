@@ -28,6 +28,7 @@ export function MaterialForm({
   return (
     <div className={styles.root}>
       {error ? <Alert theme="danger" message={error} /> : null}
+      <p>Укажите название, единицу измерения и группу. Цену, ссылку и фотографию можно добавить позже.</p>
       <TextInput
         label="Название"
         value={value.name}
@@ -49,7 +50,7 @@ export function MaterialForm({
         label="Группы"
         options={(groupsQuery.data ?? []).map((group) => ({
           value: group.id,
-          content: group.name,
+          content: group.parent_id ? `${groupsQuery.data?.find((g) => g.id === group.parent_id)?.name ?? ''} / ${group.name}` : group.name,
         }))}
         value={value.groupIds}
         onUpdate={(next) => onChange({...value, groupIds: next})}

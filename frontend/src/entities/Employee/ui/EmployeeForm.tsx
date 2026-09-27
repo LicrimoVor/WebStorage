@@ -13,6 +13,7 @@ export function EmployeeForm({value, onChange, error}: EmployeeFormProps) {
   return (
     <div className={styles.root}>
       {error ? <Alert theme="danger" message={error} /> : null}
+      <p>Выберите способ оплаты. Для почасовой оплаты укажите ставку за час; сдельная рассчитывается по выполненным операциям.</p>
       <TextInput
         label="ФИО"
         value={value.fullName}

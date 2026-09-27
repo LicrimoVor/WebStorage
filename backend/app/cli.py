@@ -3,6 +3,7 @@ import asyncio
 import getpass
 import re
 import sys
+import warnings
 
 from app.core.audit_context import AuditContext, audit_context
 from app.core.database import async_session_factory
@@ -23,14 +24,23 @@ def _valid_username(value: str) -> str:
 
 
 def _read_password() -> str:
-    password = getpass.getpass("Password: ")
-    confirmation = getpass.getpass("Repeat password: ")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", getpass.GetPassWarning)
+        try:
+            password = getpass.getpass("New password: ")
+            confirmation = getpass.getpass("Repeat new password: ")
+        except getpass.GetPassWarning as error:
+            raise ValueError(
+                "An interactive terminal is required for hidden password input"
+            ) from error
     if password != confirmation:
         raise ValueError("Passwords do not match")
     if len(password) < 12:
         raise ValueError("Password must contain at least 12 characters")
     if len(password) > 128:
         raise ValueError("Password must contain no more than 128 characters")
+    if not password.strip():
+        raise ValueError("Password must not contain only whitespace")
     return password
 
 
@@ -48,7 +58,15 @@ def _parser() -> argparse.ArgumentParser:
         choices=[role.value for role in Role],
         help="role to grant; may be repeated (defaults to admin)",
     )
-    reset = commands.add_parser("set-password", help="replace a user's password")
+    reset = commands.add_parser(
+        "reset-password",
+        aliases=["set-password"],
+        help="recover access by setting a new password without the old one",
+        description=(
+            "Set a new password, clear the temporary login lock and revoke all sessions. "
+            "The old password is not required. Disabled accounts remain disabled."
+        ),
+    )
     reset.add_argument("username", type=_valid_username)
     disable = commands.add_parser("disable-user", help="disable a user and revoke sessions")
     disable.add_argument("username", type=_valid_username)
@@ -77,7 +95,7 @@ async def _run_command(args: argparse.Namespace) -> None:
                 roles=roles,
             )
             print(f"Created user {user.username} ({', '.join(user.roles)})")
-        elif args.command == "set-password":
+        elif args.command in {"reset-password", "set-password"}:
             await service.set_user_password(
                 session, username=args.username, password=_read_password()
             )
@@ -98,6 +116,9 @@ async def _run_command(args: argparse.Namespace) -> None:
 def main() -> None:
     try:
         asyncio.run(_run(_parser().parse_args()))
+    except (EOFError, KeyboardInterrupt):
+        print("Cancelled.", file=sys.stderr)
+        raise SystemExit(130) from None
     except (ApplicationError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         raise SystemExit(1) from error

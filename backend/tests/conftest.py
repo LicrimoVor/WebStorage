@@ -53,7 +53,7 @@ async def database_engine(migrated_database: None) -> AsyncIterator[AsyncEngine]
                 "production_plan_material_requirements, production_plans, "
                 "technological_process_edges, "
                 "technological_process_nodes, technological_process_versions, "
-                "technological_processes, employees, operations, "
+                "technological_processes, employees, operation_groups, operations, "
                 "manufactured_item_movements, manufactured_items, "
                 "inventory_movements, materials CASCADE"
             )

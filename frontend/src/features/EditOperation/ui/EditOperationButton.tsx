@@ -49,6 +49,7 @@ export function EditOperationButton({operation}: EditOperationButtonProps) {
     }
     mutation.mutate({
       name: form.name.trim(),
+      group_id: form.groupId || null,
       time_norm: form.timeNorm ? normalizeDecimal(form.timeNorm) : null,
       price_per_operation: form.pricePerOperation
         ? normalizeDecimal(form.pricePerOperation)

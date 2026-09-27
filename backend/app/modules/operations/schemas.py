@@ -20,6 +20,7 @@ class OperationSortField(StrEnum):
 
 class OperationCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+    group_id: uuid.UUID | None = None
     time_norm: TimeNorm | None = None
     price_per_operation: Money | None = None
 
@@ -34,6 +35,7 @@ class OperationCreate(BaseModel):
 
 class OperationUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    group_id: uuid.UUID | None = None
     time_norm: TimeNorm | None = None
     price_per_operation: Money | None = None
 
@@ -53,6 +55,7 @@ class OperationRead(BaseModel):
 
     id: uuid.UUID
     name: str
+    group_id: uuid.UUID | None = None
     time_norm: TimeNorm | None
     price_per_operation: Money | None
     required_quantity: Quantity = Decimal("0")
@@ -69,3 +72,17 @@ class OperationList(BaseModel):
     page_size: int
     total: int
     pages: int
+
+
+class OperationGroupWrite(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return OperationCreate.strip_name(value)
+
+
+class OperationGroupRead(OperationGroupWrite):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID

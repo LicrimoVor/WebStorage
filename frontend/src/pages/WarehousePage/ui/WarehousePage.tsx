@@ -15,7 +15,7 @@ export function WarehousePage() {
   return <main className={styles.page}>
     <div className={styles.row}>
       <h1>Склад</h1>
-      <ManageInventoryGroupsButton />
+      <ManageInventoryGroupsButton defaultParentId={groups.data?.find((g) => g.id === params.get('group_id'))?.parent_id || params.get('group_id') || ''} />
       <Button onClick={() => navigate('/warehouse/revision')}>Ревизия</Button>
       <Button view="action" onClick={() => navigate('/warehouse/receipt')}>Приход</Button>
     </div>

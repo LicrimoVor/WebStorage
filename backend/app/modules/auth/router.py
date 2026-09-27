@@ -9,7 +9,7 @@ from app.core.audit_context import set_actor
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.errors import AuthenticationError, DomainValidationError, ProblemDetail
-from app.core.security import Actor, get_current_actor
+from app.core.security import Actor, bearer_token, get_current_actor
 from app.modules.auth import service
 from app.modules.auth.model import UserAccount
 from app.modules.auth.schemas import (
@@ -17,6 +17,8 @@ from app.modules.auth.schemas import (
     AuthSessionRead,
     ChangePasswordRequest,
     LoginRequest,
+    RefreshRequest,
+    TokenPairRead,
 )
 
 router = APIRouter(
@@ -28,31 +30,32 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
-@router.post("/login", response_model=AuthSessionRead, operation_id="login")
-async def login(
-    payload: LoginRequest, response: Response, session: Session
-) -> AuthSessionRead:
-    settings = get_settings()
+def token_response(created: service.CreatedSession) -> TokenPairRead:
+    return TokenPairRead(
+        username=created.username,
+        roles=created.roles,
+        expires_at=created.expires_at,
+        access_token=created.token,
+        refresh_token=created.refresh_token,
+        refresh_expires_at=created.refresh_expires_at,
+    )
+
+
+@router.post("/login", response_model=TokenPairRead, operation_id="login")
+async def login(payload: LoginRequest, session: Session) -> TokenPairRead:
     await set_actor(session, f"login-attempt:{payload.username}")
     created = await service.authenticate(
         session,
         username=payload.username,
         password=payload.password,
-        session_ttl=timedelta(hours=settings.session_ttl_hours),
+        session_ttl=timedelta(days=get_settings().refresh_token_ttl_days),
     )
-    response.set_cookie(
-        key=settings.session_cookie_name,
-        value=created.token,
-        httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="strict",
-        path="/",
-    )
-    return AuthSessionRead(
-        username=created.username,
-        roles=created.roles,
-        expires_at=created.expires_at,
-    )
+    return token_response(created)
+
+
+@router.post("/refresh", response_model=TokenPairRead, operation_id="refreshTokens")
+async def refresh(payload: RefreshRequest, session: Session) -> TokenPairRead:
+    return token_response(await service.refresh_session(session, payload.refresh_token))
 
 
 @router.get("/session", response_model=AuthSessionRead, operation_id="getAuthSession")
@@ -88,7 +91,7 @@ async def change_password(
         raise DomainValidationError("Вход по паролю отключён")
     await service.change_own_password(
         session,
-        token=request.cookies.get(settings.session_cookie_name),
+        token=bearer_token(request),
         current_password=payload.current_password,
         new_password=payload.new_password,
     )
@@ -100,17 +103,16 @@ async def change_password(
     operation_id="logout",
 )
 async def logout(
-    request: Request, response: Response, session: Session,
+    request: Request,
+    response: Response,
+    session: Session,
+    payload: RefreshRequest | None = None,
 ) -> None:
+    await service.revoke_session(session, bearer_token(request))
+    if payload is not None:
+        await service.revoke_session(session, payload.refresh_token)
+    # Remove the cookie left by earlier application versions.
     settings = get_settings()
-    token = request.cookies.get(settings.session_cookie_name)
-    if token:
-        try:
-            actor = await service.actor_for_token(session, token)
-            await set_actor(session, actor.subject)
-        except AuthenticationError:
-            pass  # Logout also clears an already expired or revoked cookie.
-    await service.revoke_session(session, token)
     response.delete_cookie(
         key=settings.session_cookie_name,
         path="/",

@@ -78,8 +78,14 @@ async def list_operations(
     include_archived: bool,
     sort_by: OperationSortField,
     sort_order: SortOrder,
+    group_id: uuid.UUID | None = None,
+    ungrouped: bool = False,
 ) -> tuple[list[tuple[Operation, Decimal, Decimal, Decimal]], int]:
     statement = select(Operation)
+    if group_id is not None:
+        statement = statement.where(Operation.group_id == group_id)
+    if ungrouped:
+        statement = statement.where(Operation.group_id.is_(None))
     if not include_archived:
         statement = statement.where(Operation.archived.is_(False))
     if search:

@@ -49,6 +49,8 @@ class AuthSession(UUIDPrimaryKeyMixin, Base):
         nullable=False,
     )
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    refresh_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    access_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

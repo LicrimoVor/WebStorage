@@ -109,6 +109,7 @@ function EditWorkEntryButton({ entry }: { entry: WorkEntry }) {
       <Dialog
         open={open}
         onClose={close}
+        aria-label={`Изменить работу: ${entry.operation_name}`}
         onEnterKeyDown={submit}
         maxWidth="s"
         fullWidth
@@ -328,6 +329,7 @@ export function WorkHistoryButton({
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
+        aria-label={`Выполненные работы: ${title}`}
         maxWidth="l"
         fullWidth
         contentOverflow="auto"
