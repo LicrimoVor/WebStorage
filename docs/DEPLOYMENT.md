@@ -3,26 +3,28 @@
 После успешного CI для `main` вызывается CD. Повторный запуск: **Actions → CI →
 Run workflow**, ветка `main`. Pull request не запускает деплой.
 
-CD подключается по SSH и под блокировкой `/opt/webstorage/deploy.lock`:
+Все команды находятся непосредственно в `.github/workflows/cd.yml`, без отдельных
+shell-скриптов. CD подключается по SSH и под блокировкой `/opt/webstorage/deploy.lock`:
 
 1. Клонирует репозиторий в `/opt/webstorage/repository` при первом запуске.
 2. Выполняет `git fetch origin main` и переключается на конкретный коммит,
    прошедший CI. Если `main` уже обновилась, старый деплой отменяется. Локальные
    изменения отслеживаемых файлов запрещены; принудительного `reset`/`clean` нет.
 3. Из репозитория собирает backend через `deploy/compose.yml`, затем frontend
-   через `npm ci` и `VITE_API_URL=/api/v1 npm run build`.
+   в одноразовом контейнере `node:24-alpine` через `npm ci` и `npm run build`
+   с `VITE_API_URL=/api/v1`. Результат остаётся в `frontend/dist` репозитория.
 4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
    `alembic upgrade head`. Запускает backend и ожидает healthcheck.
 5. Обновляет статику в `/var/www/html/` и атомарно заменяет `index.html`.
 6. Устанавливает `deploy/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
-   `nginx -t`, перезагружает Nginx и проверяет HTTPS, HTML и авторизацию API.
+   `nginx -t`, перезагружает Nginx и проверяет HTTPS healthcheck backend.
 
 Архивы релизов, `docker save/load`, SCP и Docker Registry больше не используются.
 Сборка выполняется на сервере до остановки работающего backend.
 
 ## Подготовка сервера
 
-Нужны Ubuntu/Debian с systemd, Git, Node.js **24** с npm, Docker Engine и
+Нужны Ubuntu/Debian с systemd, Git, Docker Engine и
 Docker Compose v2.24+ (либо v5), Nginx, rsync, Python 3, curl, flock и Certbot.
 Домен должен указывать на сервер, порты 80/443 и SSH — быть доступны.
 Каталог `/var/www/html/` должен принадлежать только этому приложению.
@@ -30,7 +32,6 @@ Docker Compose v2.24+ (либо v5), Nginx, rsync, Python 3, curl, flock и Cert
 ```bash
 sudo apt-get update
 sudo apt-get install -y git nginx rsync python3 curl certbot openssl util-linux
-node --version
 docker compose version
 sudo install -d -m 700 /opt/webstorage
 sudoedit /opt/webstorage/.env
@@ -38,8 +39,8 @@ sudo chmod 600 /opt/webstorage/.env
 ```
 
 В `.env` скопируйте `deploy/production.env.example`, задайте домен без
-завершающего слеша и параметры PostgreSQL. Node.js 24 и Docker установите
-перед первым запуском CD; `sudo` должен видеть `node`, `npm` и `docker`.
+завершающего слеша и параметры PostgreSQL. Docker установите перед первым
+запуском CD. Node.js и npm на хосте не нужны — их предоставляет контейнер сборки.
 Не меняйте пароль существующей БД только через `.env`: PostgreSQL применяет
 переменные инициализации только к пустому volume.
 
@@ -72,7 +73,7 @@ sudo certbot certonly --standalone -d storage.example.com
 sudo systemctl start nginx
 ```
 
-Скрипт ожидает сертификат и ключ в `/etc/letsencrypt/live/ДОМЕН/`.
+Workflow ожидает сертификат и ключ в `/etc/letsencrypt/live/ДОМЕН/`.
 После деплоя настройте автоматическое обновление сертификата через webroot
 `/var/www/html` и перезагрузку Nginx после обновления. Каталог `.well-known`
 деплой не удаляет.
@@ -119,11 +120,12 @@ volumes БД и фотографий сохраняются. PostgreSQL не п�
 доступен на хосте только по `127.0.0.1:8000`. Nginx обслуживает `/api/`, `/media/`
 и SPA.
 
-В `/opt/webstorage/backups/<commit>-<run>-<attempt>/` сохраняются дамп БД,
-предыдущие HTML и конфигурация Nginx. При ошибке скрипт пытается вернуть прежний
-образ backend, HTML и Nginx. Compose-конфигурация остаётся из нового checkout;
-при несовместимых изменениях потребуется ручное восстановление.
-Миграции автоматически не откатываются. Фотографии хранятся отдельно в volume
+В `/opt/webstorage/backups/<date>-<commit>/` сохраняются дамп БД и предыдущая
+конфигурация Nginx. Если `nginx -t` завершается ошибкой, прежняя конфигурация
+восстанавливается без перезагрузки Nginx. При других ошибках workflow останавливается
+и выводит номер строки. Если ошибка произошла после остановки backend, он может
+остаться остановленным до исправления и повторного деплоя.
+Автоматического отката backend, статики и миграций нет. Фотографии хранятся отдельно в volume
 `webstorage-production_media_data` и требуют отдельного резервного копирования.
 
 Старые хешированные assets сохраняются для открытых вкладок и возврата HTML.
