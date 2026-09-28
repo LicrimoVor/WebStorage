@@ -66,7 +66,7 @@ jobs:
           exec 9>"$base/deploy.lock"
           flock -w 600 9
           export GIT_TERMINAL_PROMPT=0
-          export GIT_SSH_COMMAND='ssh -o BatchMode=yes -o StrictHostKeyChecking=yes'
+          export GIT_SSH_COMMAND='ssh -i /root/.ssh/github_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes'
           if [[ ! -d "$checkout/.git" ]]; then
             git clone --branch main --single-branch "git@github.com:$repository.git" "$checkout"
           fi
