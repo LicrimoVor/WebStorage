@@ -22,7 +22,9 @@ services:
         max-file: "3"
 
   backend:
-    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
+    image: ${BACKEND_IMAGE:-webstorage-backend:local}
+    build:
+      context: ../backend
     restart: unless-stopped
     init: true
     depends_on:

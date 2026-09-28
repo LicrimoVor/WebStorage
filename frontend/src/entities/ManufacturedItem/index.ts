@@ -28,4 +28,3 @@ export type {
   SortOrder,
 } from './model/types';
 export {ManufacturedItemForm} from './ui/ManufacturedItemForm';
-export {ManufacturedItemsTable} from './ui/ManufacturedItemsTable';

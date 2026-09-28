@@ -14,5 +14,10 @@ node_modules/
 dist/
 coverage/
 *.log
+*.tsbuildinfo
+.vite/
+playwright-report/
+test-results/
+Thumbs.db
 .DS_Store
 backend/media/

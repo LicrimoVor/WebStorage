@@ -1,178 +1,135 @@
-# CD: Docker Compose, nginx и статический frontend
+# Деплой из репозитория на сервере
 
-## Что выполняется автоматически
+После успешного CI для `main` вызывается CD. Повторный запуск: **Actions → CI →
+Run workflow**, ветка `main`. Pull request не запускает деплой.
 
-После push в `main` workflow `CI` запускает тесты backend/frontend и проверку
-конфигурации деплоя. Только после их успешного завершения вызывается `CD`.
-Повторный запуск доступен через **Actions → CI → Run workflow**, ветка `main`.
-Pull request не запускает деплой.
+CD подключается по SSH и под блокировкой `/opt/webstorage/deploy.lock`:
 
-CD собирает Linux amd64 образ backend и frontend с `VITE_API_URL=/api/v1`,
-передаёт архив по SSH и проверяет его SHA-256. Docker Registry не требуется.
-На сервере скрипт:
+1. Клонирует репозиторий в `/opt/webstorage/repository` при первом запуске.
+2. Выполняет `git fetch origin main` и переключается на конкретный коммит,
+   прошедший CI. Если `main` уже обновилась, старый деплой отменяется. Локальные
+   изменения отслеживаемых файлов запрещены; принудительного `reset`/`clean` нет.
+3. Из репозитория собирает backend через `deploy/compose.yml`, затем frontend
+   через `npm ci` и `VITE_API_URL=/api/v1 npm run build`.
+4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
+   `alembic upgrade head`. Запускает backend и ожидает healthcheck.
+5. Обновляет статику в `/var/www/html/` и атомарно заменяет `index.html`.
+6. Устанавливает `deploy/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
+   `nginx -t`, перезагружает Nginx и проверяет HTTPS, HTML и авторизацию API.
 
-1. Загружает образ и запускает PostgreSQL через `deploy/compose.yml`.
-2. Останавливает backend на время обновления и создаёт `pg_dump` БД.
-3. Применяет `alembic upgrade head` отдельным контейнером.
-4. Запускает backend и ждёт успешной healthcheck.
-5. Копирует статику в `/var/www/html/`, заменяя `index.html` атомарно.
-6. Проверяет и перезагружает nginx; проверяет HTTPS, API и отдачу нового HTML.
+Архивы релизов, `docker save/load`, SCP и Docker Registry больше не используются.
+Сборка выполняется на сервере до остановки работающего backend.
 
-Деплои выполняются последовательно; обновление предполагает короткий перерыв
-в доступности API. Данные БД и фотографии сохраняются в Docker volumes.
-PostgreSQL не публикует порт, API слушает только `127.0.0.1:8000` хоста.
-nginx работает на хосте, обслуживает SPA и проксирует `/api/`, `/media/`.
+## Подготовка сервера
 
-## Один раз подготовить сервер
-
-Расчёт на отдельный сервер Ubuntu/Debian **amd64** с systemd, Docker Engine
-и Docker Compose v2.24+ (либо v5). `/var/www/html/` предназначен этому приложению.
-Не используйте этот каталог для другого сайта. DNS домена должен указывать
-на сервер; порты 80/443 и SSH должны быть доступны.
-
-Установить nginx и утилиты (Docker Engine и Compose должны быть установлены):
+Нужны Ubuntu/Debian с systemd, Git, Node.js **24** с npm, Docker Engine и
+Docker Compose v2.24+ (либо v5), Nginx, rsync, Python 3, curl, flock и Certbot.
+Домен должен указывать на сервер, порты 80/443 и SSH — быть доступны.
+Каталог `/var/www/html/` должен принадлежать только этому приложению.
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y nginx rsync python3 curl certbot openssl
+sudo apt-get install -y git nginx rsync python3 curl certbot openssl util-linux
+node --version
 docker compose version
 sudo install -d -m 700 /opt/webstorage
-```
-
-Скопировать содержимое `deploy/production.env.example` в `/opt/webstorage/.env`:
-
-```bash
 sudoedit /opt/webstorage/.env
 sudo chmod 600 /opt/webstorage/.env
 ```
 
-Задать `PUBLIC_APP_URL=https://ваш-домен` **без завершающего слеша**, а также
-`POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`. Пароль сгенерировать один раз
-через `openssl rand -hex 32`. Не менять пароль существующей БД простым изменением
-`.env`: PostgreSQL применяет переменные инициализации только к пустому volume.
-Секреты БД остаются на сервере и не входят в архив/образ. `DATABASE_URL`
-контейнер собирает самостоятельно, корректно кодируя специальные символы.
+В `.env` скопируйте `deploy/production.env.example`, задайте домен без
+завершающего слеша и параметры PostgreSQL. Node.js 24 и Docker установите
+перед первым запуском CD; `sudo` должен видеть `node`, `npm` и `docker`.
+Не меняйте пароль существующей БД только через `.env`: PostgreSQL применяет
+переменные инициализации только к пустому volume.
 
-Получить сертификат для домена. На свежем сервере можно использовать standalone:
+### Доступ сервера к GitHub
+
+Git выполняется от **root** через `sudo`. Создайте отдельный SSH-ключ для
+чтения репозитория, добавьте публичную часть в **Repository → Settings →
+Deploy keys** без права записи. Приватный ключ разместите в `/root/.ssh/`
+и настройте его для `github.com` в `/root/.ssh/config`.
+Добавьте проверенный SSH-ключ GitHub в `/root/.ssh/known_hosts`.
+Это отдельный ключ, не `DEPLOY_SSH_KEY`, которым Actions входит на сервер.
+
+Проверка от root (подставьте владельца и имя репозитория):
+
+```bash
+sudo git ls-remote git@github.com:OWNER/REPOSITORY.git refs/heads/main
+```
+
+На повторных деплоях используется существующий checkout с таким же SSH URL
+в `origin`. Не редактируйте файлы приложения на сервере: меняйте их через Git.
+Секреты остаются в `/opt/webstorage/.env`, вне checkout.
+
+### HTTPS и SSH
+
+До первого деплоя получите сертификат для домена из `PUBLIC_APP_URL`:
 
 ```bash
 sudo systemctl stop nginx
-sudo certbot certonly --standalone --cert-name storage.example.com \
-  -d storage.example.com --email admin@example.com --agree-tos --no-eff-email
+sudo certbot certonly --standalone -d storage.example.com
 sudo systemctl start nginx
 ```
 
-Заменить домен и email своими. Скрипт ожидает сертификат и ключ в
-`/etc/letsencrypt/live/ДОМЕН/`. После первого деплоя перевести обновление
-сертификата на webroot, чтобы оно не требовало остановки nginx:
+Скрипт ожидает сертификат и ключ в `/etc/letsencrypt/live/ДОМЕН/`.
+После деплоя настройте автоматическое обновление сертификата через webroot
+`/var/www/html` и перезагрузку Nginx после обновления. Каталог `.well-known`
+деплой не удаляет.
 
-Команда `reconfigure` требует Certbot 2.3+; для старых версий порядок изменения
-параметров приведён в [официальной инструкции Certbot](https://eff-certbot.readthedocs.io/en/stable/using.html#modifying-the-renewal-configuration-of-existing-certificates).
-
-```bash
-sudo certbot reconfigure --cert-name storage.example.com \
-  --webroot --webroot-path /var/www/html
-sudo install -d /etc/letsencrypt/renewal-hooks/deploy
-printf '#!/bin/sh\nsystemctl reload nginx\n' | \
-  sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx >/dev/null
-sudo chmod 755 /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
-sudo systemctl enable --now certbot.timer
-sudo certbot renew --dry-run
-```
-
-Для CD нужен SSH-пользователь с ключом и правом `sudo -n bash` без пароля.
-Это административный доступ: используйте отдельную учётную запись деплоя.
-Пример записи в `sudo visudo -f /etc/sudoers.d/webstorage-deploy`:
+SSH-пользователю CD нужны ключ в `~/.ssh/authorized_keys` и возможность
+`sudo -n bash` без пароля. Пример для отдельного пользователя `deploy`:
 
 ```text
 deploy ALL=(root) NOPASSWD: /usr/bin/bash
 ```
 
-Публичную часть SSH-ключа добавить этому пользователю в `~/.ssh/authorized_keys`.
-Проверить вход с ключом и `sudo -n /usr/bin/bash -c 'id -u'`: результат `0`.
-
-## GitHub Environment
-
-Создать Environment **production** в Settings → Environments и добавить Secrets:
+## GitHub Environment production
 
 | Secret | Значение |
 | --- | --- |
-| `DEPLOY_HOST` | IPv4 или DNS SSH-сервера |
-| `DEPLOY_USER` | SSH-пользователь, например `deploy` |
-| `DEPLOY_SSH_KEY` | Приватный SSH-ключ целиком, без passphrase |
-| `DEPLOY_KNOWN_HOSTS` | Проверенная строка ключа SSH-хоста в формате known_hosts |
+| `DEPLOY_HOST` | IPv4 или DNS сервера |
+| `DEPLOY_USER` | SSH-пользователь |
+| `DEPLOY_SSH_KEY` | Приватный ключ входа на сервер, без passphrase |
+| `DEPLOY_KNOWN_HOSTS` | Проверенный SSH-ключ сервера в формате known_hosts |
 
-При нестандартном SSH-порте добавить Environment Variable `DEPLOY_PORT`.
-По умолчанию используется `22`. Для нестандартного порта запись known_hosts
-должна иметь вид `[host]:port`. Полученный `ssh-keyscan -p PORT HOST` ключ
-сверить с отпечатком через консоль сервера перед сохранением; CD не отключает
-проверку ключа хоста. Добавьте ограничения Environment на ветку `main`.
+Variable `DEPLOY_PORT` необязательна, по умолчанию `22`. Для другого порта
+запись known_hosts должна содержать `[host]:port`. Ограничьте Environment веткой `main`.
 
-После сохранения параметров запустить CI для `main`. Создать первого пользователя
-после успешного первого деплоя на сервере:
+## Управление приложением
+
+Из root-shell:
 
 ```bash
-sudo bash
-cd /opt/webstorage
-export BACKEND_IMAGE="$(cat current/image)"
-docker compose --env-file .env -f current/compose.yml run --rm --no-deps backend \
-  python -m app.cli create-user admin
+cd /opt/webstorage/repository
+docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml ps
+docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml logs --tail=100 backend
+docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml run --rm --no-deps backend python -m app.cli create-user admin
+docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml run --rm --no-deps backend python -m app.cli reset-password admin
 ```
 
-Пароль вводится интерактивно. Приложение доступно по `PUBLIC_APP_URL`.
-Для этих изменений дополнительная миграция схемы не создаётся; CD применяет
-все имеющиеся миграции проекта.
+Пароли вводятся интерактивно. `reset-password` снимает временную блокировку
+и отзывает сессии, но не активирует отключённого пользователя. Для просмотра
+логинов используйте `list-users`.
 
-## Диагностика и восстановление
+## Восстановление и переход со старого CD
 
-### Восстановление пароля
+Имя Compose-проекта остаётся `webstorage-production`, поэтому существующие
+volumes БД и фотографий сохраняются. PostgreSQL не публикует порт, backend
+доступен на хосте только по `127.0.0.1:8000`. Nginx обслуживает `/api/`, `/media/`
+и SPA.
 
-На сервере выполните в интерактивном терминале:
-
-```bash
-sudo bash
-cd /opt/webstorage
-export BACKEND_IMAGE="$(cat current/image)"
-docker compose --env-file .env -f current/compose.yml run --rm --no-deps backend \
-  python -m app.cli reset-password admin
-```
-
-Замените `admin` логином пользователя. Введите новый пароль дважды (12–128
-символов); старый пароль не требуется. Пароль не передаётся аргументом команды
-и не выводится в терминал. При несовпадении ввода изменения не сохраняются.
-Для отмены нажмите Ctrl+C.
-
-Команда снимает временную блокировку и отзывает все сессии пользователя.
-Если учётная запись отключена администратором, она остаётся отключённой.
-Для просмотра логинов замените `reset-password admin` на `list-users`.
-
-Здесь используется `compose run`, чтобы Docker entrypoint настроил подключение
-к БД перед запуском CLI. PostgreSQL должен быть запущен; дополнительные
-контейнеры backend не остаются после завершения команды.
-
-### Логи и релизы
-
-Релизы: `/opt/webstorage/releases/<commit>-<run>-<attempt>`; текущий релиз:
-`/opt/webstorage/current`; резервные копии: `/opt/webstorage/backups/*.dump`.
-Для просмотра состояния и логов из root-shell:
-
-```bash
-cd /opt/webstorage
-export BACKEND_IMAGE="$(cat current/image)"
-docker compose --env-file .env -f current/compose.yml ps
-docker compose --env-file .env -f current/compose.yml logs --tail=100 backend
-nginx -t
-```
-
-При ошибке скрипт пытается вернуть прежние backend, HTML и nginx. Миграции
-автоматически не откатываются: совместимость прежнего backend с новой схемой
-не гарантируется. Если схема несовместима, требуется ручное восстановление
-из указанного в логе дампа. Docker volumes не удаляются ни при деплое,
-ни при ошибке. Дампы содержат БД, фотографии находятся в отдельном volume
+В `/opt/webstorage/backups/<commit>-<run>-<attempt>/` сохраняются дамп БД,
+предыдущие HTML и конфигурация Nginx. При ошибке скрипт пытается вернуть прежний
+образ backend, HTML и Nginx. Compose-конфигурация остаётся из нового checkout;
+при несовместимых изменениях потребуется ручное восстановление.
+Миграции автоматически не откатываются. Фотографии хранятся отдельно в volume
 `webstorage-production_media_data` и требуют отдельного резервного копирования.
 
-Старые образы, релизы, дампы и хешированные `/var/www/html/assets/` намеренно
-сохраняются для восстановления и открытых вкладок браузера. Настройте их
-периодическую ротацию с учётом требуемого срока хранения; текущий и резервный
-релизы/образы должны оставаться доступными. Не запускайте `compose down -v`
-для production.
+Старые хешированные assets сохраняются для открытых вкладок и возврата HTML.
+Настройте ротацию assets, дампов и старых Docker-образов. Не выполняйте
+`compose down -v` в production.
+
+Старые `/opt/webstorage/releases` и ссылка `current` больше не используются.
+После успешного перехода их можно удалить вручную, сохранив необходимые
+резервные копии. CD не удаляет существующие серверные данные автоматически.

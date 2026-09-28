@@ -7,7 +7,11 @@ export POSTGRES_PASSWORD='cd-check@%:password'
 compose() {
     docker compose --project-name webstorage-cd-check \
         --env-file "$root/deploy/production.env.example" \
-        --file "$root/deploy/compose.yml" --file "$root/deploy/compose.check.yml" "$@"
+        --file "$root/deploy/compose.yml" --file - "$@" <<'OVERRIDE'
+services:
+  backend:
+    ports: !reset []
+OVERRIDE
 }
 # Only this isolated test project's volumes are removed.
 trap 'compose down --volumes --remove-orphans' EXIT
