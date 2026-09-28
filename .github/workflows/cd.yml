@@ -44,14 +44,23 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           set -euo pipefail
           test -n "$SSH_PRIVATE_KEY"
           test -n "$SSH_KNOWN_HOSTS"
+
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          # Проверка, что ключ читается и соответствует ожидаемому формату
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
       - name: Upload and deploy through SSH
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
