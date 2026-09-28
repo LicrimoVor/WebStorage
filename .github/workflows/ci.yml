@@ -143,6 +143,16 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+        env:
+          VITE_API_URL: /api/v1
+      - name: Archive frontend
+        run: tar -czf frontend.tar.gz -C frontend/dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
+          path: frontend.tar.gz
+          retention-days: 7
+          if-no-files-found: error
 
   deploy:
     needs: [backend, frontend, deployment-config]

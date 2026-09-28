@@ -17,116 +17,101 @@ jobs:
     environment: production
     timeout-minutes: 30
     steps:
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          test -n "$SSH_PRIVATE_KEY"
-          test -n "$SSH_KNOWN_HOSTS"
+      - name: Download frontend archive from CI
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-${{ github.sha }}
 
-          install -d -m 700 ~/.ssh
-
-          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
-          # Проверка, что ключ читается и соответствует ожидаемому формату
-          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
-      - name: Update server checkout and deploy
+      - name: Connect to server
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          set -euo pipefail
-          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
-          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
-          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
-          [[ "$GITHUB_REPOSITORY" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]
-          ssh -i "$HOME/.ssh/deploy_key" -p "$DEPLOY_PORT" \
-            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "sudo -n bash -s -- '$GITHUB_REPOSITORY' '$GITHUB_SHA'" <<'REMOTE'
-          set -Eeuo pipefail
-          umask 077
-          repository=$1
-          revision=$2
-          trap 'printf "Deployment failed at line %s (exit %s)\n" "$LINENO" "$?" >&2' ERR
-          base=/opt/webstorage
-          checkout="$base/repository"
-          install -d -m 700 "$base"
-          exec 9>"$base/deploy.lock"
-          flock -w 600 9
-          export GIT_TERMINAL_PROMPT=0
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host production
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+          EOF
+          ssh production 'sudo -n bash -c "echo Connected"'
+
+      - name: Update repository
+        run: |
+          ssh production "sudo -n bash -se -- '$GITHUB_REPOSITORY' '$GITHUB_SHA'" <<'REMOTE'
           export GIT_SSH_COMMAND='ssh -i /root/.ssh/github_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes'
-          if [[ ! -d "$checkout/.git" ]]; then
-            git clone --branch main --single-branch "git@github.com:$repository.git" "$checkout"
+          install -d -m 700 /opt/webstorage
+          if [ ! -d /opt/webstorage/repository/.git ]; then
+            git clone --branch main "git@github.com:$1.git" /opt/webstorage/repository
           fi
-          cd "$checkout"
-          [[ "$(git remote get-url origin)" == "git@github.com:$repository.git" ]]
-          git diff --quiet && git diff --cached --quiet || {
-            echo "Server checkout has local changes; commit or remove them before deploying." >&2
-            exit 1
-          }
-          git fetch --prune origin main
-          [[ "$(git rev-parse FETCH_HEAD)" == "$revision" ]] || {
-            echo 'A newer main revision exists; refusing to deploy an outdated commit.' >&2
-            exit 1
-          }
-          git checkout --detach "$revision"
-          echo 'Build backend and frontend'
-          [[ -f "$base/.env" ]] || { echo "Missing $base/.env" >&2; exit 1; }
-          export COMPOSE_FILE="$checkout/deploy/compose.yml"
-          export COMPOSE_PROJECT_NAME=webstorage-production
-          export COMPOSE_ENV_FILES="$base/.env"
-          export BACKEND_IMAGE=webstorage-backend:local
-          docker compose config --quiet
-          domain=$(docker compose config --format json | python3 -c 'import json,re,sys; origin=json.load(sys.stdin)["services"]["backend"]["environment"]["PUBLIC_APP_URL"]; match=re.fullmatch(r"https://([a-zA-Z0-9.-]+)", origin); sys.exit("PUBLIC_APP_URL must be an HTTPS origin without a trailing slash") if not match else print(match[1])')
-          [[ -r /etc/letsencrypt/live/$domain/fullchain.pem && -r /etc/letsencrypt/live/$domain/privkey.pem ]] || {
-            echo "Missing HTTPS certificate for $domain" >&2; exit 1;
-          }
-          docker compose build --pull backend
-          docker run --rm --mount "type=bind,src=$checkout/frontend,dst=/app" \
-            --workdir /app --env VITE_API_URL=/api/v1 node:24-alpine \
-            sh -c 'npm ci && npm run build'
-
-          echo 'Back up database, migrate and start containers'
-          backup="$base/backups/$(date -u +%Y%m%dT%H%M%S)-$revision"
-          install -d -m 700 "$backup"
-          docker compose up -d --wait --wait-timeout 120 database
-          docker compose stop backend
-          docker compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup/database.dump"
-          docker compose run --rm --no-deps backend alembic upgrade head
-          docker compose up -d --no-build --wait --wait-timeout 120
-
-          echo 'Update Nginx and static files'
-          site=/etc/nginx/sites-available/webstorage
-          enabled=/etc/nginx/sites-enabled/webstorage
-          install -d -m 755 /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
-          [[ ! -f $site ]] || cp "$site" "$backup/nginx.conf"
-          sed "s/s278424.hostiman.com/$domain/g" deploy/nginx.conf > "$site"
-          chmod 644 "$site"
-          ln -sfn "$site" "$enabled"
-          if ! nginx -t; then
-            if [[ -f $backup/nginx.conf ]]; then
-              install -m 644 "$backup/nginx.conf" "$site"
-            else
-              rm -f "$enabled" "$site"
-            fi
+          cd /opt/webstorage/repository
+          git diff --exit-code
+          git diff --cached --exit-code
+          git fetch origin main
+          if [ "$(git rev-parse FETCH_HEAD)" != "$2" ]; then
+            echo 'main has changed; deploy the latest CI run.' >&2
             exit 1
           fi
-          rsync -rlt --chmod=D755,F644 --exclude=index.html frontend/dist/ /var/www/html/
-          install -m 644 frontend/dist/index.html /var/www/html/.webstorage-index
-          mv -f /var/www/html/.webstorage-index /var/www/html/index.html
-          systemctl reload-or-restart nginx
-          curl --fail --silent --show-error --resolve "$domain:443:127.0.0.1" "https://$domain/health/live"
-          echo "Deployed $revision"
+          git checkout --detach "$2"
           REMOTE
+
+      - name: Start Docker Compose
+        run: |
+          ssh production 'sudo -n bash -se' <<'REMOTE'
+          cd /opt/webstorage/repository
+          export COMPOSE_FILE=deploy/compose.yml
+          export COMPOSE_ENV_FILES=/opt/webstorage/.env
+          export COMPOSE_PROJECT_NAME=webstorage-production
+          export BACKEND_IMAGE=webstorage-backend:local
+          docker compose build --pull backend
+          docker compose up -d --wait database
+          docker compose stop backend
+          install -d -m 700 /opt/webstorage/backups
+          umask 077
+          docker compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "/opt/webstorage/backups/$(date -u +%Y%m%dT%H%M%S).dump"
+          docker compose run --rm --no-deps backend alembic upgrade head
+          docker compose up -d --wait --wait-timeout 120
+          REMOTE
+
+      - name: Update Nginx config
+        run: |
+          ssh production 'sudo -n bash -se' <<'REMOTE'
+          set -o pipefail
+          cd /opt/webstorage/repository
+          domain=$(docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml config --format json | python3 -c 'import json,re,sys; origin=json.load(sys.stdin)["services"]["backend"]["environment"]["PUBLIC_APP_URL"]; match=re.fullmatch(r"https://([a-zA-Z0-9.-]+)", origin); sys.exit("Invalid PUBLIC_APP_URL") if not match else print(match[1])')
+          install -d /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/html
+          sed "s/s278424.hostiman.com/$domain/g" deploy/nginx.conf > /etc/nginx/sites-available/webstorage
+          chmod 644 /etc/nginx/sites-available/webstorage
+          ln -sfn /etc/nginx/sites-available/webstorage /etc/nginx/sites-enabled/webstorage
+          nginx -t
+          systemctl reload-or-restart nginx
+          REMOTE
+
+      - name: Upload and extract frontend archive
+        run: |
+          ssh production 'sudo -n bash -c "cat > /opt/webstorage/frontend.tar.gz"' < frontend.tar.gz
+          ssh production 'sudo -n bash -se' <<'REMOTE'
+          staging=$(mktemp -d /opt/webstorage/frontend.XXXXXX)
+          trap 'rm -rf -- "$staging" /opt/webstorage/frontend.tar.gz' EXIT
+          tar -xzf /opt/webstorage/frontend.tar.gz -C "$staging"
+          rsync -rlt --chmod=D755,F644 --exclude=index.html "$staging/" /var/www/html/
+          install -m 644 "$staging/index.html" /var/www/html/.webstorage-index
+          mv -f /var/www/html/.webstorage-index /var/www/html/index.html
+          REMOTE
+
       - name: Remove SSH key
         if: always()
         run: rm -f ~/.ssh/deploy_key

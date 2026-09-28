@@ -4,28 +4,29 @@
 Run workflow**, ветка `main`. Pull request не запускает деплой.
 
 Все команды находятся непосредственно в `.github/workflows/cd.yml`, без отдельных
-shell-скриптов. CD подключается по SSH и под блокировкой `/opt/webstorage/deploy.lock`:
+shell-скриптов. GitHub Actions выполняет деплои последовательно:
 
-1. Клонирует репозиторий в `/opt/webstorage/repository` при первом запуске.
+1. Скачивает архив frontend из артефактов текущего CI и проверяет подключение по SSH.
+   CI собирает frontend с `VITE_API_URL=/api/v1` и сохраняет `frontend.tar.gz`.
 2. Выполняет `git fetch origin main` и переключается на конкретный коммит,
    прошедший CI. Если `main` уже обновилась, старый деплой отменяется. Локальные
    изменения отслеживаемых файлов запрещены; принудительного `reset`/`clean` нет.
-3. Из репозитория собирает backend через `deploy/compose.yml`, затем frontend
-   в одноразовом контейнере `node:24-alpine` через `npm ci` и `npm run build`
-   с `VITE_API_URL=/api/v1`. Результат остаётся в `frontend/dist` репозитория.
+   При первом запуске клонирует репозиторий в `/opt/webstorage/repository`.
+3. Из репозитория собирает backend через `deploy/compose.yml`.
 4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
    `alembic upgrade head`. Запускает backend и ожидает healthcheck.
-5. Обновляет статику в `/var/www/html/` и атомарно заменяет `index.html`.
-6. Устанавливает `deploy/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
-   `nginx -t`, перезагружает Nginx и проверяет HTTPS healthcheck backend.
+5. Устанавливает `deploy/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
+   `nginx -t` и перезагружает Nginx.
+6. Передаёт архив frontend по SSH, распаковывает во временную папку, обновляет
+   статику в `/var/www/html/` и атомарно заменяет `index.html`.
 
-Архивы релизов, `docker save/load`, SCP и Docker Registry больше не используются.
-Сборка выполняется на сервере до остановки работающего backend.
+Frontend и backend соответствуют одному коммиту. Frontend собирается в GitHub Actions,
+backend — на сервере до остановки работающего контейнера. Docker Registry не нужен.
 
 ## Подготовка сервера
 
 Нужны Ubuntu/Debian с systemd, Git, Docker Engine и
-Docker Compose v2.24+ (либо v5), Nginx, rsync, Python 3, curl, flock и Certbot.
+Docker Compose v2.24+ (либо v5), Nginx, rsync, Python 3, tar и Certbot.
 Домен должен указывать на сервер, порты 80/443 и SSH — быть доступны.
 Каталог `/var/www/html/` должен принадлежать только этому приложению.
 
@@ -40,7 +41,7 @@ sudo chmod 600 /opt/webstorage/.env
 
 В `.env` скопируйте `deploy/production.env.example`, задайте домен без
 завершающего слеша и параметры PostgreSQL. Docker установите перед первым
-запуском CD. Node.js и npm на хосте не нужны — их предоставляет контейнер сборки.
+запуском CD. Node.js и npm на сервере не нужны: frontend приходит готовым архивом.
 Не меняйте пароль существующей БД только через `.env`: PostgreSQL применяет
 переменные инициализации только к пустому volume.
 
@@ -48,15 +49,15 @@ sudo chmod 600 /opt/webstorage/.env
 
 Git выполняется от **root** через `sudo`. Создайте отдельный SSH-ключ для
 чтения репозитория, добавьте публичную часть в **Repository → Settings →
-Deploy keys** без права записи. Приватный ключ разместите в `/root/.ssh/`
-и настройте его для `github.com` в `/root/.ssh/config`.
+Deploy keys** без права записи. Приватный ключ разместите в `/root/.ssh/github_deploy`
+с правами `600`.
 Добавьте проверенный SSH-ключ GitHub в `/root/.ssh/known_hosts`.
 Это отдельный ключ, не `DEPLOY_SSH_KEY`, которым Actions входит на сервер.
 
 Проверка от root (подставьте владельца и имя репозитория):
 
 ```bash
-sudo git ls-remote git@github.com:OWNER/REPOSITORY.git refs/heads/main
+sudo env GIT_SSH_COMMAND='ssh -i /root/.ssh/github_deploy -o IdentitiesOnly=yes' git ls-remote git@github.com:OWNER/REPOSITORY.git refs/heads/main
 ```
 
 На повторных деплоях используется существующий checkout с таким же SSH URL
@@ -120,10 +121,10 @@ volumes БД и фотографий сохраняются. PostgreSQL не п�
 доступен на хосте только по `127.0.0.1:8000`. Nginx обслуживает `/api/`, `/media/`
 и SPA.
 
-В `/opt/webstorage/backups/<date>-<commit>/` сохраняются дамп БД и предыдущая
-конфигурация Nginx. Если `nginx -t` завершается ошибкой, прежняя конфигурация
-восстанавливается без перезагрузки Nginx. При других ошибках workflow останавливается
-и выводит номер строки. Если ошибка произошла после остановки backend, он может
+В `/opt/webstorage/backups/<date>.dump` сохраняется дамп БД перед миграциями.
+При ошибке workflow останавливается на соответствующем шаге.
+Если `nginx -t` завершается ошибкой, Nginx не перезагружается.
+Если ошибка произошла после остановки backend, он может
 остаться остановленным до исправления и повторного деплоя.
 Автоматического отката backend, статики и миграций нет. Фотографии хранятся отдельно в volume
 `webstorage-production_media_data` и требуют отдельного резервного копирования.
