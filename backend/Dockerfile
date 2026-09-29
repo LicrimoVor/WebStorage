@@ -17,6 +17,9 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY docker-entrypoint.py ./
 
+# COPY preserves host permissions; server checkouts may use umask 077.
+RUN chmod -R a+rX /app
+
 USER webstorage
 EXPOSE 8000
 ENTRYPOINT ["python", "/app/docker-entrypoint.py"]
