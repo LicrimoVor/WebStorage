@@ -23,5 +23,8 @@ export function usePageMetadata(title: string, description: string) {
     setMeta('meta[property="og:description"]', 'property', 'og:description', description);
     setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', fullTitle);
     setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description);
+    setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary');
+    setMeta('meta[property="og:locale"]', 'property', 'og:locale', 'ru_RU');
+    setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', APP_NAME);
   }, [description, title]);
 }

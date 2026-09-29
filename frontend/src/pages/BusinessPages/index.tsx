@@ -1,7 +1,10 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import { isDecimal } from '@/shared/lib';
 import { useProductionPlansQuery } from '@/entities/ProductionPlan';
 import { PlanRelease } from './PlanRelease';
-import { Alert, Button, Select, TextInput, TextArea } from '@gravity-ui/uikit';
+import { Alert, Button, Icon, Select, TextInput, TextArea } from '@gravity-ui/uikit';
+import {ClockArrowRotateLeft, Persons} from '@gravity-ui/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -20,6 +23,8 @@ const isMoney = (value: string) => /^\d+(?:[.,]\d{1,2})?$/.test(value.trim());
 interface Unit { issued_for_repair_id: string | null; id: string; serial_number: string; product_id: string; photo: string | null; sale_id: string | null; created_at: string }
 
 export function SettingsPage() {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const sources = useFundingSources();
   const client = useQueryClient();
   const [name, setName] = useState('');
@@ -35,7 +40,7 @@ export function SettingsPage() {
       {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
       {sources.data?.map((source) => <div key={source.id}>{source.name}</div>)}
     </section>
-    <Link to="/settings/audit">Журнал событий</Link>
+    {admin && <div className={styles.row}><Button component={Link} to="/settings/users" view="outlined" size="l"><Icon data={Persons} size={20} />Пользователи</Button><Button component={Link} to="/settings/audit" view="outlined" size="l"><Icon data={ClockArrowRotateLeft} size={20} />Журнал событий</Button></div>}
   </main>;
 }
 

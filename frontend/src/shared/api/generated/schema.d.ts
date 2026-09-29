@@ -192,6 +192,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["listUsers"];
+        put?: never;
+        /** Create User */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update User */
+        put: operations["updateUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/materials": {
         parameters: {
             query?: never;
@@ -1422,6 +1457,8 @@ export interface components {
             roles: components["schemas"]["Role"][];
             /** Expires At */
             expires_at?: string | null;
+            /** Permissions */
+            permissions?: components["schemas"]["Section"][];
         };
         /**
          * AvailabilityFilter
@@ -3530,7 +3567,7 @@ export interface components {
          * Role
          * @enum {string}
          */
-        Role: "admin" | "production" | "warehouse" | "manager" | "finance";
+        Role: "user" | "admin" | "production" | "warehouse" | "manager" | "finance";
         /** SaleCreate */
         SaleCreate: {
             /** Serial Numbers */
@@ -3690,6 +3727,11 @@ export interface components {
             revenue: string;
         };
         /**
+         * Section
+         * @enum {string}
+         */
+        Section: "planning" | "processes" | "warehouse" | "operations" | "personnel" | "repairs" | "sales" | "finance";
+        /**
          * SortOrder
          * @enum {string}
          */
@@ -3813,6 +3855,8 @@ export interface components {
             roles: components["schemas"]["Role"][];
             /** Expires At */
             expires_at?: string | null;
+            /** Permissions */
+            permissions?: components["schemas"]["Section"][];
             /** Access Token */
             access_token: string;
             /** Refresh Token */
@@ -3827,6 +3871,48 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** UserRead */
+        UserRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Is Admin */
+            is_admin: boolean;
+            /** Active */
+            active: boolean;
+            /** Permissions */
+            permissions: components["schemas"]["Section"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Login At */
+            last_login_at: string | null;
+        };
+        /** UserWrite */
+        UserWrite: {
+            /** Username */
+            username: string;
+            /**
+             * Is Admin
+             * @default false
+             */
+            is_admin: boolean;
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /** Permissions */
+            permissions?: components["schemas"]["Section"][];
+            /** Password */
+            password?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -4450,6 +4536,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"][];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRead"];
                 };
             };
             /** @description Validation Error */

@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import { login, type AuthSession } from "@/entities/Auth";
 import { ApiError, getErrorMessage } from "@/shared/api";
 import { usePageMetadata } from "@/shared/lib";
+import {PageHelp} from '@/shared/ui/PageHelp';
 
 import styles from "./LoginPage.module.scss";
 
@@ -43,6 +44,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
           <Icon data={Lock} size={28} />
         </div>
         <div className={styles.heading}>
+          <PageHelp path="/login" />
           <Text as="h1" variant="display-1">
             Вход в Веб-склад
           </Text>

@@ -8,6 +8,7 @@ import {getErrorMessage} from '@/shared/api';
 import styles from './ProfilePage.module.scss';
 
 const roleLabels: Record<AuthProfile['roles'][number], string> = {
+  user: 'Пользователь',
   admin: 'Администратор',
   production: 'Производство',
   warehouse: 'Склад',

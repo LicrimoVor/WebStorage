@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.access import Section
 from app.core.security import Role
 
 
@@ -22,6 +23,7 @@ class AuthSessionRead(BaseModel):
     username: str
     roles: list[Role]
     expires_at: datetime | None = None
+    permissions: list[Section] = Field(default_factory=list)
 
 
 class AuthProfileRead(BaseModel):

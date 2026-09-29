@@ -3,6 +3,8 @@
   "short_name": "Веб-склад",
   "description": "Управление складом, производством и технологическими процессами.",
   "lang": "ru",
+  "id": "/",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#101217",

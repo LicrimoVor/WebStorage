@@ -19,17 +19,21 @@ export function useAuthSessionQuery() {
     queryKey: authKeys.session,
     queryFn: ({signal}) => getAuthSession(signal),
     retry: false,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
-export async function login(payload: LoginRequest) {
+export async function login(payload: LoginRequest): Promise<AuthSession> {
   const result = await apiRequest<AuthSession & TokenPair>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
   saveTokens(result);
-  return {username: result.username, roles: result.roles, expires_at: result.expires_at ?? null};
+  return {username: result.username, roles: result.roles,
+    ...(result.permissions ? {permissions: result.permissions} : {}),
+    expires_at: result.expires_at ?? null};
 }
 
 export async function logout() {

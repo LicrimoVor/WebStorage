@@ -18,6 +18,7 @@ class UserAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     id: Mapped[uuid.UUID]
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    permissions: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)), nullable=True)
     roles: Mapped[list[str]] = mapped_column(
         ARRAY(String(32)),
         nullable=False,

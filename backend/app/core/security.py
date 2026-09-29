@@ -12,6 +12,7 @@ from app.core.errors import AuthorizationError
 
 
 class Role(StrEnum):
+    USER = "user"
     ADMIN = "admin"
     PRODUCTION = "production"
     WAREHOUSE = "warehouse"
@@ -23,6 +24,7 @@ class Role(StrEnum):
 class Actor:
     subject: str
     roles: frozenset[Role]
+    permissions: frozenset[str] = frozenset()
 
 
 def bearer_token(request: Request) -> str | None:
@@ -47,6 +49,10 @@ async def get_current_actor(
 
 
 def require_any_role(actor: Actor, *allowed: Role) -> None:
+    # Tab-based users are authorized by the API router's access dependency.
+    # An explicit admin-only check must never be bypassed.
+    if Role.USER in actor.roles and any(role != Role.ADMIN for role in allowed):
+        return
     if Role.ADMIN in actor.roles or actor.roles.intersection(allowed):
         return
     raise AuthorizationError("The current role is not allowed to perform this action")

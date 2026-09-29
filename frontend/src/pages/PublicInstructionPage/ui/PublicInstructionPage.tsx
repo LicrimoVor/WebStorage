@@ -7,6 +7,7 @@ import {
   usePublicOperationInstructionQuery,
 } from '@/entities/OperationInstruction';
 import {formatDateTime, usePageMetadata} from '@/shared/lib';
+import {PageHelp} from '@/shared/ui/PageHelp';
 
 import styles from './PublicInstructionPage.module.scss';
 
@@ -40,6 +41,7 @@ export function PublicInstructionPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
+        <PageHelp />
         <div>
           <Text color="secondary" variant="subheader-1">
             Производственная инструкция

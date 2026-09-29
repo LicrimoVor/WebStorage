@@ -42,7 +42,7 @@ it('removes the previous user’s business data before accepting a new session',
     expect(queryClient.getQueryData(['materials'])).toBeUndefined();
     expect(queryClient.getQueryData(authKeys.profile)).toBeUndefined();
     expect(queryClient.getQueryData(authKeys.session)).toEqual(nextSession);
-    expect(window.location.pathname).toBe("/production-plans");
+    expect(window.location.pathname).toBe("/warehouse");
   } finally {
     queryClient.clear();
   }

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.access import Section
 from app.core.audit_context import set_actor
 from app.core.config import get_settings
 from app.core.database import get_session
@@ -34,6 +35,7 @@ def token_response(created: service.CreatedSession) -> TokenPairRead:
     return TokenPairRead(
         username=created.username,
         roles=created.roles,
+        permissions=created.permissions,
         expires_at=created.expires_at,
         access_token=created.token,
         refresh_token=created.refresh_token,
@@ -60,7 +62,10 @@ async def refresh(payload: RefreshRequest, session: Session) -> TokenPairRead:
 
 @router.get("/session", response_model=AuthSessionRead, operation_id="getAuthSession")
 async def get_auth_session(actor: ActorDependency) -> AuthSessionRead:
-    return AuthSessionRead(username=actor.subject, roles=sorted(actor.roles), expires_at=None)
+    return AuthSessionRead(
+        username=actor.subject, roles=sorted(actor.roles), expires_at=None,
+        permissions=list(Section) if "admin" in actor.roles else sorted(actor.permissions),
+    )
 
 
 @router.get("/profile", response_model=AuthProfileRead, operation_id="getAuthProfile")

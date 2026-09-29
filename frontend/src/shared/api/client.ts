@@ -66,7 +66,7 @@ export async function apiRequest<T>(
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code === 'conflict') {
+    if (error.code === 'conflict' || error.status === 403) {
       return error.message;
     }
     if (error.code === 'validation_error' || error.code === 'domain_validation_error') {

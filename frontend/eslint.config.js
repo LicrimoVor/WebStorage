@@ -9,6 +9,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['scripts/*.mjs'],
+    languageOptions: {globals: globals.node},
+  },
+  {
+    files: ['public/sw.js'],
+    languageOptions: {globals: globals.serviceworker},
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {globals: globals.browser},
     plugins: {
@@ -23,4 +31,3 @@ export default tseslint.config(
     },
   },
 );
-

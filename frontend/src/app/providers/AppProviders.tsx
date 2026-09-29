@@ -1,6 +1,6 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {ThemeProvider} from '@gravity-ui/uikit';
-import {useState, type PropsWithChildren} from 'react';
+import {useEffect, useState, type PropsWithChildren} from 'react';
 import {ThemeContext} from './themeContext';
 
 const queryClient = new QueryClient({
@@ -19,6 +19,11 @@ export function AppProviders({children}: PropsWithChildren) {
     try {return localStorage.getItem('webstorage-theme') === 'dark' ? 'dark' : 'light';}
     catch {return 'light';}
   });
+  useEffect(() => {
+    document.documentElement.style.colorScheme = theme;
+    const color = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (color) color.content = theme === 'dark' ? '#101217' : '#ffffff';
+  }, [theme]);
   const toggle = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);

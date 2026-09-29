@@ -25,6 +25,10 @@ import { ErrorBoundary } from "@/shared/ui";
 
 import {SettingsPage, ReceiptPage, RepairsPage} from "@/pages/BusinessPages";
 import {AppHeader} from "./AppHeader";
+import {PageHelp} from '@/shared/ui/PageHelp';
+import {canOpenPath, firstAvailablePath} from "@/shared/lib/access";
+const HelpPage = lazy(() => import("@/pages/HelpPage/HelpPage").then((m) => ({default: m.HelpPage})));
+const UsersPage = lazy(() => import("@/pages/UsersPage/UsersPage").then((m) => ({default: m.UsersPage})));
 
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
@@ -91,6 +95,8 @@ const PublicInstructionPage = lazy(async () => {
 });
 
 function getPageMetadata(pathname: string) {
+  if (pathname.startsWith("/help")) return ["Инструкция пользователя", "Пошаговое руководство по работе с Веб-складом."] as const;
+  if (pathname === "/settings/users") return ["Пользователи", "Учётные записи и доступ к разделам."] as const;
   if (pathname === routes.profile) return ["Профиль пользователя", "Учётная запись и пароль."] as const;
   if (pathname === "/production") return ["Выпуск", "Выпуск номерных изделий."] as const;
   if (pathname === "/repairs") return ["Ремонт", "Материалы, операции и история ремонтов."] as const;
@@ -143,9 +149,11 @@ function AppLayout({ session }: { session: AuthSession }) {
   });
   return (
     <div className={styles.app}>
-      <AppHeader username={session.username} pending={logoutMutation.isPending} onLogout={() => logoutMutation.mutate()} />
-      <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
+      <AppHeader access={session} username={session.username} pending={logoutMutation.isPending} onLogout={() => logoutMutation.mutate()} />
+      {!canOpenPath(session, location.pathname) ? <main className={styles.authError}><Alert theme="warning" title="Нет доступа к разделу" message="Обратитесь к администратору, чтобы получить нужные права." actions={<Button onClick={() => navigate(firstAvailablePath(session))}>Открыть доступный раздел</Button>} /></main> : <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>
+          <Route path="/help/:chapterId?" element={<HelpPage />} />
+          <Route path="/settings/users" element={<UsersPage />} />
           <Route path={routes.profile} element={<ProfilePage />} />
           <Route path={routes.procurement} element={<Navigate to="/warehouse/receipt" replace />} />
           <Route path="/production" element={<Navigate to="/production-plans?tab=release" replace />} />
@@ -156,7 +164,7 @@ function AppLayout({ session }: { session: AuthSession }) {
           <Route path={routes.audit} element={<AuditPage />} />
           <Route
             path="/"
-            element={<Navigate to={routes.productionPlans} replace />}
+            element={<Navigate to={firstAvailablePath(session)} replace />}
           />
           <Route
             path={routes.productionPlans}
@@ -206,12 +214,13 @@ function AppLayout({ session }: { session: AuthSession }) {
             }
           />
         </Routes>
-      </Suspense>
+      </Suspense>}
     </div>
   );
 }
 
 function AuthenticatedApp() {
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const sessionQuery = useAuthSessionQuery();
@@ -231,13 +240,17 @@ function AuthenticatedApp() {
   }
   if (sessionQuery.isError) {
     if (sessionQuery.error instanceof ApiError && sessionQuery.error.status === 401) {
+      if (location.pathname === '/help' || location.pathname.startsWith('/help/')) {
+        return <><header className={styles.topbar}><Button onClick={() => navigate('/')}>Войти в Веб-склад</Button><PageHelp /></header>
+          <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}><Routes><Route path="/help/:chapterId?" element={<HelpPage />} /></Routes></Suspense></>;
+      }
       return (
         <LoginPage
           onAuthenticated={(session) => {
             queryClient.removeQueries({predicate: (query) =>
               query.queryKey[0] !== "auth" || query.queryKey[1] !== "session"});
             queryClient.setQueryData(authKeys.session, session);
-            navigate(routes.productionPlans, {replace: true});
+            navigate(firstAvailablePath(session), {replace: true});
           }}
         />
       );

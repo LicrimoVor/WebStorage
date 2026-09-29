@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.access import Section, permissions_for
 from app.core.audit_context import set_actor
 from app.core.config import get_settings
 from app.core.errors import AuthenticationError, ConflictError, DomainValidationError, NotFoundError
@@ -26,6 +28,7 @@ class CreatedSession:
     username: str
     roles: list[Role]
     expires_at: datetime
+    permissions: list[Section]
 
 
 def _token_hash(token: str) -> str:
@@ -99,6 +102,7 @@ async def authenticate(
         refresh_expires_at=refresh_expires_at,
         username=user.username,
         roles=_roles(user.roles),
+        permissions=permissions_for(user.roles, user.permissions),
         expires_at=expires_at,
     )
 
@@ -123,7 +127,10 @@ async def actor_for_token(session: AsyncSession, token: str | None) -> Actor:
         raise AuthenticationError("Authentication is required")
     if auth_session.access_expires_at is None or auth_session.access_expires_at <= now:
         raise AuthenticationError("Access token expired")
-    return Actor(subject=user.username, roles=frozenset(_roles(user.roles)))
+    return Actor(
+        subject=user.username, roles=frozenset(_roles(user.roles)),
+        permissions=frozenset(permissions_for(user.roles, user.permissions)),
+    )
 
 
 async def refresh_session(session: AsyncSession, token: str) -> CreatedSession:
@@ -153,6 +160,7 @@ async def refresh_session(session: AsyncSession, token: str) -> CreatedSession:
         refresh_token=token,
         username=user.username,
         roles=_roles(user.roles),
+        permissions=permissions_for(user.roles, user.permissions),
         expires_at=auth_session.access_expires_at,
         refresh_expires_at=auth_session.expires_at,
     )
@@ -219,6 +227,8 @@ async def create_user(
     username: str,
     password: str,
     roles: list[Role],
+    permissions: list[Section] | None = None,
+    active: bool = True,
 ) -> UserAccount:
     existing = (
         await session.execute(
@@ -229,11 +239,17 @@ async def create_user(
         raise ConflictError("A user with this username already exists")
     user = UserAccount(
         username=username,
+        active=active,
         password_hash=await asyncio.to_thread(hash_password, password),
         roles=[role.value for role in roles],
+        permissions=[value.value for value in permissions] if permissions is not None else None,
     )
     session.add(user)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise ConflictError("Пользователь с таким логином уже существует") from error  # noqa: RUF001
     await session.refresh(user)
     return user
 
