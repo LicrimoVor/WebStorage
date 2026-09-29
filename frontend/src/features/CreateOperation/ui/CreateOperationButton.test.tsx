@@ -4,6 +4,7 @@ import {describe, expect, it, vi} from 'vitest';
 
 import {createOperation} from '@/entities/Operation';
 import type * as OperationExports from '@/entities/Operation';
+import type * as OperationGroupExports from '@/entities/OperationGroup/api';
 import {operationFixture} from '@/entities/Operation/testing';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
@@ -14,7 +15,13 @@ vi.mock('@/entities/Operation', async (importOriginal) => {
   return {...actual, createOperation: vi.fn()};
 });
 
-vi.mock('@/entities/OperationGroup/api', () => ({useOperationGroupsQuery: () => ({data: [{id: 'group-1', name: 'Обработка'}]})}));
+vi.mock('@/entities/OperationGroup/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof OperationGroupExports>();
+  return {
+    ...actual,
+    useOperationGroupsQuery: () => ({data: [{id: 'group-1', name: 'Обработка'}]}),
+  };
+});
 
 describe('CreateOperationButton', () => {
   it('creates an operation with decimal strings', async () => {
