@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.query import SortOrder
-from app.modules.operations.model import Operation
+from app.modules.operations.model import Operation, OperationGroup
 from app.modules.operations.schemas import OperationSortField
 from app.modules.payroll.model import WorkEntry
 from app.modules.production_plans.model import (
@@ -83,7 +83,9 @@ async def list_operations(
 ) -> tuple[list[tuple[Operation, Decimal, Decimal, Decimal]], int]:
     statement = select(Operation)
     if group_id is not None:
-        statement = statement.where(Operation.group_id == group_id)
+        statement = statement.where(Operation.group_id.in_(select(OperationGroup.id).where(
+            (OperationGroup.id == group_id) | (OperationGroup.parent_id == group_id)
+        )))
     if ungrouped:
         statement = statement.where(Operation.group_id.is_(None))
     if not include_archived:

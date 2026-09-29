@@ -27,7 +27,7 @@ class ReceiptLine(BaseModel):
     material_id: uuid.UUID
     quantity: Quantity = Field(gt=0)
     defective_quantity: Quantity = Field(default=Decimal("0"), ge=0)
-    unit_price: Money = Field(ge=0)
+    unit_price: Money | None = None
 
     @model_validator(mode="after")
     def validate_defects(self) -> "ReceiptLine":
@@ -37,6 +37,7 @@ class ReceiptLine(BaseModel):
 
 
 class ReceiptCreate(BaseModel):
+    total_amount: Money | None = None
     funding_source_id: uuid.UUID
     occurred_at: datetime
     comment: str = Field(default="", max_length=2000)
@@ -44,6 +45,8 @@ class ReceiptCreate(BaseModel):
 
     @model_validator(mode="after")
     def unique_materials(self) -> "ReceiptCreate":
+        if self.total_amount is None and any(line.unit_price is None for line in self.entries):
+            raise ValueError("Укажите сумму за приход")
         ids = [line.material_id for line in self.entries]
         if len(ids) != len(set(ids)):
             raise ValueError("Материалы не должны повторяться")

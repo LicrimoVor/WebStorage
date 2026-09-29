@@ -71,7 +71,7 @@ async def register_document(
                 movement_type=MovementType.RECEIPT,
                 quantity=line.quantity,
                 comment=payload.comment,
-                source_type="receipt",
+                source_type="receipt_total" if payload.total_amount is not None else "receipt",
                 source_id=document.id,
             )
             movement.funding_source_id = payload.funding_source_id
@@ -80,10 +80,15 @@ async def register_document(
             snapshots.append(
                 {**line.model_dump(mode="json"), "name": material.name if material else ""}
             )
-            movement.unit_price_snapshot = line.unit_price
-            movement.total_amount_snapshot = money(line.quantity * line.unit_price)
+            movement.unit_price_snapshot = (
+                line.unit_price if payload.total_amount is None else None
+            )
+            movement.total_amount_snapshot = (
+                money(line.quantity * line.unit_price)
+                if payload.total_amount is None and line.unit_price is not None else None
+            )
             if line.defective_quantity:
-                await create_movement(
+                defect = await create_movement(
                     session,
                     material_id=line.material_id,
                     movement_type=MovementType.WRITE_OFF,
@@ -92,6 +97,10 @@ async def register_document(
                     source_type="receipt_defect",
                     source_id=document.id,
                 )
+                defect.created_at = timestamp(payload.occurred_at)
+                defect.funding_source_id = payload.funding_source_id
+                defect.unit_price_snapshot = None
+                defect.total_amount_snapshot = None
         document.data = {**document.data, "entries": snapshots}
     else:
         if payload.copied_from_id:

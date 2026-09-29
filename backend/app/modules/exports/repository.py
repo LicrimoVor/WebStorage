@@ -19,7 +19,7 @@ from app.modules.manufactured_items.schemas import ManufacturedItemKind
 from app.modules.materials import repository as material_repository
 from app.modules.materials.model import Material
 from app.modules.operations import repository as operation_repository
-from app.modules.operations.model import Operation
+from app.modules.operations.model import Operation, OperationGroup
 from app.modules.payroll.model import EmployeePayment, PaymentAllocation, WorkEntry
 from app.modules.production.model import ProductionRecord
 from app.modules.production_plans.model import ProductionPlan
@@ -251,7 +251,10 @@ async def operations(
     if filters.search:
         statement = statement.where(Operation.name.ilike(f"%{filters.search.strip()}%"))
     if filters.operation_group_id is not None:
-        statement = statement.where(Operation.group_id == filters.operation_group_id)
+        statement = statement.where(Operation.group_id.in_(select(OperationGroup.id).where(
+            (OperationGroup.id == filters.operation_group_id)
+            | (OperationGroup.parent_id == filters.operation_group_id)
+        )))
     if filters.operations_ungrouped:
         statement = statement.where(Operation.group_id.is_(None))
     statement = apply_ids(statement, Operation.id, filters.ids)

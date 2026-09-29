@@ -1,5 +1,5 @@
 import { Alert, Select, TextInput } from "@gravity-ui/uikit";
-import {useOperationGroupsQuery} from '@/entities/OperationGroup/api';
+import {operationGroupLabel, useOperationGroupsQuery} from '@/entities/OperationGroup/api';
 
 import type { OperationFormValue } from "../model/types";
 import styles from "./OperationForm.module.scss";
@@ -21,7 +21,7 @@ export function OperationForm({ value, onChange, error }: OperationFormProps) {
       <p>Название и группа помогают найти операцию. Норма времени и ставка используются при расчёте работ.</p>
       <Select label="Группа" aria-label="Группа операции" value={value.groupId ? [value.groupId] : []}
         loading={groups.isPending}
-        options={(groups.data ?? []).map((g) => ({value: g.id, content: g.name}))}
+        options={(groups.data ?? []).map((g) => ({value: g.id, content: operationGroupLabel(g, groups.data ?? [])}))}
         onUpdate={(ids) => update('groupId', ids[0] ?? '')} hasClear filterable width="max" size="l" placeholder="Без группы" />
       {groups.isError && <Alert theme="warning" message="Не удалось загрузить группы операций. Повторите открытие формы." />}
       <TextInput

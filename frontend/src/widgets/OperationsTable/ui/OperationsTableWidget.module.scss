@@ -26,6 +26,7 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--g-spacing-1);
   white-space: nowrap;
 }

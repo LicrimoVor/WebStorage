@@ -19,6 +19,7 @@ from app.modules.materials.schemas import (
     MaterialSortField,
     MaterialUpdate,
 )
+from app.modules.materials.uniqueness import lock_material_catalog, validate_material_name
 from app.modules.warehouse import repository as warehouse_repository
 from app.modules.warehouse.composition import product_components
 from app.modules.warehouse.schemas import InventoryGroupSummary
@@ -33,12 +34,14 @@ def to_read_model(
     free_quantity: Decimal,
     required_quantity: Decimal = Decimal("0"),
     groups: list[InventoryGroupSummary] | None = None,
+    defective_quantity: Decimal = Decimal("0"),
 ) -> MaterialRead:
     return MaterialRead(
         id=material.id,
         name=material.name,
         unit=material.unit,
         free_quantity=free_quantity,
+        defective_quantity=defective_quantity,
         required_quantity=required_quantity,
         deficit_quantity=max(required_quantity - free_quantity, Decimal("0")),
         price=material.price,
@@ -52,6 +55,8 @@ def to_read_model(
 
 
 async def create(session: AsyncSession, payload: MaterialCreate) -> MaterialRead:
+    await lock_material_catalog(session)
+    await validate_material_name(session, payload.name, payload.group_ids)
     material = Material(
         name=payload.name,
         unit=payload.unit,
@@ -117,10 +122,12 @@ async def list_all(
     group_map = await warehouse_repository.material_group_map(
         session, (material.id for material, _, _ in rows)
     )
+    defects = await repository.defective_quantities(session, [row[0].id for row in rows])
     return MaterialList(
         items=[
             to_read_model(
-                material, balance, required, group_map.get(material.id, [])
+                material, balance, required, group_map.get(material.id, []),
+                defects.get(material.id, Decimal("0")),
             )
             for material, balance, required in rows
         ],
@@ -136,17 +143,29 @@ async def get(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead:
     if result is None:
         raise NotFoundError("Material was not found")
     groups = await warehouse_repository.material_group_map(session, [material_id])
-    return to_read_model(*result, groups.get(material_id, []))
+    defects = await repository.defective_quantities(session, [material_id])
+    return to_read_model(
+        *result, groups.get(material_id, []), defects.get(material_id, Decimal("0")),
+    )
 
 
 async def update(
     session: AsyncSession, material_id: uuid.UUID, payload: MaterialUpdate
 ) -> MaterialRead:
+    await lock_material_catalog(session)
     material = await repository.get_material_for_update(session, material_id)
     if material is None:
         raise NotFoundError("Material was not found")
     changes = payload.model_dump(exclude_unset=True)
     group_ids = changes.pop("group_ids", None)
+    existing_groups = await warehouse_repository.material_group_map(session, [material_id])
+    target_groups = (
+        group_ids if group_ids is not None
+        else [g.id for g in existing_groups.get(material_id, [])]
+    )
+    await validate_material_name(
+        session, changes.get("name") or material.name, target_groups, material_id,
+    )
     for field, value in changes.items():
         if field in {"url", "image"}:
             value = _url_value(value)
@@ -163,7 +182,10 @@ async def update(
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Material was not found")
     groups = await warehouse_repository.material_group_map(session, [material_id])
-    return to_read_model(*result, groups.get(material_id, []))
+    defects = await repository.defective_quantities(session, [material_id])
+    return to_read_model(
+        *result, groups.get(material_id, []), defects.get(material_id, Decimal("0")),
+    )
 
 
 async def archive(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead:
@@ -177,4 +199,7 @@ async def archive(session: AsyncSession, material_id: uuid.UUID) -> MaterialRead
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Material was not found")
     groups = await warehouse_repository.material_group_map(session, [material_id])
-    return to_read_model(*result, groups.get(material_id, []))
+    defects = await repository.defective_quantities(session, [material_id])
+    return to_read_model(
+        *result, groups.get(material_id, []), defects.get(material_id, Decimal("0")),
+    )

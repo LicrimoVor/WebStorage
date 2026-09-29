@@ -60,6 +60,7 @@ class MaterialRead(BaseModel):
     name: str
     unit: str
     free_quantity: Quantity
+    defective_quantity: Quantity = Decimal("0")
     required_quantity: Quantity = Decimal("0")
     deficit_quantity: Quantity = Decimal("0")
     price: Money | None

@@ -4,12 +4,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import case, func, literal, select, union_all
+from sqlalchemy import DateTime, Numeric, case, cast, func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import Subquery
 
 from app.core.query import SortOrder
+from app.modules.business.model import BusinessDocument
 from app.modules.employees.model import Employee
 from app.modules.finance.model import FinancialTransaction
 from app.modules.finance.schemas import FinanceSource, FinancialDirection
@@ -98,7 +99,25 @@ def entry_union() -> Subquery:
             InventoryMovement.total_amount_snapshot.is_not(None),
         )
     )
-    return union_all(manual, sales, labour, materials).subquery("finance_entries")
+    receipts = select(
+        BusinessDocument.id.label("id"),
+        BusinessDocument.funding_source_id.label("funding_source_id"),
+        BusinessDocument.id.label("source_id"),
+        literal(FinanceSource.MATERIAL.value).label("source_type"),
+        literal(FinancialDirection.EXPENSE.value).label("direction"),
+        literal("Материалы").label("category"),
+        literal("Приход материалов").label("description"),
+        cast(BusinessDocument.data["total_amount"].astext, Numeric(20, 2)).label("amount"),
+        cast(BusinessDocument.data["occurred_at"].astext, DateTime(timezone=True)).label(
+            "occurred_at"
+        ),
+        BusinessDocument.data["comment"].astext.label("comment"),
+        BusinessDocument.created_by.label("created_by"),
+    ).where(
+        BusinessDocument.kind == "receipt",
+        BusinessDocument.data["total_amount"].astext.is_not(None),
+    )
+    return union_all(manual, sales, labour, materials, receipts).subquery("finance_entries")
 
 
 async def create_transaction(
@@ -271,6 +290,21 @@ async def summary_values(
     sales_income = Decimal((await session.execute(sales_statement)).scalar_one())
     labour_expense = Decimal((await session.execute(labour_statement)).scalar_one())
     material_expense = Decimal((await session.execute(material_statement)).scalar_one())
+    receipt_statement = with_period(
+        select(func.coalesce(func.sum(
+            cast(BusinessDocument.data["total_amount"].astext, Numeric(20, 2))
+        ), Decimal("0"))).where(
+            BusinessDocument.kind == "receipt",
+            BusinessDocument.data["total_amount"].astext.is_not(None),
+        ),
+        cast(BusinessDocument.data["occurred_at"].astext, DateTime(timezone=True)),
+        date_from, date_to,
+    )
+    if funding_source_id is not None:
+        receipt_statement = receipt_statement.where(
+            BusinessDocument.funding_source_id == funding_source_id
+        )
+    material_expense += Decimal((await session.execute(receipt_statement)).scalar_one())
     manual = (await session.execute(manual_statement)).one()
     incomplete = int((await session.execute(incomplete_statement)).scalar_one())
     return (

@@ -128,11 +128,12 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
     {
       id: 'payable_amount',
       name: 'Остаток',
-      align: 'end',
+      align: 'center',
       template: (entry) => formatMoney(entry.payable_amount),
     },
     {
       id: 'allocation',
+      align: "center",
       name: 'Оплатить',
       template: (entry) => (
         <TextInput

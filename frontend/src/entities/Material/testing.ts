@@ -1,6 +1,7 @@
 import type {Material} from './model/types';
 
 export const materialFixture: Material = {
+  defective_quantity: '2.000000',
   id: 'b283fcb7-a957-4b2a-8cf2-aea4962f234e',
   name: 'Лист стали',
   unit: 'кг',
@@ -14,4 +15,3 @@ export const materialFixture: Material = {
   created_at: '2026-08-28T05:00:00Z',
   updated_at: '2026-08-28T05:00:00Z',
 };
-

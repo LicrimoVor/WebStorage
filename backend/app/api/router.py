@@ -8,6 +8,7 @@ from app.modules.analytics.router import router as analytics_router
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.users import router as users_router
 from app.modules.business.router import router as business_router
+from app.modules.catalog_import import router as catalog_import_router
 from app.modules.employees.router import router as employees_router
 from app.modules.exports.router import router as exports_router
 from app.modules.finance.router import router as finance_router
@@ -36,6 +37,7 @@ from app.modules.warehouse.router import groups_router, warehouse_router
 api_router = APIRouter(dependencies=[Depends(require_section_access)])
 
 api_router.include_router(business_router)
+api_router.include_router(catalog_import_router)
 api_router.include_router(users_router)
 api_router.include_router(materials_router)
 api_router.include_router(media_router)

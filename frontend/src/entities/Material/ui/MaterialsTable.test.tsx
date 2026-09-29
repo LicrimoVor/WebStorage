@@ -1,5 +1,6 @@
 import {screen} from '@testing-library/react';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
+import userEvent from '@testing-library/user-event';
 
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
@@ -7,21 +8,22 @@ import {materialFixture} from '../testing';
 import {MaterialsTable} from './MaterialsTable';
 
 describe('MaterialsTable', () => {
-  it('renders all material columns and actions', () => {
+  it('shows defects and opens a material without inline actions or pricing', async () => {
+    const onSelect = vi.fn();
     renderWithProviders(
       <MaterialsTable
         items={[materialFixture]}
-        renderActions={() => <button type="button">Действие</button>}
+        onSelect={onSelect}
       />,
     );
 
     expect(screen.getByText('Лист стали')).toBeInTheDocument();
     expect(screen.getByText('10,5')).toBeInTheDocument();
-    expect(screen.getByText('125,4 ₽')).toBeInTheDocument();
-    expect(screen.getByRole('link', {name: 'Открыть'})).toHaveAttribute(
-      'href',
-      'https://example.com/steel',
-    );
-    expect(screen.getByRole('button', {name: 'Действие'})).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', {name: 'Брак'})).toBeInTheDocument();
+    for (const name of ['Цена', 'Ссылка', 'Единица', 'Действия']) {
+      expect(screen.queryByRole('columnheader', {name})).not.toBeInTheDocument();
+    }
+    await userEvent.click(screen.getByRole('button', {name: 'Лист стали'}));
+    expect(onSelect).toHaveBeenCalledWith(materialFixture);
   });
 });

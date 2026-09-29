@@ -139,19 +139,19 @@ const productColumns: TableColumnConfig<ProductSalesRow>[] = [
   {
     id: 'quantity',
     name: 'Продано',
-    align: 'end',
+    align: 'center',
     template: (row) => `${formatDecimal(row.quantity)} ${row.unit}`,
   },
   {
     id: 'revenue',
     name: 'Выручка',
-    align: 'end',
+    align: 'center',
     template: (row) => formatMoney(row.revenue),
   },
   {
     id: 'current_stock',
     name: 'Остаток',
-    align: 'end',
+    align: 'center',
     template: (row) => `${formatDecimal(row.current_stock)} ${row.unit}`,
   },
 ];
@@ -161,7 +161,7 @@ const materialColumns: TableColumnConfig<DemandedMaterialRow>[] = [
   {
     id: 'consumed_quantity',
     name: 'Израсходовано',
-    align: 'end',
+    align: 'center',
     template: (row) => `${formatDecimal(row.consumed_quantity)} ${row.unit}`,
   },
 ];
@@ -171,21 +171,21 @@ const employeeColumns: TableColumnConfig<EmployeeAnalyticsRow>[] = [
   {
     id: 'completed_operations',
     name: 'Операции',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.completed_operations),
   },
   {
     id: 'person_hours',
     name: 'Человеко-часы',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.person_hours),
   },
-  {id: 'accrued', name: 'Начислено', align: 'end', template: (row) => formatMoney(row.accrued)},
-  {id: 'paid', name: 'Выплачено', align: 'end', template: (row) => formatMoney(row.paid)},
+  {id: 'accrued', name: 'Начислено', align: 'center', template: (row) => formatMoney(row.accrued)},
+  {id: 'paid', name: 'Выплачено', align: 'center', template: (row) => formatMoney(row.paid)},
   {
     id: 'payable_current',
     name: 'К выплате',
-    align: 'end',
+    align: 'center',
     template: (row) => formatMoney(row.payable_current),
   },
 ];
@@ -195,16 +195,16 @@ const operationColumns: TableColumnConfig<OperationAnalyticsRow>[] = [
   {
     id: 'completed_operations',
     name: 'Выполнено',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.completed_operations),
   },
   {
     id: 'person_hours',
     name: 'Человеко-часы',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.person_hours),
   },
-  {id: 'accrued', name: 'Начислено', align: 'end', template: (row) => formatMoney(row.accrued)},
+  {id: 'accrued', name: 'Начислено', align: 'center', template: (row) => formatMoney(row.accrued)},
 ];
 
 const stockColumns: TableColumnConfig<StockPoint>[] = [
@@ -217,19 +217,19 @@ const stockColumns: TableColumnConfig<StockPoint>[] = [
   {
     id: 'materials_delta',
     name: 'Материалы Δ',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.materials_delta),
   },
   {
     id: 'semi_finished_delta',
     name: 'Полуфабрикаты Δ',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.semi_finished_delta),
   },
   {
     id: 'products_delta',
     name: 'Продукты Δ',
-    align: 'end',
+    align: 'center',
     template: (row) => formatDecimal(row.products_delta),
   },
 ];

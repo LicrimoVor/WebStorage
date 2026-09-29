@@ -1,5 +1,6 @@
 import {screen} from '@testing-library/react';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
+import userEvent from '@testing-library/user-event';
 
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
@@ -7,16 +8,19 @@ import {operationFixture} from '../testing';
 import {OperationsTable} from './OperationsTable';
 
 describe('OperationsTable', () => {
-  it('renders norms, rates and calculated placeholders', () => {
+  it('opens a card and does not render an actions column', async () => {
+    const onSelect = vi.fn();
     renderWithProviders(
       <OperationsTable
         items={[operationFixture]}
-        renderActions={() => <button type="button">Действие</button>}
+        onSelect={onSelect}
       />,
     );
     expect(screen.getByText('Сверление')).toBeInTheDocument();
     expect(screen.getByText('3,5 мин.')).toBeInTheDocument();
     expect(screen.getByText('12,4 ₽')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Действие'})).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', {name: 'Действия'})).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Сверление'}));
+    expect(onSelect).toHaveBeenCalledWith(operationFixture);
   });
 });

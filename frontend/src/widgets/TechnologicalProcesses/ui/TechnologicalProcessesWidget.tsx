@@ -281,6 +281,7 @@ function ProcessesTable({
     },
     {
       id: "version",
+      align: "center",
       name: "Версия",
       template: (item) => `v${item.latest_version.version_number}`,
     },

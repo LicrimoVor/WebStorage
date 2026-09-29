@@ -222,7 +222,7 @@ const columns: TableColumnConfig<FinanceEntry>[] = [
   {
     id: 'amount',
     name: 'Сумма',
-    align: 'end',
+    align: 'center',
     template: (entry) => (
       <Text color={entry.direction === 'income' ? 'positive' : 'danger'}>
         {entry.direction === 'income' ? '+' : '−'} {formatMoney(entry.amount)}

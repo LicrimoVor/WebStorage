@@ -14,8 +14,8 @@ import {
 } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import {useSearchParams} from 'react-router-dom';
-import {ProductionPage} from '@/pages/BusinessPages';
+import { useSearchParams } from "react-router-dom";
+import { ProductionPage } from "@/pages/BusinessPages";
 
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import {
@@ -176,18 +176,18 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <thead>
               <tr>
                 <th>Позиция</th>
-                <th>Нужно</th>
-                <th>Со склада</th>
-                <th>Дефицит</th>
+                <th data-numeric>Нужно</th>
+                <th data-numeric>Со склада</th>
+                <th data-numeric>Дефицит</th>
               </tr>
             </thead>
             <tbody>
               {plan.materials.map((item) => (
                 <tr key={item.material_id}>
                   <td>{item.name}</td>
-                  <td>{amount(item.required_quantity, ` ${item.unit}`)}</td>
-                  <td>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
-                  <td
+                  <td data-numeric>{amount(item.required_quantity, ` ${item.unit}`)}</td>
+                  <td data-numeric>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
+                  <td data-numeric
                     className={
                       Number(item.deficit_quantity) > 0
                         ? styles.deficit
@@ -213,18 +213,18 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <thead>
               <tr>
                 <th>Позиция</th>
-                <th>Нужно</th>
-                <th>Со склада</th>
-                <th>Изготовить</th>
+                <th data-numeric>Нужно</th>
+                <th data-numeric>Со склада</th>
+                <th data-numeric>Изготовить</th>
               </tr>
             </thead>
             <tbody>
               {semis.map((item) => (
                 <tr key={item.manufactured_item_id}>
                   <td>{item.name}</td>
-                  <td>{amount(item.required_quantity, ` ${item.unit}`)}</td>
-                  <td>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
-                  <td>{amount(item.to_produce_quantity, ` ${item.unit}`)}</td>
+                  <td data-numeric>{amount(item.required_quantity, ` ${item.unit}`)}</td>
+                  <td data-numeric>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
+                  <td data-numeric>{amount(item.to_produce_quantity, ` ${item.unit}`)}</td>
                 </tr>
               ))}
             </tbody>
@@ -242,18 +242,18 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <thead>
               <tr>
                 <th>Операция</th>
-                <th>Количество</th>
-                <th>Время, мин</th>
-                <th>Стоимость</th>
+                <th data-numeric>Количество</th>
+                <th data-numeric>Время, мин</th>
+                <th data-numeric>Стоимость</th>
               </tr>
             </thead>
             <tbody>
               {plan.operations.map((item) => (
                 <tr key={item.operation_id}>
                   <td>{item.name}</td>
-                  <td>{amount(item.required_quantity)}</td>
-                  <td>{amount(item.required_time_minutes)}</td>
-                  <td>{amount(item.cost, " ₽")}</td>
+                  <td data-numeric>{amount(item.required_quantity)}</td>
+                  <td data-numeric>{amount(item.required_time_minutes)}</td>
+                  <td data-numeric>{amount(item.cost, " ₽")}</td>
                 </tr>
               ))}
             </tbody>
@@ -408,7 +408,10 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
       ) : null}
       <details className={styles.details}>
         <summary>Показать рассчитанные потребности</summary>
-        <details><summary>Потребности в материалах и операциях</summary><RequirementTable plan={plan} /></details>
+        <details>
+          <summary>Потребности в материалах и операциях</summary>
+          <RequirementTable plan={plan} />
+        </details>
       </details>
       <details
         className={styles.details}
@@ -428,7 +431,7 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
 function PlanningListPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState<"all" | ProductionPlanStatus>("all");
+  const [status, setStatus] = useState<"all" | ProductionPlanStatus>("active");
   const query = useProductionPlansQuery({
     page,
     page_size: pageSize,
@@ -544,12 +547,22 @@ function PlanningListPage() {
 
 export function ProductionPlansPage() {
   const [params, setParams] = useSearchParams();
-  const release = params.get('tab') === 'release';
-  return <>
-    <nav className={styles.tabs} aria-label="Разделы планирования">
-      <Button size="l" selected={!release} onClick={() => setParams({})}>Планы</Button>
-      <Button size="l" selected={release} onClick={() => setParams({tab: 'release'})}>Выпуск продукции</Button>
-    </nav>
-    {release ? <ProductionPage /> : <PlanningListPage />}
-  </>;
+  const release = params.get("tab") === "release";
+  return (
+    <>
+      <nav className={styles.tabs} aria-label="Разделы планирования">
+        <Button size="l" selected={!release} onClick={() => setParams({})}>
+          Планы
+        </Button>
+        <Button
+          size="l"
+          selected={release}
+          onClick={() => setParams({ tab: "release" })}
+        >
+          Выпуск продукции
+        </Button>
+      </nav>
+      {release ? <ProductionPage /> : <PlanningListPage />}
+    </>
+  );
 }

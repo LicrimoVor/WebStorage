@@ -47,14 +47,18 @@ export function SettingsPage() {
 export function ReceiptPage() {
   const rows = useStockRevisionRowsQuery({ type: 'material' });
   const groups = useInventoryGroupsQuery();
-  const [values, setValues] = useState<Record<string, { quantity: string; defect: string; price: string }>>({});
+  const [values, setValues] = useState<Record<string, { quantity: string; defect: string }>>({});
+  const [amount, setAmount] = useState('');
   const [source, setSource] = useState('');
   const [comment, setComment] = useState('');
   const [date, setDate] = useState(now);
   const key = useRef(crypto.randomUUID());
   const client = useQueryClient();
-  const mutation = useMutation({ mutationFn: () => apiRequest('/warehouse/receipts', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, comment, occurred_at: new Date(date).toISOString(), entries: Object.entries(values).filter(([, v]) => v.quantity.trim()).map(([id, v]) => ({ material_id: id, quantity: decimal(v.quantity), defective_quantity: decimal(v.defect || '0'), unit_price: decimal(v.price) })) }) }), onSuccess: async () => { setValues({}); setComment(''); key.current = crypto.randomUUID(); await client.invalidateQueries(); } });
-  const invalidLine = Object.values(values).some((v) => v.quantity.trim() && (!isDecimal(v.quantity) || Number(decimal(v.quantity)) <= 0 || !isDecimal(v.defect || "0") || Number(decimal(v.defect || "0")) > Number(decimal(v.quantity)) || !isMoney(v.price)));
+  const mutation = useMutation({ mutationFn: () => apiRequest('/warehouse/receipts', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, comment, total_amount: decimal(amount.trim()), occurred_at: new Date(date).toISOString(), entries: Object.entries(values).filter(([, v]) => Number(decimal(v.quantity.trim())) > 0).map(([id, v]) => ({ material_id: id, quantity: decimal(v.quantity.trim()), defective_quantity: decimal(v.defect.trim() || '0') })) }) }), onSuccess: async () => { setValues({}); setAmount(''); setComment(''); key.current = crypto.randomUUID(); await client.invalidateQueries(); } });
+  const invalidLine = Object.values(values).some((v) => {
+    const quantity = v.quantity.trim() || '0'; const defect = v.defect.trim() || '0';
+    return !isDecimal(quantity) || Number(decimal(quantity)) < 0 || !isDecimal(defect) || Number(decimal(defect)) < 0 || Number(decimal(defect)) > Number(decimal(quantity));
+  });
   const sections = new Map<string, StockRevisionRow[]>();
   for (const row of rows.data ?? []) {
     const group = groups.data?.find((g) => g.id === row.groups?.[0]?.id);
@@ -65,8 +69,9 @@ export function ReceiptPage() {
   return <main className={styles.page}>
     <h1>Приход материалов</h1>
     <section className={styles.form}>
-      <p>Укажите количество всей партии, брак и закупочную цену. На склад поступит количество за вычетом брака.</p>
+      <p>Заполните только поступившие материалы. Пустые строки и нулевой приход пропускаются. В количестве укажите всю партию, включая брак; на склад поступит годное количество. Сумма задаётся один раз за весь приход.</p>
       <FundingSelect value={source} onChange={setSource} />
+      <TextInput label="Сумма за приход, ₽" value={amount} onUpdate={setAmount} controlProps={{inputMode: 'decimal', 'aria-label': 'Сумма за приход'}} placeholder="0,00" />
       <label>Дата <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
       </label>
       <TextInput label="Комментарий" value={comment} onUpdate={setComment} />
@@ -76,28 +81,28 @@ export function ReceiptPage() {
           <thead>
             <tr>
               <th>Материал</th>
-              <th>Остаток</th>
-              <th>Приход</th>
-              <th>Брак</th>
-              <th>Цена за единицу</th>
+              <th data-numeric>Остаток</th>
+              <th data-numeric>Приход</th>
+              <th data-numeric>Брак</th>
             </tr>
           </thead>
           <tbody>
             {[...sections].sort(([a], [b]) => a.localeCompare(b)).map(([title, materials]) => <Fragment key={title}>
               <tr className={styles.group}>
-                <td colSpan={5}>{title.split(" / ")[0]}</td>
+                <td colSpan={4}>{title.split(" / ")[0]}</td>
               </tr>{title.includes(" / ") && <tr className={styles.group}>
-                <td colSpan={5} style={{ paddingLeft: 30 }}>{title.split(" / ")[1]}</td>
+                <td colSpan={4} style={{ paddingLeft: 30 }}>{title.split(" / ")[1]}</td>
               </tr>}{materials.map((row) => <tr key={row.id}>
                 <td>{row.name}</td>
-                <td>{row.current_quantity} {row.unit}</td>{(['quantity', 'defect', 'price'] as const).map((field) => <td key={field}>
-                  <TextInput value={values[row.id]?.[field] ?? ''} controlProps={{ 'aria-label': `${field === 'quantity' ? 'Приход' : field === 'defect' ? 'Брак' : 'Цена'}: ${row.name}`, inputMode: 'decimal' }} onUpdate={(value) => setValues((current) => ({ ...current, [row.id]: { ...(current[row.id] ?? { quantity: '', defect: '', price: '' }), [field]: value } }))} />
+                <td data-numeric>{row.current_quantity} {row.unit}</td>{(['quantity', 'defect'] as const).map((field) => <td data-numeric key={field}>
+                  <TextInput value={values[row.id]?.[field] ?? ''} controlProps={{ 'aria-label': `${field === 'quantity' ? 'Приход' : 'Брак'}: ${row.name}`, inputMode: 'decimal' }} onUpdate={(value) => setValues((current) => ({ ...current, [row.id]: { ...(current[row.id] ?? { quantity: '', defect: '' }), [field]: value } }))} />
                 </td>)}</tr>)}</Fragment>)}
           </tbody>
         </table>
       </div>
-      {invalidLine && <Alert theme="warning" message="Проверьте строки прихода: количество больше нуля, брак от нуля до количества партии, цена указана с точностью до копеек." />}
-      <Button view="action" loading={mutation.isPending} disabled={invalidLine || !source || !date || !Object.values(values).some((v) => v.quantity.trim())} onClick={() => mutation.mutate()}>Провести приход</Button>
+      {invalidLine && <Alert theme="warning" message="Количество и брак должны быть неотрицательными, брак не может превышать количество партии." />}
+      {amount && !isMoney(amount) && <Alert theme="warning" message="Укажите сумму от нуля с точностью до копеек." />}
+      <Button view="action" loading={mutation.isPending} disabled={invalidLine || !isMoney(amount) || !source || !date || !Object.values(values).some((v) => Number(decimal(v.quantity)) > 0)} onClick={() => mutation.mutate()}>Провести приход</Button>
       {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}{mutation.isSuccess && <Alert theme="success" message="Приход сохранён" />}
     </section>
     <History kind="receipt" />

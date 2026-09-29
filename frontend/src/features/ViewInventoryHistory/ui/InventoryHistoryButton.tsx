@@ -45,19 +45,19 @@ const columns: TableColumnConfig<InventoryMovement>[] = [
   {
     id: "quantity",
     name: "Изменение",
-    align: "end",
+    align: "center",
     template: (item) => formatDecimal(item.quantity),
   },
   {
     id: "balance_before",
     name: "До",
-    align: "end",
+    align: "center",
     template: (item) => formatDecimal(item.balance_before),
   },
   {
     id: "balance_after",
     name: "После",
-    align: "end",
+    align: "center",
     template: (item) => formatDecimal(item.balance_after),
   },
   { id: "comment", name: "Комментарий" },

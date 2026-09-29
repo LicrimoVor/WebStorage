@@ -275,14 +275,14 @@ export function WorkHistoryButton({
     {
       id: "input_value",
       name: "Введено",
-      align: "end",
+      align: "center",
       template: (entry) =>
         `${formatDecimal(entry.input_value)} ${entry.input_mode === "time" ? "мин." : "оп."}`,
     },
     {
       id: "equivalent_quantity",
       name: "Операций",
-      align: "end",
+      align: "center",
       template: (entry) =>
         entry.equivalent_quantity === null
           ? "—"
@@ -291,7 +291,7 @@ export function WorkHistoryButton({
     {
       id: "accrued_amount",
       name: "Начислено",
-      align: "end",
+      align: "center",
       template: (entry) =>
         entry.calculation_message ? (
           <Label theme="warning">Нет расчёта</Label>
@@ -302,7 +302,7 @@ export function WorkHistoryButton({
     {
       id: "paid_amount",
       name: "Оплачено",
-      align: "end",
+      align: "center",
       template: (entry) => formatMoney(entry.paid_amount),
     },
     {

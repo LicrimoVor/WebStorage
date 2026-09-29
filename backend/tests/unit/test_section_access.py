@@ -11,6 +11,8 @@ from app.core.access import Section, required_sections
         ("/materials/id/movements", "POST", "warehouse"),
         ("/technological-processes/id/versions", "POST", "processes"),
         ("/operations", "POST", "operations"),
+        ("/operations/import", "POST", "operations"),
+        ("/warehouse/import", "POST", "warehouse"),
         ("/operations/id/work-entries", "POST", "personnel"),
         ("/employees/id/payments", "POST", "personnel"),
         ("/repairs", "POST", "repairs"),

@@ -596,6 +596,170 @@
         }
       }
     },
+    "/api/v1/warehouse/import/preview": {
+      "post": {
+        "tags": [
+          "catalog-import"
+        ],
+        "summary": "Preview Warehouse",
+        "operationId": "previewWarehouseImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarehouseImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/import/preview": {
+      "post": {
+        "tags": [
+          "catalog-import"
+        ],
+        "summary": "Preview Operations",
+        "operationId": "previewOperationsImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/warehouse/import": {
+      "post": {
+        "tags": [
+          "catalog-import"
+        ],
+        "summary": "Import Warehouse",
+        "operationId": "importWarehouseCatalog",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WarehouseImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/import": {
+      "post": {
+        "tags": [
+          "catalog-import"
+        ],
+        "summary": "Import Operations",
+        "operationId": "importOperationsCatalog",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users": {
       "get": {
         "tags": [
@@ -1277,6 +1441,49 @@
               }
             },
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/manufactured-items/{item_id}/composition": {
+      "get": {
+        "tags": [
+          "manufactured items"
+        ],
+        "summary": "Read Composition",
+        "operationId": "getManufacturedItemComposition",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemComposition"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
           }
         }
       }
@@ -7384,6 +7591,46 @@
         ],
         "title": "ChangePasswordRequest"
       },
+      "CompositionEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material",
+              "semi_finished",
+              "operation"
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "unit",
+          "quantity"
+        ],
+        "title": "CompositionEntry"
+      },
       "DemandedMaterialRow": {
         "properties": {
           "material_id": {
@@ -8729,6 +8976,38 @@
         ],
         "title": "ImageUploadRequest"
       },
+      "ImportPreview": {
+        "properties": {
+          "new_groups": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "New Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_groups"
+        ],
+        "title": "ImportPreview"
+      },
+      "ImportResult": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created"
+        ],
+        "title": "ImportResult"
+      },
       "InstructionAssetRead": {
         "properties": {
           "id": {
@@ -9385,6 +9664,48 @@
         ],
         "title": "InventoryMovementRead"
       },
+      "ItemComposition": {
+        "properties": {
+          "process_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Id"
+          },
+          "version_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Number"
+          },
+          "has_recipe": {
+            "type": "boolean",
+            "title": "Has Recipe",
+            "default": false
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/CompositionEntry"
+            },
+            "type": "array",
+            "title": "Entries",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ItemComposition"
+      },
       "LoginRequest": {
         "properties": {
           "username": {
@@ -9972,6 +10293,69 @@
         ],
         "title": "MaterialCreate"
       },
+      "MaterialEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Unit"
+          },
+          "initial_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Initial Quantity",
+            "default": "0"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "group": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Group"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "unit"
+        ],
+        "title": "MaterialEntry"
+      },
       "MaterialList": {
         "properties": {
           "items": {
@@ -10027,6 +10411,12 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
             "title": "Free Quantity"
+          },
+          "defective_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Defective Quantity",
+            "default": "0"
           },
           "required_quantity": {
             "type": "string",
@@ -10310,8 +10700,91 @@
         ],
         "title": "OperationCreate"
       },
+      "OperationEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "time_norm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Norm"
+          },
+          "price_per_operation": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Operation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "OperationEntry"
+      },
       "OperationGroupRead": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -10333,6 +10806,18 @@
       },
       "OperationGroupWrite": {
         "properties": {
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -10546,6 +11031,31 @@
         },
         "type": "object",
         "title": "OperationUpdate"
+      },
+      "OperationsImport": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Version"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/OperationEntry"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Operations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "operations"
+        ],
+        "title": "OperationsImport"
       },
       "PaymentAllocationCreate": {
         "properties": {
@@ -12714,6 +13224,22 @@
       },
       "ReceiptCreate": {
         "properties": {
+          "total_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Amount"
+          },
           "funding_source_id": {
             "type": "string",
             "format": "uuid",
@@ -12791,6 +13317,9 @@
               {
                 "type": "string",
                 "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Unit Price"
@@ -12799,8 +13328,7 @@
         "type": "object",
         "required": [
           "material_id",
-          "quantity",
-          "unit_price"
+          "quantity"
         ],
         "title": "ReceiptLine"
       },
@@ -13342,6 +13870,60 @@
         ],
         "title": "Section"
       },
+      "SemiFinishedEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Unit"
+          },
+          "initial_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Initial Quantity",
+            "default": "0"
+          },
+          "product": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Product"
+          },
+          "group": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 2,
+            "title": "Group"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "unit",
+          "product"
+        ],
+        "title": "SemiFinishedEntry"
+      },
       "SortOrder": {
         "type": "string",
         "enum": [
@@ -13349,6 +13931,43 @@
           "desc"
         ],
         "title": "SortOrder"
+      },
+      "StockEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Unit"
+          },
+          "initial_quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Initial Quantity",
+            "default": "0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "unit"
+        ],
+        "title": "StockEntry"
       },
       "StockPoint": {
         "properties": {
@@ -13895,6 +14514,45 @@
           "dynamics"
         ],
         "title": "WarehouseAnalytics"
+      },
+      "WarehouseImport": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Version"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialEntry"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Materials"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/StockEntry"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Products"
+          },
+          "semi_finished": {
+            "items": {
+              "$ref": "#/components/schemas/SemiFinishedEntry"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Semi Finished"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "WarehouseImport"
       },
       "WorkCompensationType": {
         "type": "string",

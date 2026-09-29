@@ -208,11 +208,12 @@ export function StockRevisionPage() {
     {
       id: "current_quantity",
       name: "Текущее количество",
-      align: "end",
+      align: "center",
       template: (row) => `${formatDecimal(row.current_quantity)} ${row.unit}`,
     },
     {
       id: "counted_quantity",
+      align: "center",
       name: "Фактическое количество",
       width: 210,
       sticky: "end",

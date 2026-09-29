@@ -30,7 +30,7 @@ function sample(value = {}, depth = 0) {
   if (value.format === 'date-time') return stamp;
   return '0';
 }
-const material = {...sample(schema.components.schemas.MaterialRead), id, name: 'Лист алюминиевый', unit: 'шт', free_quantity: '24', required_quantity: '4', price: '1500', image: null, url: null, groups: []};
+const material = {...sample(schema.components.schemas.MaterialRead), id, name: 'Лист алюминиевый', unit: 'шт', free_quantity: '24', required_quantity: '4', defective_quantity: '2', price: '1500', image: null, url: null, groups: []};
 const operation = {...sample(schema.components.schemas.OperationRead), id, name: 'Сборка корпуса', time_norm: '20', price_per_operation: '350', group_id: null};
 const employee = {...sample(schema.components.schemas.EmployeeRead), id, full_name: 'Учебный сотрудник', active: true, compensation_type: 'piecework', hourly_rate: null, comment: 'Пример для инструкции'};
 const product = {...sample(schema.components.schemas.ManufacturedItemRead), id, name: 'Корпус К-1', is_product: true, unit: 'шт', product_id: null, image: null};
@@ -39,9 +39,32 @@ function api(url) {
   const pathname = new URL(url).pathname;
   if (pathname.endsWith('/auth/session')) return {username: 'Учебный администратор', roles: ['admin'], permissions};
   if (pathname.endsWith('/auth/profile')) return {username: 'Учебный администратор', roles: ['admin'], can_change_password: true, created_at: stamp, last_login_at: stamp};
+  if (pathname === `/api/v1/materials/${id}`) return material;
+  if (pathname === `/api/v1/operations/${id}`) return {...operation, required_quantity: '12', completed_quantity: '8', required_time_minutes: '240'};
+  if (pathname === `/api/v1/manufactured-items/${id}`) return product;
+  if (pathname === '/api/v1/manufactured-items/55555555-5555-4555-8555-555555555555') return {...product, id: '55555555-5555-4555-8555-555555555555', name: 'Заготовка К-1', is_product: false, product_id: id, free_quantity: '12', required_quantity: '16', to_produce_quantity: '4'};
+  if (pathname.endsWith('/operation-groups')) return [
+    {id, name: 'Сборочные работы', parent_id: null},
+    {id: '22222222-2222-4222-8222-222222222222', name: 'Корпуса', parent_id: id},
+    {id: '33333333-3333-4333-8333-333333333333', name: 'Электроника', parent_id: id},
+  ];
   if (pathname.endsWith('/users')) return [{id, username: 'operator', is_admin: false, active: true, permissions: ['warehouse'], created_at: stamp, last_login_at: stamp}];
   if (pathname.endsWith('/funding-sources')) return [{id, name: 'Основной счёт'}];
-  if (pathname.endsWith('/warehouse/revision')) return [{id, name: material.name, type: 'material', image: null, unit: 'шт', current_quantity: '24', products: [], groups: []}];
+  if (pathname.endsWith('/inventory-groups')) return [
+    {id, name: 'Металлы', parent_id: null},
+    {id: '22222222-2222-4222-8222-222222222222', name: 'Листовой металл', parent_id: id},
+    {id: '33333333-3333-4333-8333-333333333333', name: 'Крепёж', parent_id: id},
+    {id: '44444444-4444-4444-8444-444444444444', name: 'Электроника', parent_id: null},
+  ].map((group) => ({...group, material_count: 0, semi_finished_count: 0, created_at: stamp, updated_at: stamp}));
+  if (pathname.endsWith('/warehouse/revision')) return [
+    {id, name: material.name, type: 'material', image: null, unit: 'шт', current_quantity: '24', products: [], groups: []},
+    {id, name: product.name, type: 'product', image: null, unit: 'шт', current_quantity: '3', products: [], groups: []},
+    {id: '55555555-5555-4555-8555-555555555555', name: 'Заготовка К-1', type: 'semi_finished', image: null, unit: 'шт', current_quantity: '12', products: [{id, name: product.name}], groups: []},
+  ].filter((row) => !new URL(url).searchParams.get('type') || row.type === new URL(url).searchParams.get('type'));
+  if (pathname.endsWith('/composition')) return {process_id: id, version_number: 1, has_recipe: true, entries: [
+    {id, kind: 'material', name: material.name, quantity: '2.5', unit: 'шт'},
+    {id, kind: 'operation', name: operation.name, quantity: '1', unit: 'операций'},
+  ]};
   if (pathname.endsWith('/business-documents') || pathname.endsWith('/product-units')) return [];
   const route = Object.keys(schema.paths).find((key) => new RegExp(`^${key.replace(/\{[^}]+\}/g, '[^/]+')}$`).test(pathname));
   const value = sample(schema.paths[route]?.get?.responses?.['200']?.content?.['application/json']?.schema);
@@ -92,11 +115,16 @@ try {
   };
   for (const [name, route, button] of [
     ['planning', '/production-plans'], ['processes', '/processes'], ['warehouse', '/warehouse'],
+    ['material-card', '/warehouse', 'Лист алюминиевый'],
+    ['manufactured', '/warehouse?tab=manufactured'],
+    ['composition', '/warehouse?tab=manufactured', 'Заготовка К-1'],
     ['receipt', '/warehouse/receipt'], ['revision', '/warehouse/revision'],
     ['operations', '/operations'], ['personnel', '/personnel'], ['repairs', '/repairs'],
+    ['operation-card', '/operations', 'Сборка корпуса'],
     ['sales', '/sales'], ['finance', '/finance'], ['settings', '/settings'],
     ['users', '/settings/users', 'Добавить пользователя'], ['profile', '/profile'],
   ]) {
+    if (process.env.GUIDE_CHAPTERS && !process.env.GUIDE_CHAPTERS.split(',').includes(name)) continue;
     await send('Page.navigate', {url: `http://127.0.0.1:4178${route}`});
     for (let i = 0; i < 80; i++) {if (await evaluate(`Boolean(document.querySelector('main h1'))`)) break; await delay(100);}
     await delay(500);

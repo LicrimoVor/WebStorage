@@ -22,7 +22,14 @@ from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
 class InventoryGroup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "inventory_groups"
     __table_args__ = (
-        Index("ix_inventory_groups_name_lower", func.lower(text("name")), unique=True),
+        Index(
+            "ux_inventory_groups_root_name", func.lower(text("name")), unique=True,
+            postgresql_where=text("parent_id IS NULL"),
+        ),
+        Index(
+            "ux_inventory_groups_child_name", "parent_id", func.lower(text("name")),
+            unique=True, postgresql_where=text("parent_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID]

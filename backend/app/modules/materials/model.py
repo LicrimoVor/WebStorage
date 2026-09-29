@@ -11,7 +11,7 @@ class Material(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "materials"
     __table_args__ = (
         CheckConstraint("price IS NULL OR price >= 0", name="price_non_negative"),
-        Index("ix_materials_name_lower", func.lower(text("name")), unique=True),
+        Index("ix_materials_name_lower", func.lower(text("name"))),
         Index("ix_materials_archived", "archived"),
     )
 

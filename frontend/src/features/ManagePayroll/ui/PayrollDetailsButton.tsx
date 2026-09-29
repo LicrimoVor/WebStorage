@@ -31,37 +31,37 @@ const operationColumns: TableColumnConfig<EmployeeOperationSummary>[] = [
   {
     id: 'completed_quantity',
     name: 'Выполнено, экв.',
-    align: 'end',
+    align: 'center',
     template: (item) => formatDecimal(item.completed_quantity),
   },
   {
     id: 'paid_quantity_equivalent',
     name: 'Оплачено, экв.',
-    align: 'end',
+    align: 'center',
     template: (item) => formatDecimal(item.paid_quantity_equivalent),
   },
   {
     id: 'time_minutes',
     name: 'Минут',
-    align: 'end',
+    align: 'center',
     template: (item) => formatDecimal(item.time_minutes),
   },
   {
     id: 'accrued_amount',
     name: 'Начислено',
-    align: 'end',
+    align: 'center',
     template: (item) => formatMoney(item.accrued_amount),
   },
   {
     id: 'paid_amount',
     name: 'Оплачено',
-    align: 'end',
+    align: 'center',
     template: (item) => formatMoney(item.paid_amount),
   },
   {
     id: 'payable_amount',
     name: 'К оплате',
-    align: 'end',
+    align: 'center',
     template: (item) => formatMoney(item.payable_amount),
   },
 ];
@@ -75,7 +75,7 @@ const paymentColumns: TableColumnConfig<Payment>[] = [
   {
     id: 'amount',
     name: 'Сумма',
-    align: 'end',
+    align: 'center',
     template: (item) => formatMoney(item.amount),
   },
   {

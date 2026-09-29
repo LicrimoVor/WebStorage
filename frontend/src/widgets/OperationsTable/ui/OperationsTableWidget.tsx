@@ -12,6 +12,8 @@ import {
   TextInput,
 } from "@gravity-ui/uikit";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import {useState} from 'react';
+import {OperationDetails} from './OperationDetails';
 
 import {
   OperationsTable,
@@ -45,6 +47,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export function OperationsTableWidget() {
+  const [selectedId, setSelectedId] = useState<string>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
@@ -85,7 +88,7 @@ export function OperationsTableWidget() {
       >
         Инструкция
       </Button>
-      <RecordWorkButton operation={operation} />
+      {!operation.archived && <RecordWorkButton operation={operation} />}
       <WorkHistoryButton operation={operation} />
       <EditOperationButton operation={operation} />
       {!operation.archived ? (
@@ -187,7 +190,7 @@ export function OperationsTableWidget() {
         <div className={styles.content}>
           <OperationsTable
             items={query.data.items}
-            renderActions={renderActions}
+            onSelect={(item) => setSelectedId(item.id)}
           />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
@@ -204,6 +207,7 @@ export function OperationsTableWidget() {
           </div>
         </div>
       )}
+      {selectedId && <OperationDetails id={selectedId} onClose={() => setSelectedId(undefined)} renderActions={renderActions} />}
     </Card>
   );
 }

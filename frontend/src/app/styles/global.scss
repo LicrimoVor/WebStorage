@@ -257,6 +257,16 @@ input[type='datetime-local'] {
   height: 12px;
 }
 
+// Explicit numeric cells also cover plain HTML tables outside the UI kit.
+table th[data-numeric],
+table td[data-numeric],
+table input[inputmode='decimal'],
+table input[inputmode='numeric'],
+table input[type='number'] {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 *::-webkit-scrollbar-track {
   background: var(--g-color-base-generic);
   border-radius: 999px;

@@ -192,6 +192,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/warehouse/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Warehouse */
+        post: operations["previewWarehouseImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Operations */
+        post: operations["previewOperationsImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/warehouse/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Warehouse */
+        post: operations["importWarehouseCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Operations */
+        post: operations["importOperationsCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users": {
         parameters: {
             query?: never;
@@ -309,6 +377,23 @@ export interface paths {
         put?: never;
         /** Create Inventory Movement */
         post: operations["createInventoryMovement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manufactured-items/{item_id}/composition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Composition */
+        get: operations["getManufacturedItemComposition"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1472,6 +1557,25 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** CompositionEntry */
+        CompositionEntry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "material" | "semi_finished" | "operation";
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Quantity */
+            quantity: string;
+        };
         /** DemandedMaterialRow */
         DemandedMaterialRow: {
             /**
@@ -2002,6 +2106,16 @@ export interface components {
             /** Content Base64 */
             content_base64: string;
         };
+        /** ImportPreview */
+        ImportPreview: {
+            /** New Groups */
+            new_groups: string[][];
+        };
+        /** ImportResult */
+        ImportResult: {
+            /** Created */
+            created: number;
+        };
         /** InstructionAssetRead */
         InstructionAssetRead: {
             /**
@@ -2240,6 +2354,23 @@ export interface components {
              */
             created_at: string;
         };
+        /** ItemComposition */
+        ItemComposition: {
+            /** Process Id */
+            process_id?: string | null;
+            /** Version Number */
+            version_number?: number | null;
+            /**
+             * Has Recipe
+             * @default false
+             */
+            has_recipe: boolean;
+            /**
+             * Entries
+             * @default []
+             */
+            entries: components["schemas"]["CompositionEntry"][];
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Username */
@@ -2425,6 +2556,22 @@ export interface components {
             /** Group Ids */
             group_ids?: string[];
         };
+        /** MaterialEntry */
+        MaterialEntry: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Initial Quantity
+             * @default 0
+             */
+            initial_quantity: number | string;
+            /** Price */
+            price?: number | string | null;
+            /** Group */
+            group?: string[];
+        };
         /** MaterialList */
         MaterialList: {
             /** Items */
@@ -2451,6 +2598,11 @@ export interface components {
             unit: string;
             /** Free Quantity */
             free_quantity: string;
+            /**
+             * Defective Quantity
+             * @default 0
+             */
+            defective_quantity: string;
             /**
              * Required Quantity
              * @default 0
@@ -2538,8 +2690,21 @@ export interface components {
             /** Price Per Operation */
             price_per_operation?: number | string | null;
         };
+        /** OperationEntry */
+        OperationEntry: {
+            /** Name */
+            name: string;
+            /** Group */
+            group?: string | string[] | null;
+            /** Time Norm */
+            time_norm?: number | string | null;
+            /** Price Per Operation */
+            price_per_operation?: number | string | null;
+        };
         /** OperationGroupRead */
         OperationGroupRead: {
+            /** Parent Id */
+            parent_id?: string | null;
             /** Name */
             name: string;
             /**
@@ -2550,6 +2715,8 @@ export interface components {
         };
         /** OperationGroupWrite */
         OperationGroupWrite: {
+            /** Parent Id */
+            parent_id?: string | null;
             /** Name */
             name: string;
         };
@@ -2624,6 +2791,16 @@ export interface components {
             time_norm?: number | string | null;
             /** Price Per Operation */
             price_per_operation?: number | string | null;
+        };
+        /** OperationsImport */
+        OperationsImport: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Operations */
+            operations: components["schemas"]["OperationEntry"][];
         };
         /** PaymentAllocationCreate */
         PaymentAllocationCreate: {
@@ -3473,6 +3650,8 @@ export interface components {
         };
         /** ReceiptCreate */
         ReceiptCreate: {
+            /** Total Amount */
+            total_amount?: number | string | null;
             /**
              * Funding Source Id
              * Format: uuid
@@ -3506,7 +3685,7 @@ export interface components {
              */
             defective_quantity: number | string;
             /** Unit Price */
-            unit_price: number | string;
+            unit_price?: number | string | null;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -3731,11 +3910,39 @@ export interface components {
          * @enum {string}
          */
         Section: "planning" | "processes" | "warehouse" | "operations" | "personnel" | "repairs" | "sales" | "finance";
+        /** SemiFinishedEntry */
+        SemiFinishedEntry: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Initial Quantity
+             * @default 0
+             */
+            initial_quantity: number | string;
+            /** Product */
+            product: string;
+            /** Group */
+            group?: string[];
+        };
         /**
          * SortOrder
          * @enum {string}
          */
         SortOrder: "asc" | "desc";
+        /** StockEntry */
+        StockEntry: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Initial Quantity
+             * @default 0
+             */
+            initial_quantity: number | string;
+        };
         /** StockPoint */
         StockPoint: {
             /**
@@ -3983,6 +4190,20 @@ export interface components {
             demanded_materials: components["schemas"]["DemandedMaterialRow"][];
             /** Dynamics */
             dynamics: components["schemas"]["StockPoint"][];
+        };
+        /** WarehouseImport */
+        WarehouseImport: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Materials */
+            materials?: components["schemas"]["MaterialEntry"][];
+            /** Products */
+            products?: components["schemas"]["StockEntry"][];
+            /** Semi Finished */
+            semi_finished?: components["schemas"]["SemiFinishedEntry"][];
         };
         /**
          * WorkCompensationType
@@ -4549,6 +4770,138 @@ export interface operations {
             };
         };
     };
+    previewWarehouseImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    previewOperationsImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationsImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    importWarehouseCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    importOperationsCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationsImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listUsers: {
         parameters: {
             query?: never;
@@ -4968,6 +5321,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getManufacturedItemComposition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemComposition"];
                 };
             };
             /** @description Unprocessable Content */

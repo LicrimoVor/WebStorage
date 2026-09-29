@@ -212,14 +212,14 @@ export function ProduceManufacturedItemButton({
                   <Text as="h3" variant="subheader-2">Материалы</Text>
                   <div className={styles.tableWrap}>
                     <table>
-                      <thead><tr><th>Материал</th><th>Требуется</th><th>Со склада</th><th>Дефицит</th></tr></thead>
+                      <thead><tr><th>Материал</th><th data-numeric>Требуется</th><th data-numeric>Со склада</th><th data-numeric>Дефицит</th></tr></thead>
                       <tbody>
                         {preview.data.materials.map((material) => (
                           <tr key={material.material_id}>
                             <td>{material.name}</td>
-                            <td>{formatDecimal(material.required_quantity)} {material.unit}</td>
-                            <td>{formatDecimal(material.stock_used_quantity)} {material.unit}</td>
-                            <td>{formatDecimal(material.deficit_quantity)} {material.unit}</td>
+                            <td data-numeric>{formatDecimal(material.required_quantity)} {material.unit}</td>
+                            <td data-numeric>{formatDecimal(material.stock_used_quantity)} {material.unit}</td>
+                            <td data-numeric>{formatDecimal(material.deficit_quantity)} {material.unit}</td>
                           </tr>
                         ))}
                       </tbody>

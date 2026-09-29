@@ -15,6 +15,7 @@ from app.modules.manufactured_items.model import (
     ManufacturedItemMovement,
 )
 from app.modules.materials.model import Material
+from app.modules.materials.uniqueness import lock_material_catalog, validate_material_name
 from app.modules.warehouse import repository
 from app.modules.warehouse.composition import (
     all_product_memberships,
@@ -67,7 +68,7 @@ async def create_group(session: AsyncSession, payload: InventoryGroupCreate) -> 
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
-        raise ConflictError("An inventory group with this name already exists") from error
+        raise ConflictError("Группа уже существует внутри выбранного родителя") from error
     await session.refresh(group)
     return _group_read(group)
 
@@ -85,19 +86,35 @@ async def update_group(
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
-        raise ConflictError("An inventory group with this name already exists") from error
+        raise ConflictError("Группа уже существует внутри выбранного родителя") from error
     await session.refresh(group)
     rows = await repository.list_groups_with_counts(session)
     return next(_group_read(*row) for row in rows if row[0].id == group_id)
 
 
 async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
+    await lock_material_catalog(session)
     group = await session.get(InventoryGroup, group_id)
     if group is None:
         raise NotFoundError("Inventory group was not found")
     if await session.scalar(select(InventoryGroup.id).where(InventoryGroup.parent_id == group_id)):
         raise ConflictError("Сначала удалите подгруппы")
+    affected = list((await session.scalars(
+        select(Material).join(InventoryGroupMaterial).where(
+            InventoryGroupMaterial.group_id == group_id
+        )
+    )).all())
     await session.delete(group)
+    await session.flush()
+    try:
+        groups = await repository.material_group_map(session, [item.id for item in affected])
+        for item in affected:
+            await validate_material_name(
+                session, item.name, [g.id for g in groups.get(item.id, [])], item.id,
+            )
+    except ConflictError:
+        await session.rollback()
+        raise
     await session.commit()
 
 

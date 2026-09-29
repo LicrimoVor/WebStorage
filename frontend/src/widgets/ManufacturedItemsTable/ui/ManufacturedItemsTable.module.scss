@@ -1,0 +1,48 @@
+.left,
+.details,
+.section {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.section h2 {
+  margin: 0;
+}
+
+.details p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.hint {
+  color: var(--g-color-text-secondary);
+}
+
+.itemRow {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--g-color-base-simple-hover);
+  }
+}
+
+.name {
+  padding: 6px 0;
+  color: var(--g-color-text-link);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-color-line-brand);
+    outline-offset: 2px;
+  }
+}

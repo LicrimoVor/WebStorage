@@ -9,6 +9,7 @@ from app.core.errors import ProblemDetail
 from app.core.query import AvailabilityFilter, SortOrder
 from app.modules.inventory.schemas import InventoryMovementCreate
 from app.modules.manufactured_items import movement_service, service
+from app.modules.manufactured_items.composition import ItemComposition, get_composition
 from app.modules.manufactured_items.schemas import (
     ManufacturedItemCreate,
     ManufacturedItemKind,
@@ -26,6 +27,11 @@ router = APIRouter(
     responses={422: {"model": ProblemDetail}},
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
+
+
+@router.get("/{item_id}/composition", operation_id="getManufacturedItemComposition")
+async def read_composition(item_id: uuid.UUID, session: Session) -> ItemComposition:
+    return await get_composition(session, item_id)
 
 
 @router.post(

@@ -75,6 +75,7 @@ class OperationList(BaseModel):
 
 
 class OperationGroupWrite(BaseModel):
+    parent_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
 
     @field_validator("name")

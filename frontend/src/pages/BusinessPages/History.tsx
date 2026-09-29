@@ -24,6 +24,7 @@ export interface Document {
   serial_number?: string;
   replacement_serial_number?: string;
   service_cost?: string;
+  total_amount?: string | null;
   materials?: Line[];
   material_costs?: Line[];
   operations?: OperationLine[];
@@ -37,6 +38,7 @@ function DocumentDetails({document: doc}: {document: Document}) {
   return <div className={styles.documentDetails}>
     <dl className={styles.documentMetadata}>
       <div><dt>Дата</dt><dd>{new Date(doc.occurred_at).toLocaleString()}</dd></div>
+      {doc.total_amount != null && <div><dt>Сумма за приход</dt><dd>{doc.total_amount} ₽</dd></div>}
       {doc.serial_number && <div><dt>Ремонтируемое изделие</dt><dd>{doc.serial_number}</dd></div>}
       {doc.replacement_serial_number && <div><dt>Выдано взамен</dt><dd>{doc.replacement_serial_number}</dd></div>}
       <div><dt>Источник финансирования</dt><dd>{sources.data?.find((s) => s.id === doc.funding_source_id)?.name ?? '—'}</dd></div>

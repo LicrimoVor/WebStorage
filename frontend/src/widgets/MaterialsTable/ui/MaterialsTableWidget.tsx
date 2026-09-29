@@ -12,6 +12,8 @@ import {
 } from "@gravity-ui/uikit";
 import { Boxes3 } from "@gravity-ui/icons";
 import { useSearchParams } from "react-router-dom";
+import {useState} from 'react';
+import {MaterialDetails} from './MaterialDetails';
 
 import {
   MaterialsTable,
@@ -22,7 +24,6 @@ import {
   type MaterialSortField,
   type SortOrder,
 } from "@/entities/Material";
-import { useProductOptionsQuery } from "@/entities/ManufacturedItem";
 import { AdjustStockButton } from "@/features/AdjustStock";
 import { ArchiveMaterialButton } from "@/features/ArchiveMaterial";
 import { CreateMaterialButton } from "@/features/CreateMaterial";
@@ -55,6 +56,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export function MaterialsTableWidget() {
+  const [selected, setSelected] = useState<Material>();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
   const pageSize = positiveInteger(searchParams.get("page_size"), 20);
@@ -66,7 +68,6 @@ export function MaterialsTableWidget() {
   const deficitOnly = searchParams.get("deficit_only") === "true";
   const productId = searchParams.get("product_id") ?? "";
   const groupId = searchParams.get("group_id") ?? "";
-  const productsQuery = useProductOptionsQuery();
 
   const params: MaterialListParams = {
     page,
@@ -95,10 +96,10 @@ export function MaterialsTableWidget() {
 
   const renderActions = (material: Material) => (
     <div className={styles.actions}>
-      <AdjustStockButton material={material} />
+      {!material.archived && <AdjustStockButton material={material} />}
       <InventoryHistoryButton material={material} />
-      <EditMaterialButton material={material} />
-      <ArchiveMaterialButton material={material} />
+      {!material.archived && <><EditMaterialButton material={material} />
+      <ArchiveMaterialButton material={material} /></>}
     </div>
   );
 
@@ -135,21 +136,6 @@ export function MaterialsTableWidget() {
           size="l"
           controlProps={{ "aria-label": "Поиск материалов" }}
         />
-        <Select
-          options={(productsQuery.data ?? []).map((product) => ({
-            value: product.id,
-            content: product.name,
-          }))}
-          value={productId ? [productId] : []}
-          onUpdate={(values) => updateUrl({ product_id: values[0] ?? "", page: 1 })}
-          placeholder="Для любого продукта"
-          hasClear
-          filterable
-          width="max"
-          size="l"
-          aria-label="Фильтр материалов по продукту"
-        />
-
         <Select
           options={availabilityOptions}
           value={[availability]}
@@ -227,7 +213,7 @@ export function MaterialsTableWidget() {
         <div className={styles.content}>
           <MaterialsTable
             items={query.data.items}
-            renderActions={renderActions}
+            onSelect={setSelected}
           />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
@@ -244,6 +230,7 @@ export function MaterialsTableWidget() {
           </div>
         </div>
       )}
+      {selected && <MaterialDetails id={selected.id} onClose={() => setSelected(undefined)} renderActions={renderActions} />}
     </Card>
   );
 }
