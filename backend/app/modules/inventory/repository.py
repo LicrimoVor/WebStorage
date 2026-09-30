@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit_context import audit_context
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.inventory.model import InventoryMovement
 from app.modules.inventory.types import MovementType
@@ -38,13 +39,13 @@ async def create_movement(
 
     price_snapshot = material.price
     amount_snapshot = (
-        (abs(quantity) * price_snapshot).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        (abs(quantity) * price_snapshot).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if price_snapshot is not None
         else None
     )
+    context = audit_context.get()
     movement = InventoryMovement(
+        created_by=context.actor if context else "unknow",
         material_id=material_id,
         movement_type=movement_type.value,
         quantity=quantity,

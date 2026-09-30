@@ -1,5 +1,8 @@
+import {FundingSplit} from '@/entities/Funding/FundingSplit';
+import {useFundingSplit, fundingTotal} from '@/entities/Funding/split';
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import {FundingSelect} from '@/entities/Funding';
-import {Alert, Button, Dialog, Select, TextInput} from '@gravity-ui/uikit';
+import {Alert, Button, Dialog} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 
@@ -32,6 +35,7 @@ export function AdjustStockButton({material}: AdjustStockButtonProps) {
   const [quantity, setQuantity] = useState('');
   const [comment, setComment] = useState('');
   const [fundingSource, setFundingSource] = useState('');
+  const fundingSplit = useFundingSplit(fundingTotal(quantity, material.price), fundingSource);
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
   const titleId = `adjust-stock-${material.id}`;
@@ -43,11 +47,13 @@ export function AdjustStockButton({material}: AdjustStockButtonProps) {
       setOpen(false);
       setQuantity('');
       setComment('');
+      fundingSplit.reset();
     },
   });
 
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSplit.valid && movementType === "receipt") return;
     if (movementType === "receipt" && !fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     const allowNegative = movementType === 'adjustment';
     if (!isDecimal(quantity, {allowNegative}) || Number(normalizeDecimal(quantity)) === 0) {
@@ -64,6 +70,7 @@ export function AdjustStockButton({material}: AdjustStockButtonProps) {
       quantity: normalizeDecimal(quantity),
       comment: comment.trim() || null,
       funding_source_id: fundingSource || null,
+      ...(movementType === "receipt" ? fundingSplit.payload : {}),
     });
   };
 
@@ -83,7 +90,7 @@ export function AdjustStockButton({material}: AdjustStockButtonProps) {
         <Dialog.Header caption={`Изменить остаток: ${material.name}`} id={titleId} />
         <Dialog.Body>
           <div className={styles.form}>
-            {movementType === "receipt" && <FundingSelect value={fundingSource} onChange={setFundingSource} />}
+            {movementType === "receipt" && <><FundingSelect value={fundingSource} onChange={setFundingSource} /><FundingSplit split={fundingSplit} primary={fundingSource} /></>}
             {validationError || mutation.error ? (
               <Alert
                 theme="danger"

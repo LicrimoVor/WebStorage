@@ -19,6 +19,7 @@ def to_read_model(movement: InventoryMovement) -> InventoryMovementRead:
     return InventoryMovementRead(
         id=movement.id,
         funding_source_id=movement.funding_source_id,
+        funding_allocations=movement.funding_allocations,
         material_id=movement.material_id,
         movement_type=movement.movement_type,
         quantity=movement.quantity,
@@ -53,9 +54,11 @@ async def apply_manual_movement(
         source_type="manual",
     )
     if payload.movement_type.value == "receipt":
-        from app.modules.business.service import validate_funding
+        from app.modules.finance.funding import validate_allocations
 
-        await validate_funding(session, payload.funding_source_id)
+        movement.funding_allocations = await validate_allocations(
+            session, payload, movement.total_amount_snapshot
+        )
         movement.funding_source_id = payload.funding_source_id
     await session.commit()
     await session.refresh(movement)

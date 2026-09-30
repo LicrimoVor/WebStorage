@@ -4,7 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, Numeric, case, cast, func, literal, select, union_all
+from sqlalchemy import DateTime, Numeric, case, cast, column, func, literal, select, union_all
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import Subquery
@@ -34,12 +35,14 @@ class FinanceEntryRecord:
     comment: str | None
     created_by: str
     funding_source_id: uuid.UUID | None
+    funding_allocations: list[dict[str, Any]]
 
 
-def entry_union() -> Subquery:
+def entry_union(funding_source_id: uuid.UUID | None = None) -> Subquery:
     manual = select(
         FinancialTransaction.id.label("id"),
         FinancialTransaction.funding_source_id.label("funding_source_id"),
+        FinancialTransaction.funding_allocations.label("funding_allocations"),
         FinancialTransaction.id.label("source_id"),
         case((FinancialTransaction.category == "Ремонт", "repair"), else_="manual").label(
             "source_type"
@@ -55,6 +58,7 @@ def entry_union() -> Subquery:
     sales = select(
         Sale.id.label("id"),
         Sale.funding_source_id.label("funding_source_id"),
+        Sale.funding_allocations.label("funding_allocations"),
         Sale.id.label("source_id"),
         literal(FinanceSource.SALE.value).label("source_type"),
         literal(FinancialDirection.INCOME.value).label("direction"),
@@ -68,6 +72,7 @@ def entry_union() -> Subquery:
     labour = select(
         EmployeePayment.id.label("id"),
         EmployeePayment.funding_source_id.label("funding_source_id"),
+        EmployeePayment.funding_allocations.label("funding_allocations"),
         EmployeePayment.id.label("source_id"),
         literal(FinanceSource.LABOUR.value).label("source_type"),
         literal(FinancialDirection.EXPENSE.value).label("direction"),
@@ -82,6 +87,7 @@ def entry_union() -> Subquery:
         select(
             InventoryMovement.id.label("id"),
             InventoryMovement.funding_source_id.label("funding_source_id"),
+            InventoryMovement.funding_allocations.label("funding_allocations"),
             InventoryMovement.id.label("source_id"),
             literal(FinanceSource.MATERIAL.value).label("source_type"),
             literal(FinancialDirection.EXPENSE.value).label("direction"),
@@ -90,7 +96,7 @@ def entry_union() -> Subquery:
             InventoryMovement.total_amount_snapshot.label("amount"),
             InventoryMovement.created_at.label("occurred_at"),
             InventoryMovement.comment.label("comment"),
-            literal("system").label("created_by"),
+            InventoryMovement.created_by.label("created_by"),
         )
         .join(Material, Material.id == InventoryMovement.material_id)
         .where(
@@ -102,6 +108,7 @@ def entry_union() -> Subquery:
     receipts = select(
         BusinessDocument.id.label("id"),
         BusinessDocument.funding_source_id.label("funding_source_id"),
+        BusinessDocument.funding_allocations.label("funding_allocations"),
         BusinessDocument.id.label("source_id"),
         literal(FinanceSource.MATERIAL.value).label("source_type"),
         literal(FinancialDirection.EXPENSE.value).label("direction"),
@@ -117,7 +124,32 @@ def entry_union() -> Subquery:
         BusinessDocument.kind == "receipt",
         BusinessDocument.data["total_amount"].astext.is_not(None),
     )
-    return union_all(manual, sales, labour, materials, receipts).subquery("finance_entries")
+    entries = union_all(manual, sales, labour, materials, receipts).subquery("finance_entries")
+    if funding_source_id is None:
+        return entries
+    parts = (
+        func.jsonb_array_elements(entries.c.funding_allocations)
+        .table_valued(column("value", JSONB))
+        .alias("funding_part")
+    )
+    allocated = (
+        select(func.sum(cast(parts.c.value["amount"].astext, Numeric(20, 2))))
+        .where(parts.c.value["funding_source_id"].astext == str(funding_source_id))
+        .correlate(entries)
+        .scalar_subquery()
+    )
+    split = func.jsonb_array_length(entries.c.funding_allocations) > 0
+    amount = case((split, allocated), else_=entries.c.amount)
+    return (
+        select(*[c for c in entries.c if c.key != "amount"], amount.label("amount"))
+        .where(
+            case(
+                (split, allocated.is_not(None)),
+                else_=entries.c.funding_source_id == funding_source_id,
+            )
+        )
+        .subquery("filtered_finance_entries")
+    )
 
 
 async def create_transaction(
@@ -140,10 +172,8 @@ async def list_entries(
     sort_order: SortOrder,
     funding_source_id: uuid.UUID | None = None,
 ) -> tuple[list[FinanceEntryRecord], int]:
-    entries = entry_union()
+    entries = entry_union(funding_source_id)
     statement = select(entries)
-    if funding_source_id is not None:
-        statement = statement.where(entries.c.funding_source_id == funding_source_id)
     if source != FinanceSource.ALL:
         statement = statement.where(entries.c.source_type == source.value)
     if direction is not None:
@@ -179,6 +209,7 @@ async def list_entries(
                 comment=row.comment,
                 created_by=row.created_by,
                 funding_source_id=row.funding_source_id,
+                funding_allocations=row.funding_allocations,
             )
             for row in rows
         ],
@@ -206,63 +237,35 @@ async def summary_values(
     date_to: datetime | None,
     funding_source_id: uuid.UUID | None = None,
 ) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, int]:
-    sales_statement = with_period(
-        select(func.coalesce(func.sum(Sale.total_amount), Decimal("0"))),
-        Sale.sold_at,
-        date_from,
-        date_to,
-    )
-    labour_statement = with_period(
-        select(func.coalesce(func.sum(EmployeePayment.amount), Decimal("0"))),
-        EmployeePayment.paid_at,
-        date_from,
-        date_to,
-    )
-    material_statement = with_period(
-        select(
-            func.coalesce(func.sum(InventoryMovement.total_amount_snapshot), Decimal("0"))
-        ).where(
-            InventoryMovement.movement_type == "receipt",
-            InventoryMovement.source_type.in_(["manual", "receipt"]),
-            InventoryMovement.total_amount_snapshot.is_not(None),
-        ),
-        InventoryMovement.created_at,
-        date_from,
-        date_to,
-    )
-    manual_statement = with_period(
-        select(
-            func.coalesce(
-                func.sum(
-                    case(
-                        (
-                            FinancialTransaction.transaction_type
-                            == FinancialDirection.INCOME.value,
-                            FinancialTransaction.amount,
-                        ),
-                        else_=Decimal("0"),
-                    )
-                ),
-                Decimal("0"),
+    entries = entry_union(funding_source_id)
+    statement = with_period(select(entries), entries.c.occurred_at, date_from, date_to).subquery()
+
+    def total(source: list[str], direction: str) -> Any:
+        return func.coalesce(
+            func.sum(
+                case(
+                    (
+                        (statement.c.source_type.in_(source))
+                        & (statement.c.direction == direction),
+                        statement.c.amount,
+                    ),
+                    else_=0,
+                )
             ),
-            func.coalesce(
-                func.sum(
-                    case(
-                        (
-                            FinancialTransaction.transaction_type
-                            == FinancialDirection.EXPENSE.value,
-                            FinancialTransaction.amount,
-                        ),
-                        else_=Decimal("0"),
-                    )
-                ),
-                Decimal("0"),
-            ),
-        ),
-        FinancialTransaction.occurred_at,
-        date_from,
-        date_to,
-    )
+            0,
+        )
+
+    totals = (
+        await session.execute(
+            select(
+                total(["sale"], "income"),
+                total(["material"], "expense"),
+                total(["labour"], "expense"),
+                total(["manual", "repair"], "income"),
+                total(["manual", "repair"], "expense"),
+            )
+        )
+    ).one()
     incomplete_statement = with_period(
         select(func.count()).where(
             InventoryMovement.movement_type == "receipt",
@@ -274,44 +277,15 @@ async def summary_values(
         date_to,
     )
     if funding_source_id is not None:
-        sales_statement = sales_statement.where(Sale.funding_source_id == funding_source_id)
-        labour_statement = labour_statement.where(
-            EmployeePayment.funding_source_id == funding_source_id
-        )
-        material_statement = material_statement.where(
-            InventoryMovement.funding_source_id == funding_source_id
-        )
-        manual_statement = manual_statement.where(
-            FinancialTransaction.funding_source_id == funding_source_id
-        )
         incomplete_statement = incomplete_statement.where(
             InventoryMovement.funding_source_id == funding_source_id
         )
-    sales_income = Decimal((await session.execute(sales_statement)).scalar_one())
-    labour_expense = Decimal((await session.execute(labour_statement)).scalar_one())
-    material_expense = Decimal((await session.execute(material_statement)).scalar_one())
-    receipt_statement = with_period(
-        select(func.coalesce(func.sum(
-            cast(BusinessDocument.data["total_amount"].astext, Numeric(20, 2))
-        ), Decimal("0"))).where(
-            BusinessDocument.kind == "receipt",
-            BusinessDocument.data["total_amount"].astext.is_not(None),
-        ),
-        cast(BusinessDocument.data["occurred_at"].astext, DateTime(timezone=True)),
-        date_from, date_to,
-    )
-    if funding_source_id is not None:
-        receipt_statement = receipt_statement.where(
-            BusinessDocument.funding_source_id == funding_source_id
-        )
-    material_expense += Decimal((await session.execute(receipt_statement)).scalar_one())
-    manual = (await session.execute(manual_statement)).one()
     incomplete = int((await session.execute(incomplete_statement)).scalar_one())
     return (
-        sales_income,
-        material_expense,
-        labour_expense,
-        Decimal(manual[0]),
-        Decimal(manual[1]),
+        Decimal(totals[0]),
+        Decimal(totals[1]),
+        Decimal(totals[2]),
+        Decimal(totals[3]),
+        Decimal(totals[4]),
         incomplete,
     )

@@ -1,19 +1,10 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Switch,
-  Text,
-  TextInput,
-} from "@gravity-ui/uikit";
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Button, Card, Pagination, PlaceholderContainer, Skeleton, Switch, Text} from '@gravity-ui/uikit';
 import { Boxes3 } from "@gravity-ui/icons";
 import { useSearchParams } from "react-router-dom";
 import {useState} from 'react';
 import {MaterialDetails} from './MaterialDetails';
+import {DefectTransferButton} from './DefectTransferButton';
 
 import {
   MaterialsTable,
@@ -97,6 +88,7 @@ export function MaterialsTableWidget() {
   const renderActions = (material: Material) => (
     <div className={styles.actions}>
       {!material.archived && <AdjustStockButton material={material} />}
+      {!material.archived && <><DefectTransferButton material={material} />{!material.source_material_id && <CreateMaterialButton sourceMaterial={material} />}</>}
       <InventoryHistoryButton material={material} />
       {!material.archived && <><EditMaterialButton material={material} />
       <ArchiveMaterialButton material={material} /></>}

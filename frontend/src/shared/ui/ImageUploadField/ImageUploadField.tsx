@@ -1,4 +1,5 @@
-import {Button, Dialog, Loader, Text, TextInput} from '@gravity-ui/uikit';
+import {TextInput} from '@/shared/ui/FormControls';
+import {Button, Dialog, Loader, Text} from '@gravity-ui/uikit';
 import {useMutation} from '@tanstack/react-query';
 import {useRef, useState, type ChangeEvent} from 'react';
 

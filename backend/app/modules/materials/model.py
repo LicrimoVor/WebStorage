@@ -1,7 +1,17 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Index, Numeric, String, Text, func, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -16,6 +26,9 @@ class Material(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     id: Mapped[uuid.UUID]
+    source_material_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("materials.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
     price: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)

@@ -394,6 +394,7 @@ async def create_export(
     *,
     dataset: ExportDataset,
     filters: ExportFilters,
+    include_finance_author: bool = False,
 ) -> ExportResult:
     date_from = normalize_timestamp(filters.date_from)
     date_to = normalize_timestamp(filters.date_to)
@@ -448,6 +449,8 @@ async def create_export(
 
     rows = readable_rows(await repository.rows_for_dataset(session, dataset, filters))
     sheet_name, columns = DATASET_COLUMNS[dataset]
+    if dataset == ExportDataset.FINANCE_ENTRIES and not include_finance_author:
+        columns = [column for column in columns if column.key != "created_by"]
     return ExportResult(
         filename=filename(dataset, filters),
         content=build_workbook([ExportSheet(sheet_name, columns, rows)]),

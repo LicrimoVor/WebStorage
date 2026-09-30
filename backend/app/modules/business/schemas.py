@@ -5,6 +5,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.types import Money, Quantity
+from app.modules.finance.funding import FundingWrite
 
 
 class FundingSourceCreate(BaseModel):
@@ -21,22 +22,17 @@ class FundingSourceCreate(BaseModel):
 class FundingSourceRead(FundingSourceCreate):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
+    archived: bool = False
 
 
 class ReceiptLine(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     material_id: uuid.UUID
     quantity: Quantity = Field(gt=0)
-    defective_quantity: Quantity = Field(default=Decimal("0"), ge=0)
     unit_price: Money | None = None
 
-    @model_validator(mode="after")
-    def validate_defects(self) -> "ReceiptLine":
-        if self.defective_quantity > self.quantity:
-            raise ValueError("Брак не может превышать приход")
-        return self
 
-
-class ReceiptCreate(BaseModel):
+class ReceiptCreate(FundingWrite):
     total_amount: Money | None = None
     funding_source_id: uuid.UUID
     occurred_at: datetime
@@ -63,7 +59,7 @@ class RepairOperation(BaseModel):
     quantity: Quantity = Field(gt=0)
 
 
-class RepairCreate(BaseModel):
+class RepairCreate(FundingWrite):
     funding_source_id: uuid.UUID
     occurred_at: datetime
     serial_number: str = Field(min_length=1, max_length=200)

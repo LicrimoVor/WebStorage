@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import AvailabilityFilter, SortOrder
-from app.modules.materials import service
+from app.modules.materials import defects, service
 from app.modules.materials.schemas import (
+    DefectTransfer,
     MaterialCreate,
     MaterialList,
     MaterialRead,
@@ -94,3 +95,16 @@ async def update_material(
 )
 async def archive_material(material_id: uuid.UUID, session: Session) -> MaterialRead:
     return await service.archive(session, material_id)
+
+
+
+@router.get("/{material_id}/defects", response_model=list[MaterialRead])
+async def material_defects(material_id: uuid.UUID, session: Session) -> list[MaterialRead]:
+    return await defects.relatives(session, material_id)
+
+
+@router.post("/{material_id}/defect-transfers", status_code=204)
+async def transfer_defects(
+    material_id: uuid.UUID, payload: DefectTransfer, session: Session
+) -> None:
+    await defects.transfer(session, material_id, payload)

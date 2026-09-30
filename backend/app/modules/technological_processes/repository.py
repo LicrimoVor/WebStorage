@@ -107,7 +107,7 @@ async def list_processes(
     statement = select(TechnologicalProcess, ManufacturedItem.name).outerjoin(
         ManufacturedItem,
         ManufacturedItem.id == TechnologicalProcess.output_item_id,
-    )
+    ).where(TechnologicalProcess.deleted_at.is_(None))
     if not include_archived:
         statement = statement.where(TechnologicalProcess.archived.is_(False))
     if search:
@@ -174,7 +174,7 @@ async def get_process_bundle(session: AsyncSession, process_id: uuid.UUID) -> Pr
                 ManufacturedItem,
                 ManufacturedItem.id == TechnologicalProcess.output_item_id,
             )
-            .where(TechnologicalProcess.id == process_id)
+            .where(TechnologicalProcess.id == process_id, TechnologicalProcess.deleted_at.is_(None))
         )
     ).one_or_none()
     if row is None:
@@ -192,7 +192,7 @@ async def get_process_for_update(
     return (
         await session.execute(
             select(TechnologicalProcess)
-            .where(TechnologicalProcess.id == process_id)
+            .where(TechnologicalProcess.id == process_id, TechnologicalProcess.deleted_at.is_(None))
             .with_for_update()
         )
     ).scalar_one_or_none()

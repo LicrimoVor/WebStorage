@@ -16,19 +16,6 @@ from app.modules.production_plans.model import (
 from app.modules.warehouse.model import InventoryGroup, InventoryGroupMaterial
 
 
-async def defective_quantities(
-    session: AsyncSession, material_ids: list[uuid.UUID],
-) -> dict[uuid.UUID, Decimal]:
-    rows = await session.execute(
-        select(InventoryMovement.material_id, -func.sum(InventoryMovement.quantity))
-        .where(
-            InventoryMovement.material_id.in_(material_ids),
-            InventoryMovement.source_type == "receipt_defect",
-        ).group_by(InventoryMovement.material_id)
-    )
-    return {row[0]: Decimal(row[1]) for row in rows}
-
-
 def balance_expression() -> ColumnElement[Decimal]:
     return (
         select(func.coalesce(func.sum(InventoryMovement.quantity), Decimal("0")))

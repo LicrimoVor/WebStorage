@@ -1,17 +1,6 @@
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  Label,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Text,
-  TextInput,
-} from "@gravity-ui/uikit";
+import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Text} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";

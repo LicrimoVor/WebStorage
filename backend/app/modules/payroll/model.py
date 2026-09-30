@@ -17,14 +17,13 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.modules.finance.funding import FundingMixin
 
 
 class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "work_entries"
     __table_args__ = (
-        CheckConstraint(
-            "input_mode IN ('quantity', 'time')", name="input_mode_valid"
-        ),
+        CheckConstraint("input_mode IN ('quantity', 'time')", name="input_mode_valid"),
         CheckConstraint("input_value > 0", name="input_value_positive"),
         CheckConstraint(
             "equivalent_quantity IS NULL OR equivalent_quantity > 0",
@@ -77,17 +76,11 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(20), nullable=False, server_default="piecework", default="piecework"
     )
     input_value: Mapped[Decimal] = mapped_column(Numeric(20, 6), nullable=False)
-    equivalent_quantity: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 6), nullable=True
-    )
+    equivalent_quantity: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     time_minutes: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
-    time_norm_snapshot: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 6), nullable=True
-    )
+    time_norm_snapshot: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
     rate_snapshot: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
-    accrued_amount: Mapped[Decimal | None] = mapped_column(
-        Numeric(20, 2), nullable=True
-    )
+    accrued_amount: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     performed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -101,7 +94,7 @@ class WorkEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     void_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
-class EmployeePayment(UUIDPrimaryKeyMixin, Base):
+class EmployeePayment(FundingMixin, UUIDPrimaryKeyMixin, Base):
     __tablename__ = "employee_payments"
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),

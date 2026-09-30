@@ -18,7 +18,8 @@ from app.modules.operations.model import Operation
 
 
 async def validate_funding(session: AsyncSession, source_id: uuid.UUID | None) -> None:
-    if source_id is None or await session.get(FundingSource, source_id) is None:
+    source = await session.get(FundingSource, source_id) if source_id else None
+    if source is None or source.archived:
         raise DomainValidationError("Выберите существующий источник финансирования")
 
 
@@ -36,7 +37,14 @@ async def register_document(
     session: AsyncSession, payload: ReceiptCreate | RepairCreate, *, key: str, actor: str
 ) -> dict[str, Any]:
     kind = "receipt" if isinstance(payload, ReceiptCreate) else "repair"
-    fingerprint = hashlib.sha256((kind + payload.model_dump_json()).encode()).hexdigest()
+    fingerprint = hashlib.sha256(
+        (
+            kind
+            + payload.model_dump_json(
+                exclude={"funding_allocations"} if not payload.funding_allocations else None
+            )
+        ).encode()
+    ).hexdigest()
     # Serialize retries before checking the unique key, including concurrent requests.
     from sqlalchemy import text
 
@@ -50,13 +58,17 @@ async def register_document(
         if existing.fingerprint != fingerprint:
             raise ConflictError("Ключ уже использован для другого документа")
         return document_read(existing)
-    await validate_funding(session, payload.funding_source_id)
+    from app.modules.finance.funding import validate_allocations
+
+    total = payload.total_amount if isinstance(payload, ReceiptCreate) else payload.service_cost
+    allocations = await validate_allocations(session, payload, total)
     document = BusinessDocument(
         id=uuid.uuid4(),
         kind=kind,
         idempotency_key=key,
         fingerprint=fingerprint,
         funding_source_id=payload.funding_source_id,
+        funding_allocations=allocations,
         created_by=actor,
         data=payload.model_dump(mode="json"),
     )
@@ -80,27 +92,12 @@ async def register_document(
             snapshots.append(
                 {**line.model_dump(mode="json"), "name": material.name if material else ""}
             )
-            movement.unit_price_snapshot = (
-                line.unit_price if payload.total_amount is None else None
-            )
+            movement.unit_price_snapshot = line.unit_price if payload.total_amount is None else None
             movement.total_amount_snapshot = (
                 money(line.quantity * line.unit_price)
-                if payload.total_amount is None and line.unit_price is not None else None
+                if payload.total_amount is None and line.unit_price is not None
+                else None
             )
-            if line.defective_quantity:
-                defect = await create_movement(
-                    session,
-                    material_id=line.material_id,
-                    movement_type=MovementType.WRITE_OFF,
-                    quantity=-line.defective_quantity,
-                    comment=payload.comment or "Брак при поступлении",
-                    source_type="receipt_defect",
-                    source_id=document.id,
-                )
-                defect.created_at = timestamp(payload.occurred_at)
-                defect.funding_source_id = payload.funding_source_id
-                defect.unit_price_snapshot = None
-                defect.total_amount_snapshot = None
         document.data = {**document.data, "entries": snapshots}
     else:
         if payload.copied_from_id:
@@ -145,6 +142,7 @@ async def register_document(
         if payload.service_cost:
             session.add(
                 FinancialTransaction(
+                    document_id=document.id,
                     transaction_type="expense",
                     amount=payload.service_cost,
                     occurred_at=timestamp(payload.occurred_at),
@@ -152,6 +150,7 @@ async def register_document(
                     comment=payload.comment,
                     created_by=actor,
                     funding_source_id=payload.funding_source_id,
+                    funding_allocations=allocations,
                 )
             )
         document.data = {

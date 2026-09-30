@@ -23,7 +23,7 @@ export function MaterialsTable({ items, onSelect }: MaterialsTableProps) {
       id: "name",
       name: "Название",
       primary: true,
-      template: (item) => <Button view="flat" onClick={() => onSelect(item)}>{item.name}</Button>,
+      template: (item) => <><Button view="flat" onClick={() => onSelect(item)}>{item.name}</Button>{item.source_material_id && <Text color="secondary"> · Брак</Text>}</>,
     },
     {
       id: "groups",
@@ -53,12 +53,6 @@ export function MaterialsTable({ items, onSelect }: MaterialsTableProps) {
           {formatDecimal(item.deficit_quantity)}
         </Text>
       ),
-    },
-    {
-      id: "defective_quantity",
-      name: "Брак",
-      align: "center",
-      template: (item) => formatDecimal(item.defective_quantity ?? '0'),
     },
   ];
 

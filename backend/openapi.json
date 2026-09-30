@@ -285,6 +285,66 @@
         }
       }
     },
+    "/api/v1/auth/appearance": {
+      "get": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Get Appearance",
+        "operationId": "get_appearance_api_v1_auth_appearance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appearance"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Save Appearance",
+        "operationId": "save_appearance_api_v1_auth_appearance_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Appearance"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appearance"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/funding-sources": {
       "get": {
         "tags": [
@@ -335,6 +395,93 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/funding-sources/{source_id}": {
+      "patch": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Update Source",
+        "operationId": "update_source_api_v1_funding_sources__source_id__patch",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundingSourceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingSourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Delete Source",
+        "operationId": "delete_source_api_v1_funding_sources__source_id__delete",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -1253,6 +1400,99 @@
               }
             },
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/materials/{material_id}/defects": {
+      "get": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Material Defects",
+        "operationId": "material_defects_api_v1_materials__material_id__defects_get",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Material Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialRead"
+                  },
+                  "title": "Response Material Defects Api V1 Materials  Material Id  Defects Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/materials/{material_id}/defect-transfers": {
+      "post": {
+        "tags": [
+          "materials"
+        ],
+        "summary": "Transfer Defects",
+        "operationId": "transfer_defects_api_v1_materials__material_id__defect_transfers_post",
+        "parameters": [
+          {
+            "name": "material_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Material Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefectTransfer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
           }
         }
       }
@@ -3709,6 +3949,40 @@
             "description": "Conflict"
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "technological processes"
+        ],
+        "summary": "Delete Technological Process",
+        "operationId": "deleteTechnologicalProcess",
+        "parameters": [
+          {
+            "name": "process_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Process Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
       }
     },
     "/api/v1/technological-processes/{process_id}/archive": {
@@ -5854,6 +6128,104 @@
         }
       }
     },
+    "/api/v1/finance/entries/{entry_id}": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "Financial Entry Details",
+        "operationId": "financial_entry_details_api_v1_finance_entries__entry_id__get",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Financial Entry Details Api V1 Finance Entries  Entry Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "Edit Financial Entry",
+        "operationId": "edit_financial_entry_api_v1_finance_entries__entry_id__patch",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinanceEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Edit Financial Entry Api V1 Finance Entries  Entry Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/v1/finance/transactions": {
       "post": {
         "tags": [
@@ -7321,6 +7693,33 @@
         ],
         "title": "AnalyticsPeriodRead"
       },
+      "Appearance": {
+        "properties": {
+          "light": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Palette"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Palette"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Appearance"
+      },
       "AuditEventList": {
         "properties": {
           "through_id": {
@@ -7630,6 +8029,64 @@
           "quantity"
         ],
         "title": "CompositionEntry"
+      },
+      "DefectTransfer": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/DefectTransferLine"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "entries"
+        ],
+        "title": "DefectTransfer"
+      },
+      "DefectTransferLine": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "quantity"
+        ],
+        "title": "DefectTransferLine"
       },
       "DemandedMaterialRow": {
         "properties": {
@@ -8394,6 +8851,68 @@
         ],
         "title": "ExportDataset"
       },
+      "FinanceEdit": {
+        "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Amount"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          },
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "occurred_at",
+          "funding_source_id",
+          "reason",
+          "revision"
+        ],
+        "title": "FinanceEdit"
+      },
       "FinanceEntryList": {
         "properties": {
           "items": {
@@ -8432,6 +8951,14 @@
       },
       "FinanceEntryRead": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {
@@ -8490,7 +9017,14 @@
             "title": "Comment"
           },
           "created_by": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Created By"
           }
         },
@@ -8504,8 +9038,7 @@
           "description",
           "amount",
           "occurred_at",
-          "comment",
-          "created_by"
+          "comment"
         ],
         "title": "FinanceEntryRead"
       },
@@ -8596,6 +9129,14 @@
       },
       "FinancialTransactionCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "type": "string",
             "format": "uuid",
@@ -8660,6 +9201,14 @@
       },
       "FinancialTransactionRead": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {
@@ -8706,7 +9255,14 @@
             "title": "Comment"
           },
           "created_by": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Created By"
           },
           "created_at": {
@@ -8723,10 +9279,57 @@
           "occurred_at",
           "category",
           "comment",
-          "created_by",
           "created_at"
         ],
         "title": "FinancialTransactionRead"
+      },
+      "FundingPart-Input": {
+        "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "funding_source_id",
+          "amount"
+        ],
+        "title": "FundingPart"
+      },
+      "FundingPart-Output": {
+        "properties": {
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "funding_source_id",
+          "amount"
+        ],
+        "title": "FundingPart"
       },
       "FundingSourceCreate": {
         "properties": {
@@ -8755,6 +9358,11 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
           }
         },
         "type": "object",
@@ -9444,6 +10052,14 @@
       },
       "InventoryMovementCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {
@@ -9529,6 +10145,14 @@
       },
       "InventoryMovementRead": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {
@@ -10209,6 +10833,18 @@
       },
       "MaterialCreate": {
         "properties": {
+          "source_material_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Id"
+          },
           "name": {
             "type": "string",
             "maxLength": 200,
@@ -10219,7 +10855,8 @@
             "type": "string",
             "maxLength": 32,
             "minLength": 1,
-            "title": "Unit"
+            "title": "Unit",
+            "default": "шт."
           },
           "initial_quantity": {
             "anyOf": [
@@ -10288,8 +10925,7 @@
         },
         "type": "object",
         "required": [
-          "name",
-          "unit"
+          "name"
         ],
         "title": "MaterialCreate"
       },
@@ -10412,11 +11048,17 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
             "title": "Free Quantity"
           },
-          "defective_quantity": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
-            "title": "Defective Quantity",
-            "default": "0"
+          "source_material_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Id"
           },
           "required_quantity": {
             "type": "string",
@@ -11057,6 +11699,39 @@
         ],
         "title": "OperationsImport"
       },
+      "Palette": {
+        "properties": {
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Accent"
+          },
+          "link": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Link"
+          },
+          "background": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Background"
+          },
+          "surface": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Surface"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accent",
+          "link",
+          "background",
+          "surface"
+        ],
+        "title": "Palette"
+      },
       "PaymentAllocationCreate": {
         "properties": {
           "work_entry_id": {
@@ -11125,6 +11800,14 @@
       },
       "PaymentCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "type": "string",
             "format": "uuid",
@@ -11228,6 +11911,14 @@
       },
       "PaymentRead": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {
@@ -13224,6 +13915,14 @@
       },
       "ReceiptCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "total_amount": {
             "anyOf": [
               {
@@ -13294,20 +13993,6 @@
             ],
             "title": "Quantity"
           },
-          "defective_quantity": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0.0
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
-              }
-            ],
-            "title": "Defective Quantity",
-            "default": "0"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -13325,6 +14010,7 @@
             "title": "Unit Price"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "material_id",
@@ -13349,6 +14035,14 @@
       },
       "RepairCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "type": "string",
             "format": "uuid",
@@ -13509,6 +14203,14 @@
       },
       "SaleCreate": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "serial_numbers": {
             "items": {
               "type": "string"
@@ -13637,6 +14339,14 @@
       },
       "SaleRead": {
         "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
           "funding_source_id": {
             "anyOf": [
               {

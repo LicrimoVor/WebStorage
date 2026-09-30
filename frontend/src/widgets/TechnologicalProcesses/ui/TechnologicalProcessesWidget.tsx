@@ -1,21 +1,6 @@
+import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  Label,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Switch,
-  Table,
-  Text,
-  TextArea,
-  TextInput,
-  type TableColumnConfig,
-} from "@gravity-ui/uikit";
+import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Switch, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -33,7 +18,7 @@ import {
   type TechnologicalProcess,
   type TechnologicalProcessListParams,
 } from "@/entities/TechnologicalProcess";
-import { getErrorMessage } from "@/shared/api";
+import { apiRequest, getErrorMessage } from "@/shared/api";
 import { formatDateTime } from "@/shared/lib";
 import { routes } from "@/shared/routes";
 
@@ -260,6 +245,41 @@ function ArchiveProcessButton({ process }: { process: TechnologicalProcess }) {
   );
 }
 
+function DeleteProcessButton({ process }: { process: TechnologicalProcess }) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => apiRequest(`/technological-processes/${process.id}`, {method: 'DELETE'}),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries();
+      setOpen(false);
+    },
+  });
+  return (
+    <>
+      <Button view="flat-danger" size="s" onClick={() => setOpen(true)}>
+        Удалить
+      </Button>
+      <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)}>
+        <Dialog.Header caption="Удалить технологический процесс?" />
+        <Dialog.Body>
+          Техпроцесс «{process.name}» исчезнет из списка и архива. Записи производства сохранятся.
+        </Dialog.Body>
+        <Dialog.Footer
+          preset="danger"
+          textButtonApply="Удалить"
+          textButtonCancel="Отмена"
+          onClickButtonApply={() => mutation.mutate()}
+          onClickButtonCancel={() => setOpen(false)}
+          loading={mutation.isPending}
+          errorText={mutation.error ? getErrorMessage(mutation.error) : ""}
+          showError={Boolean(mutation.error)}
+        />
+      </Dialog>
+    </>
+  );
+}
+
 function ProcessesTable({
   items,
   renderActions,
@@ -355,6 +375,7 @@ export function TechnologicalProcessesWidget() {
         Открыть
       </Button>
       {!process.archived ? <ArchiveProcessButton process={process} /> : null}
+      <DeleteProcessButton process={process} />
     </div>
   );
   const hasFilters = Boolean(search) || includeArchived;

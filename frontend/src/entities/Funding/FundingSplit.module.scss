@@ -1,0 +1,25 @@
+.root {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.part {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 140px) auto;
+  align-items: end;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--g-color-base-generic);
+}
+
+@media (width <= 480px) {
+  .part {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
+}

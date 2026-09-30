@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.types import Money
+from app.modules.finance.funding import FundingWrite
 
 
 class FinancialDirection(StrEnum):
@@ -22,7 +23,7 @@ class FinanceSource(StrEnum):
     REPAIR = "repair"
 
 
-class FinancialTransactionCreate(BaseModel):
+class FinancialTransactionCreate(FundingWrite):
     funding_source_id: uuid.UUID
     transaction_type: FinancialDirection
     amount: Money = Field(gt=0)
@@ -44,7 +45,7 @@ class FinancialTransactionCreate(BaseModel):
         return value.strip() or None if value is not None else None
 
 
-class FinancialTransactionRead(BaseModel):
+class FinancialTransactionRead(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     transaction_type: FinancialDirection
@@ -52,11 +53,11 @@ class FinancialTransactionRead(BaseModel):
     occurred_at: datetime
     category: str
     comment: str | None
-    created_by: str
+    created_by: str | None = None
     created_at: datetime
 
 
-class FinanceEntryRead(BaseModel):
+class FinanceEntryRead(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     source_id: uuid.UUID
@@ -67,7 +68,7 @@ class FinanceEntryRead(BaseModel):
     amount: Money
     occurred_at: datetime
     comment: str | None
-    created_by: str
+    created_by: str | None = None
 
 
 class FinanceEntryList(BaseModel):

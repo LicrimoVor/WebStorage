@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func, text
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -16,6 +17,7 @@ class UserAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     id: Mapped[uuid.UUID]
+    appearance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     permissions: Mapped[list[str] | None] = mapped_column(ARRAY(String(32)), nullable=True)

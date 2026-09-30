@@ -36,9 +36,8 @@ async def receipt(client: AsyncClient, source: dict, material: dict) -> dict:
             "entries": [
                 {
                     "material_id": material["id"],
-                    "quantity": "10",
-                    "defective_quantity": "2",
-                    "unit_price": "12",
+                    "quantity": "8",
+                    "unit_price": "15",
                 }
             ],
         },

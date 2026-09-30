@@ -24,13 +24,12 @@ it('submits only received materials with a single total and no unit prices', asy
   await userEvent.click(screen.getByRole('button', {name: 'Выбрать счёт'}));
   fireEvent.change(screen.getByRole('textbox', {name: 'Сумма за приход'}), {target: {value: '123,45'}});
   fireEvent.change(screen.getByRole('textbox', {name: 'Приход: Сталь'}), {target: {value: '10'}});
-  fireEvent.change(screen.getByRole('textbox', {name: 'Брак: Сталь'}), {target: {value: '2'}});
   fireEvent.change(screen.getByRole('textbox', {name: 'Приход: Медь'}), {target: {value: '0'}});
   await userEvent.click(screen.getByRole('button', {name: 'Провести приход'}));
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('/warehouse/receipts', expect.objectContaining({method: 'POST'})));
   const request = vi.mocked(apiRequest).mock.calls.find(([path]) => path === '/warehouse/receipts');
   expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
-    total_amount: '123.45', entries: [{material_id: 'first', quantity: '10', defective_quantity: '2'}],
+    total_amount: '123.45', entries: [{material_id: 'first', quantity: '10'}],
   });
   expect(String(request?.[1]?.body)).not.toContain('unit_price');
 });

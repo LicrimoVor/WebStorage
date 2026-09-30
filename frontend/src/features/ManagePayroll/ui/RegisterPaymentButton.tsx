@@ -1,13 +1,8 @@
+import {FundingSplit} from '@/entities/Funding/FundingSplit';
+import {useFundingSplit} from '@/entities/Funding/split';
+import {TextInput} from '@/shared/ui/FormControls';
 import {FundingSelect} from '@/entities/Funding';
-import {
-  Alert,
-  Button,
-  Dialog,
-  Switch,
-  Table,
-  TextInput,
-  type TableColumnConfig,
-} from '@gravity-ui/uikit';
+import {Alert, Button, Dialog, Switch, Table, type TableColumnConfig} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useMemo, useState} from 'react';
 
@@ -44,6 +39,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
   const [paidAt, setPaidAt] = useState(currentDateTime);
   const [comment, setComment] = useState('');
   const [fundingSource, setFundingSource] = useState('');
+  const fundingSplit = useFundingSplit(amount, fundingSource);
   const [manual, setManual] = useState(false);
   const [allocationAmounts, setAllocationAmounts] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string>();
@@ -66,6 +62,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
       setOpen(false);
       setAmount('');
       setComment('');
+      fundingSplit.reset();
       setAllocationAmounts({});
     },
   });
@@ -79,6 +76,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSplit.valid) return;
     if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     if (!isMoney(amount)) {
       setValidationError('Укажите положительную сумму с точностью до копеек.');
@@ -115,6 +113,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
       paid_at: new Date(paidAt).toISOString(),
       comment: comment.trim() || null,
       funding_source_id: fundingSource,
+      ...fundingSplit.payload,
       allocations,
     });
   };
@@ -200,7 +199,7 @@ export function RegisterPaymentButton({employee}: RegisterPaymentButtonProps) {
                 onChange={(event) => setPaidAt(event.target.value)}
               />
             </label>
-            <FundingSelect value={fundingSource} onChange={setFundingSource} />
+            <><FundingSelect value={fundingSource} onChange={setFundingSource} /><FundingSplit split={fundingSplit} primary={fundingSource} /></>
             <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
             <Switch checked={manual} onUpdate={setManual} size="l">
               Распределить вручную

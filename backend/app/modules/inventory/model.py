@@ -17,9 +17,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UUIDPrimaryKeyMixin
+from app.modules.finance.funding import FundingMixin
 
 
-class InventoryMovement(UUIDPrimaryKeyMixin, Base):
+class InventoryMovement(FundingMixin, UUIDPrimaryKeyMixin, Base):
     __tablename__ = "inventory_movements"
     __table_args__ = (
         CheckConstraint("quantity <> 0", name="quantity_non_zero"),
@@ -48,6 +49,7 @@ class InventoryMovement(UUIDPrimaryKeyMixin, Base):
         FundingForeignKey("funding_sources.id"), nullable=True
     )
     id: Mapped[uuid.UUID]
+    created_by: Mapped[str] = mapped_column(String(200), default="unknow", server_default="unknow")
     material_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("materials.id", ondelete="RESTRICT"),

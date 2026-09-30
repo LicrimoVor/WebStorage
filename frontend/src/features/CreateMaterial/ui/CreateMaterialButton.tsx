@@ -10,6 +10,7 @@ import {
   validateMaterialForm,
   type MaterialCreate,
   type MaterialFormValue,
+  type Material,
 } from '@/entities/Material';
 import {getErrorMessage} from '@/shared/api';
 import {inventoryGroupKeys} from '@/entities/InventoryGroup';
@@ -17,7 +18,7 @@ import {normalizeDecimal} from '@/shared/lib';
 
 const titleId = 'create-material-title';
 
-export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: string}) {
+export function CreateMaterialButton({defaultGroupId = "", sourceMaterial}: {defaultGroupId?: string; sourceMaterial?: Material}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<MaterialFormValue>(emptyMaterialForm);
   const [validationError, setValidationError] = useState<string>();
@@ -42,6 +43,7 @@ export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: st
   };
 
   const submit = () => {
+    if (form.isDefect && !form.sourceMaterialId) {setValidationError('Выберите исходный материал'); return;}
     const error = validateMaterialForm(form, true);
     if (error) {
       setValidationError(error);
@@ -55,6 +57,7 @@ export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: st
       url: form.url || null,
       image: form.image || null,
       group_ids: form.groupIds,
+      ...(form.isDefect ? {source_material_id: form.sourceMaterialId} : {}),
     };
     setValidationError(undefined);
     mutation.mutate(payload);
@@ -62,8 +65,8 @@ export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: st
 
   return (
     <>
-      <Button view="action" size="l" onClick={() => {setForm({...emptyMaterialForm, groupIds: defaultGroupId ? [defaultGroupId] : []}); setValidationError(undefined); mutation.reset(); setOpen(true);}}>
-        Создать материал
+      <Button view={sourceMaterial ? 'outlined' : 'action'} size="l" onClick={() => {setForm(sourceMaterial ? {...emptyMaterialForm, isDefect: true, sourceMaterialId: sourceMaterial.id, unit: sourceMaterial.unit, price: sourceMaterial.price ?? '', url: sourceMaterial.url ?? '', image: sourceMaterial.image ?? '', groupIds: sourceMaterial.groups?.map((g) => g.id) ?? []} : {...emptyMaterialForm, groupIds: defaultGroupId ? [defaultGroupId] : []}); setValidationError(undefined); mutation.reset(); setOpen(true);}}>
+        {sourceMaterial ? 'Новый брак' : 'Создать материал'}
       </Button>
       <Dialog
         open={open}
@@ -73,12 +76,13 @@ export function CreateMaterialButton({defaultGroupId = ""}: {defaultGroupId?: st
         maxWidth="m"
         fullWidth
       >
-        <Dialog.Header caption="Новый материал" id={titleId} />
+        <Dialog.Header caption={sourceMaterial ? `Новый брак: ${sourceMaterial.name}` : 'Новый материал'} id={titleId} />
         <Dialog.Body>
           <MaterialForm
             value={form}
             onChange={setForm}
             includeInitialQuantity
+            fixedSource={Boolean(sourceMaterial)}
             error={validationError ?? (mutation.error ? getErrorMessage(mutation.error) : undefined)}
           />
         </Dialog.Body>

@@ -29,16 +29,18 @@ class TechnologicalProcess(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "ix_technological_processes_name_lower",
             func.lower(text("name")),
             unique=True,
+            postgresql_where=text("archived = false"),
         ),
         Index(
             "ux_technological_processes_output_item",
             "output_item_id",
             unique=True,
-            postgresql_where=text("output_item_id IS NOT NULL"),
+            postgresql_where=text("output_item_id IS NOT NULL AND archived = false"),
         ),
         Index("ix_technological_processes_archived", "archived"),
     )
 
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     id: Mapped[uuid.UUID]
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     output_item_id: Mapped[uuid.UUID | None] = mapped_column(

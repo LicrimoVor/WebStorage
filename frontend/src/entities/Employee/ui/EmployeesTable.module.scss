@@ -12,3 +12,12 @@
     width: 100%;
   }
 }
+
+.name {
+  border: 0;
+  padding: 8px 0;
+  background: none;
+  color: var(--g-color-text-link);
+  cursor: pointer;
+  text-align: left;
+}

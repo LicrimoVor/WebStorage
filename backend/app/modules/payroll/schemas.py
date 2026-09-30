@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.types import Money, Quantity
+from app.modules.finance.funding import FundingWrite
 
 
 class WorkInputMode(StrEnum):
@@ -103,7 +104,7 @@ class PaymentAllocationCreate(BaseModel):
     amount: Money = Field(gt=0)
 
 
-class PaymentCreate(BaseModel):
+class PaymentCreate(FundingWrite):
     funding_source_id: uuid.UUID
     amount: Money = Field(gt=0)
     paid_at: datetime | None = None
@@ -135,7 +136,7 @@ class PaymentAllocationRead(BaseModel):
     amount: Money
 
 
-class PaymentRead(BaseModel):
+class PaymentRead(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     employee_id: uuid.UUID

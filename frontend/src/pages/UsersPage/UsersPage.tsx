@@ -1,5 +1,6 @@
+import {TextInput} from '@/shared/ui/FormControls';
 import {PersonPlus, Pencil} from '@gravity-ui/icons';
-import {Alert, Button, Checkbox, Dialog, Icon, TextInput} from '@gravity-ui/uikit';
+import {Alert, Button, Checkbox, Dialog, Icon} from '@gravity-ui/uikit';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 import {Link} from 'react-router-dom';

@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
-from app.core.errors import ConflictError
+from app.core.errors import ConflictError, NotFoundError
 from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.business.model import BusinessDocument, FundingSource, ProductUnit
 from app.modules.business.schemas import (
@@ -45,6 +45,34 @@ async def create_source(payload: FundingSourceCreate, session: Session, actor: C
         raise ConflictError("Источник с таким названием уже существует") from error  # noqa: RUF001
     await session.refresh(source)
     return source
+
+
+@router.patch("/funding-sources/{source_id}", response_model=FundingSourceRead)
+async def update_source(
+    source_id: uuid.UUID, payload: FundingSourceCreate, session: Session, actor: CurrentActor
+) -> Any:
+    require_any_role(actor, Role.FINANCE)
+    source = await session.get(FundingSource, source_id)
+    if source is None or source.archived:
+        raise NotFoundError("Источник финансирования не найден")
+    source.name = payload.name
+    try:
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise ConflictError("Источник с таким названием уже существует") from error  # noqa: RUF001
+    await session.refresh(source)
+    return source
+
+
+@router.delete("/funding-sources/{source_id}", status_code=204)
+async def delete_source(source_id: uuid.UUID, session: Session, actor: CurrentActor) -> None:
+    require_any_role(actor, Role.FINANCE)
+    source = await session.get(FundingSource, source_id)
+    if source is None:
+        raise NotFoundError("Источник финансирования не найден")
+    source.archived = True
+    await session.commit()
 
 
 @router.post("/warehouse/receipts", status_code=201)

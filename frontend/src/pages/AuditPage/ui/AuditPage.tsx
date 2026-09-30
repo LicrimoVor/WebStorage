@@ -1,4 +1,6 @@
-import {Alert, Button, Dialog, Pagination, Select, Table, Text, TextInput, type TableColumnConfig} from '@gravity-ui/uikit';
+import {auditTitle, auditEntity, auditResult, auditValue, fieldLabels} from './presentation';
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Button, Dialog, Pagination, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
 import {useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
 
@@ -8,7 +10,7 @@ import {formatDateTime} from '@/shared/lib';
 
 import styles from './AuditPage.module.scss';
 
-const actionLabels: Record<string, string> = {insert: 'Создание', update: 'Изменение', delete: 'Удаление', request: 'Запрос API'};
+const actionLabels: Record<string, string> = {insert: 'Создание', update: 'Изменение', delete: 'Удаление', request: 'Действия пользователей'};
 const actionOptions = [{value: '', content: 'Все события'}, ...Object.entries(actionLabels).map(([value, content]) => ({value, content}))];
 
 function dateBoundary(value: string, end: boolean): string | null {
@@ -59,9 +61,9 @@ export function AuditPage() {
   const columns: TableColumnConfig<AuditEvent>[] = [
     {id: 'created_at', name: 'Время', template: (item) => formatDateTime(item.created_at)},
     {id: 'actor', name: 'Пользователь'},
-    {id: 'action', name: 'Событие', template: (item) => actionLabels[item.action] ?? item.action},
-    {id: 'entity', name: 'Объект'},
-    {id: 'status_code', name: 'Результат', template: (item) => item.status_code ? `${item.method} · ${item.status_code}` : 'Сохранено'},
+    {id: 'action', name: 'Событие', template: auditTitle},
+    {id: 'entity', name: 'Раздел', template: auditEntity},
+    {id: 'status_code', name: 'Результат', template: auditResult},
     {id: 'details', name: '', template: (item) => <Button onClick={() => setSelected(item)} aria-label={`Подробности события ${item.id}`}>Подробности</Button>},
   ];
   return (
@@ -89,13 +91,15 @@ export function AuditPage() {
         <Dialog.Header caption={`Событие №${selected?.id ?? ''}`} />
         <Dialog.Body>{selected && <div className={styles.details}>
           <Text as="p">{selected.actor} · {formatDateTime(selected.created_at)}</Text>
-          <Text as="p">Объект: {selected.entity} {selected.entity_id}</Text>
-          <Text as="p">ID запроса: {selected.request_id ?? 'Системное изменение'}</Text>
-          {selected.status_code && <Text as="p">{selected.method} · HTTP {selected.status_code}</Text>}
-          {selected.action !== 'request' && <div className={styles.snapshots}>
-            <section><Text as="h2" variant="header-1">До</Text><pre>{JSON.stringify(selected.before, null, 2)}</pre></section>
-            <section><Text as="h2" variant="header-1">После</Text><pre>{JSON.stringify(selected.after, null, 2)}</pre></section>
-          </div>}
+          <Text as="h2" variant="header-1">{auditTitle(selected)}</Text>
+          <Text as="p">{auditEntity(selected)} · {auditResult(selected)}</Text>
+          {selected.action !== 'request' && <div className={styles.table}><table>
+            <thead><tr><th>Поле</th><th>До</th><th>После</th></tr></thead>
+            <tbody>{[...new Set([...Object.keys(selected.before ?? {}), ...Object.keys(selected.after ?? {})])].filter((key) => key !== 'updated_at' && JSON.stringify(selected.before?.[key]) !== JSON.stringify(selected.after?.[key])).map((key) => <tr key={key}>
+              <th>{fieldLabels[key] ?? key.replaceAll('_', ' ')}</th><td>{auditValue(selected.before?.[key])}</td><td>{auditValue(selected.after?.[key])}</td>
+            </tr>)}</tbody>
+          </table></div>}
+          <details><summary>Технические данные</summary><pre>{JSON.stringify(selected, null, 2)}</pre></details>
         </div>}</Dialog.Body>
         <Dialog.Footer textButtonCancel="Закрыть" onClickButtonCancel={() => setSelected(undefined)} />
       </Dialog>

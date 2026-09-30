@@ -1,4 +1,5 @@
-import { Alert, Button, Dialog, TextArea, TextInput } from '@gravity-ui/uikit';
+import {TextArea, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Button, Dialog} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { registerProduction } from '@/entities/Production';

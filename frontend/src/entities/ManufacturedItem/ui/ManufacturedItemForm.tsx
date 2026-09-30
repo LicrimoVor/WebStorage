@@ -1,5 +1,6 @@
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import {useProductOptionsQuery} from '../api/manufacturedItemApi';
-import {Alert, Select, Switch, TextInput} from '@gravity-ui/uikit';
+import {Alert, Switch} from '@gravity-ui/uikit';
 
 import {measurementUnitOptions} from '@/shared/lib';
 import {ImageUploadField} from '@/shared/ui';

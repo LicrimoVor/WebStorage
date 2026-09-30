@@ -8,7 +8,7 @@ import {materialFixture} from '../testing';
 import {MaterialsTable} from './MaterialsTable';
 
 describe('MaterialsTable', () => {
-  it('shows defects and opens a material without inline actions or pricing', async () => {
+  it('opens a material without inline actions or pricing', async () => {
     const onSelect = vi.fn();
     renderWithProviders(
       <MaterialsTable
@@ -19,7 +19,7 @@ describe('MaterialsTable', () => {
 
     expect(screen.getByText('Лист стали')).toBeInTheDocument();
     expect(screen.getByText('10,5')).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', {name: 'Брак'})).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', {name: 'Брак'})).not.toBeInTheDocument();
     for (const name of ['Цена', 'Ссылка', 'Единица', 'Действия']) {
       expect(screen.queryByRole('columnheader', {name})).not.toBeInTheDocument();
     }

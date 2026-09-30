@@ -1,4 +1,5 @@
-import {Alert, Select, TextArea, TextInput} from '@gravity-ui/uikit';
+import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
+import {Alert} from '@gravity-ui/uikit';
 
 import type {EmployeeFormValue} from '../model/types';
 import styles from './EmployeeForm.module.scss';

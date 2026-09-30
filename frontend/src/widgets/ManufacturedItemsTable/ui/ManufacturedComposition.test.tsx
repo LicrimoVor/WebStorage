@@ -29,7 +29,6 @@ it('opens the selected composition in a dialog and links to its process', async 
   expect(screen.queryByRole('button', {name: 'Произвести'})).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', {name: 'Открыть состав: Заготовка'}));
   const dialog = await screen.findByRole('dialog');
-  await userEvent.click(await screen.findByRole('button', {name: 'Действия'}));
   expect(within(dialog).getByText('Заготовка')).toBeInTheDocument();
   expect(await screen.findByRole('button', {name: 'Произвести'})).toBeInTheDocument();
   expect(within(dialog).getByText('Корпус')).toBeInTheDocument();

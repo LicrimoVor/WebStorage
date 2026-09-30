@@ -1,12 +1,5 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Label,
-  Select,
-  Skeleton,
-  Text,
-} from "@gravity-ui/uikit";
+import {Select} from '@/shared/ui/FormControls';
+import {Alert, Button, Card, Label, Skeleton, Text} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";

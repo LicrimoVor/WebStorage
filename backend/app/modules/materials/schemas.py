@@ -17,8 +17,9 @@ class MaterialSortField(StrEnum):
 
 
 class MaterialCreate(BaseModel):
+    source_material_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
-    unit: str = Field(min_length=1, max_length=32)
+    unit: str = Field(default="шт.", min_length=1, max_length=32)
     initial_quantity: Quantity = Field(default=Decimal("0"), ge=0)
     price: Money | None = None
     url: AnyHttpUrl | None = None
@@ -60,7 +61,7 @@ class MaterialRead(BaseModel):
     name: str
     unit: str
     free_quantity: Quantity
-    defective_quantity: Quantity = Decimal("0")
+    source_material_id: uuid.UUID | None = None
     required_quantity: Quantity = Decimal("0")
     deficit_quantity: Quantity = Decimal("0")
     price: Money | None
@@ -78,3 +79,14 @@ class MaterialList(BaseModel):
     page_size: int
     total: int
     pages: int
+
+
+class DefectTransferLine(BaseModel):
+    material_id: uuid.UUID
+    quantity: Quantity = Field(gt=0)
+    comment: str = Field(default="", max_length=2000)
+
+
+class DefectTransfer(BaseModel):
+    request_id: uuid.UUID
+    entries: list[DefectTransferLine] = Field(min_length=1, max_length=100)

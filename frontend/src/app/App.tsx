@@ -1,3 +1,4 @@
+import {PersonalAppearance} from './providers/PersonalAppearance';
 import {CircleQuestion} from "@gravity-ui/icons";
 import { Alert, Button, Icon, PlaceholderContainer } from "@gravity-ui/uikit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -149,6 +150,7 @@ function AppLayout({ session }: { session: AuthSession }) {
   });
   return (
     <div className={styles.app}>
+      <PersonalAppearance key={session.username} username={session.username} />
       <AppHeader access={session} username={session.username} pending={logoutMutation.isPending} onLogout={() => logoutMutation.mutate()} />
       {!canOpenPath(session, location.pathname) ? <main className={styles.authError}><Alert theme="warning" title="Нет доступа к разделу" message="Обратитесь к администратору, чтобы получить нужные права." actions={<Button onClick={() => navigate(firstAvailablePath(session))}>Открыть доступный раздел</Button>} /></main> : <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>
         <Routes>

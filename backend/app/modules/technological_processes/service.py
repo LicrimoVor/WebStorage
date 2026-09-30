@@ -223,7 +223,7 @@ async def _get_process(
         if for_update
         else await session.get(TechnologicalProcess, process_id)
     )
-    if process is None:
+    if process is None or process.deleted_at is not None:
         raise NotFoundError("Technological process was not found")
     return process
 
@@ -701,3 +701,10 @@ async def archive(session: AsyncSession, process_id: uuid.UUID) -> ProcessRead:
         await repository.archive_process(session, process)
         await session.commit()
     return await get(session, process.id)
+
+
+async def delete_process(session: AsyncSession, process_id: uuid.UUID) -> None:
+    process = await _get_process(session, process_id, for_update=True)
+    await repository.archive_process(session, process)
+    process.deleted_at = datetime.now(UTC)
+    await session.commit()

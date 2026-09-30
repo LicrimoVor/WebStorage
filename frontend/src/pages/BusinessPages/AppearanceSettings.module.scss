@@ -1,0 +1,33 @@
+.palettes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+
+  fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--g-color-line-generic);
+    border-radius: 12px;
+  }
+
+  legend { padding: 0 8px; }
+
+  label {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 65px;
+    gap: 8px;
+    align-items: center;
+    margin-block: 12px;
+  }
+
+  input {
+    width: 44px;
+    height: 36px;
+    padding: 3px;
+    cursor: pointer;
+    border: 1px solid var(--g-color-line-generic);
+    border-radius: 8px;
+    background: var(--g-color-base-background);
+  }
+}

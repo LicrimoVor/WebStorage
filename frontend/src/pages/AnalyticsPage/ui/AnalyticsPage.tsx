@@ -1,16 +1,6 @@
+import {Select} from '@/shared/ui/FormControls';
 import {ChartColumn} from '@gravity-ui/icons';
-import {
-  Alert,
-  Button,
-  Card,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Table,
-  Text,
-  type TableColumnConfig,
-  type TableDataItem,
-} from '@gravity-ui/uikit';
+import {Alert, Button, Card, PlaceholderContainer, Skeleton, Table, Text, type TableColumnConfig, type TableDataItem} from '@gravity-ui/uikit';
 import {useMemo} from 'react';
 import {useSearchParams} from 'react-router-dom';
 

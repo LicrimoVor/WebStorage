@@ -60,3 +60,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+.details th,
+.details td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--g-color-line-generic);
+  overflow-wrap: anywhere;
+}

@@ -12,7 +12,7 @@ async def test_partial_receipt_total_and_defects_are_counted_once(client: AsyncC
     payload = {
         'funding_source_id': source['id'], 'occurred_at': '2026-09-29T10:00:00Z',
         'total_amount': '123.45', 'entries': [
-            {'material_id': material['id'], 'quantity': '10', 'defective_quantity': '2'},
+            {'material_id': material['id'], 'quantity': '10'},
             {'material_id': other['id'], 'quantity': '5'},
         ],
     }
@@ -22,11 +22,11 @@ async def test_partial_receipt_total_and_defects_are_counted_once(client: AsyncC
     assert first['id'] == repeated['id']
     assert Decimal(first['total_amount']) == Decimal('123.45')
     stock = (await client.get(f"/api/v1/materials/{material['id']}")).json()
-    assert Decimal(stock['free_quantity']) == 8
-    assert Decimal(stock['defective_quantity']) == 2
+    assert Decimal(stock['free_quantity']) == 10
+    assert 'defective_quantity' not in stock
     rows = (await client.get('/api/v1/materials')).json()['items']
     listed = next(row for row in rows if row['id'] == material['id'])
-    assert Decimal(listed['defective_quantity']) == 2
+    assert 'defective_quantity' not in listed
     assert Decimal(next(row for row in rows if row['id'] == untouched['id'])['free_quantity']) == 0
     summary = (await client.get('/api/v1/finance/summary')).json()
     assert Decimal(summary['material_expense']) == Decimal('123.45')

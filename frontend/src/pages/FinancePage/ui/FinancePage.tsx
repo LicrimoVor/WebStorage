@@ -1,20 +1,11 @@
+import {FundingSplit} from '@/entities/Funding/FundingSplit';
+import {useFundingSplit} from '@/entities/Funding/split';
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import {FundingSelect, useFundingSources} from '@/entities/Funding';
 import {Archive} from '@gravity-ui/icons';
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  Label,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Table,
-  Text,
-  TextInput,
-  type TableColumnConfig,
-} from '@gravity-ui/uikit';
+import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 import {useSearchParams} from 'react-router-dom';
@@ -34,6 +25,7 @@ import {getErrorMessage} from '@/shared/api';
 import {formatDateTime, formatMoney, normalizeDecimal} from '@/shared/lib';
 
 import styles from './FinancePage.module.scss';
+import {FinanceEditor} from './FinanceEditor';
 
 const sourceOptions: Array<{value: FinanceSource; content: string}> = [
   {value: 'all', content: 'Все источники'},
@@ -90,6 +82,7 @@ function AddTransactionButton() {
   const [category, setCategory] = useState('');
   const [comment, setComment] = useState('');
   const [fundingSource, setFundingSource] = useState('');
+  const fundingSplit = useFundingSplit(amount, fundingSource);
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -101,6 +94,7 @@ function AddTransactionButton() {
       setAmount('');
       setCategory('');
       setComment('');
+      fundingSplit.reset();
     },
   });
   const openDialog = () => {
@@ -111,6 +105,7 @@ function AddTransactionButton() {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (!fundingSplit.valid) return;
     if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
     if (!isMoney(amount)) {
       setValidationError('Укажите положительную сумму с точностью до копеек.');
@@ -132,6 +127,7 @@ function AddTransactionButton() {
       category: category.trim(),
       comment: comment.trim() || null,
       funding_source_id: fundingSource,
+      ...fundingSplit.payload,
     });
   };
   return (
@@ -185,12 +181,12 @@ function AddTransactionButton() {
                 onChange={(event) => setOccurredAt(event.target.value)}
               />
             </label>
-            <FundingSelect value={fundingSource} onChange={setFundingSource} />
+            <><FundingSelect value={fundingSource} onChange={setFundingSource} /><FundingSplit split={fundingSplit} primary={fundingSource} /></>
             <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
             <Alert
               theme="warning"
               view="outlined"
-              message="После проведения операция станет неизменяемой записью финансовой истории."
+              message="Администратор может исправить операцию. Все изменения сохраняются в истории."
             />
           </div>
         </Dialog.Body>
@@ -233,6 +229,9 @@ const columns: TableColumnConfig<FinanceEntry>[] = [
 ];
 
 export function FinancePage() {
+  const [selectedId, setSelectedId] = useState<string>();
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const fundingSources = useFundingSources();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get('page'), 1);
@@ -393,8 +392,9 @@ export function FinancePage() {
           <div className={styles.content}>
             <div className={styles.tableWrap}>
               <Table
+                onRowClick={(entry) => {if (admin) setSelectedId(entry.id);}}
                 data={query.data.items}
-                columns={[...columns, {id: "funding_source_id", name: "Источник финансирования", template: (entry) => fundingSources.data?.find((s) => s.id === entry.funding_source_id)?.name ?? "Не указан (история)"}]}
+                columns={[...columns.map((column) => column.id === "description" && admin ? {...column, template: (entry: FinanceEntry) => <Button view="flat" onClick={() => setSelectedId(entry.id)}>{entry.description}</Button>} : column), ...(admin ? [{id: "created_by", name: "Автор", template: (entry: FinanceEntry) => entry.created_by || "unknow"}] : []), {id: "funding_source_id", name: "Источник финансирования", template: (entry) => entry.funding_allocations?.length ? entry.funding_allocations.map((part) => `${fundingSources.data?.find((s) => s.id === part.funding_source_id)?.name ?? "—"}: ${formatMoney(part.amount)}`).join("; ") : fundingSources.data?.find((s) => s.id === entry.funding_source_id)?.name ?? "Не указан (история)"}]}
                 getRowId={(entry) => `${entry.source_type}-${entry.id}`}
                 verticalAlign="middle"
               />
@@ -414,6 +414,7 @@ export function FinancePage() {
           </div>
         )}
       </Card>
+      {admin && selectedId && <FinanceEditor id={selectedId} onClose={() => setSelectedId(undefined)} />}
     </main>
   );
 }

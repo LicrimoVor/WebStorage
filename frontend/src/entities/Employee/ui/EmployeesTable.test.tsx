@@ -11,7 +11,7 @@ describe('EmployeesTable', () => {
     renderWithProviders(
       <EmployeesTable
         items={[employeeFixture]}
-        renderActions={() => <button type="button">Действие</button>}
+        onSelect={() => {}}
       />,
     );
     expect(screen.getByText('Иванов Иван Иванович')).toBeInTheDocument();

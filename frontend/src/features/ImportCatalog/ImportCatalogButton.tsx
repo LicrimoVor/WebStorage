@@ -1,5 +1,6 @@
+import {TextArea} from '@/shared/ui/FormControls';
 import {ArrowUpFromLine} from '@gravity-ui/icons';
-import {Alert, Button, Dialog, Icon, TextArea} from '@gravity-ui/uikit';
+import {Alert, Button, Dialog, Icon} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 import {ApiError, apiRequest, getErrorMessage} from '@/shared/api';

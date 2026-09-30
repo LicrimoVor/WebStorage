@@ -19,6 +19,6 @@ it('shows the actor and saved before/after values', async () => {
   renderWithProviders(<AuditPage />, '/audit');
   expect(screen.getByText('admin')).toBeVisible();
   fireEvent.click(screen.getByRole('button', {name: 'Подробности события 15'}));
-  await waitFor(() => expect(screen.getByText(/"Before"/)).toBeVisible());
-  expect(screen.getByText(/"After"/)).toBeVisible();
+  await waitFor(() => expect(screen.getByText("Before")).toBeVisible());
+  expect(screen.getByText("After")).toBeVisible();
 });

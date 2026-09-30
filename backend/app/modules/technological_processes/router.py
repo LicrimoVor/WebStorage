@@ -203,3 +203,8 @@ async def activate_technological_process_version(
     process_id: uuid.UUID, version_id: uuid.UUID, session: Session
 ) -> ProcessVersionRead:
     return await service.activate(session, process_id, version_id)
+
+
+@router.delete("/{process_id}", status_code=204, operation_id="deleteTechnologicalProcess")
+async def delete_technological_process(process_id: uuid.UUID, session: Session) -> None:
+    await service.delete_process(session, process_id)

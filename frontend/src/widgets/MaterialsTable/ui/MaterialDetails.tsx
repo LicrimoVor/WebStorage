@@ -12,6 +12,7 @@ export function MaterialDetails({id, onClose, renderActions}: {
 }) {
   const query = useQuery({queryKey: materialKeys.detail(id), queryFn: () => apiRequest<Material>(`/materials/${id}`)});
   const item = query.data;
+  const related = useQuery({queryKey: ['materials', id, 'defects'], queryFn: () => apiRequest<Material[]>(`/materials/${id}/defects`)});
   return <Dialog open onClose={onClose} size="m">
     <Dialog.Header caption={item?.name ?? 'Карточка материала'} />
     <Dialog.Body><div className={card.body}>
@@ -23,9 +24,10 @@ export function MaterialDetails({id, onClose, renderActions}: {
           {label: 'Свободно', value: formatDecimal(item.free_quantity), unit: item.unit},
           {label: 'Требуется', value: formatDecimal(item.required_quantity), unit: item.unit},
           {label: 'Дефицит', value: formatDecimal(item.deficit_quantity), unit: item.unit, warning: Number(item.deficit_quantity) > 0},
-          {label: 'Брак при поступлении, всего', value: formatDecimal(item.defective_quantity ?? '0'), unit: item.unit},
         ]} />
         <dl className={card.metadata}>
+          <div><dt>Тип</dt><dd>{item.source_material_id ? 'Брак' : 'Рабочий материал'}</dd></div>
+          {related.data && related.data.length > 0 && <div><dt>{item.source_material_id ? 'Исходный материал' : 'Виды брака'}</dt><dd>{related.data.map((m) => `${m.name}: ${formatDecimal(m.free_quantity)} ${m.unit}`).join('; ')}</dd></div>}
           <div><dt>Группы</dt><dd>{item.groups?.map((g) => g.name).join(', ') || 'Без группы'}</dd></div>
           <div><dt>Единица измерения</dt><dd>{item.unit}</dd></div>
           <div><dt>Цена</dt><dd>{formatMoney(item.price)}</dd></div>

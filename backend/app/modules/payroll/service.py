@@ -90,9 +90,7 @@ def calculation_message(entry: WorkEntry) -> str | None:
         missing.append("operation time norm")
     if entry.rate_snapshot is None and entry.compensation_type_snapshot != "anonymous":
         missing.append(
-            "hourly rate"
-            if entry.compensation_type_snapshot == "hourly"
-            else "operation rate"
+            "hourly rate" if entry.compensation_type_snapshot == "hourly" else "operation rate"
         )
     if not missing:
         return None
@@ -220,13 +218,15 @@ async def list_work_entries(
     page: int,
     page_size: int,
 ) -> WorkEntryList:
-    if operation_id is not None and await operation_repository.get_operation(
-        session, operation_id
-    ) is None:
+    if (
+        operation_id is not None
+        and await operation_repository.get_operation(session, operation_id) is None
+    ):
         raise NotFoundError("Operation was not found")
-    if employee_id is not None and await employee_repository.get_employee(
-        session, employee_id
-    ) is None:
+    if (
+        employee_id is not None
+        and await employee_repository.get_employee(session, employee_id) is None
+    ):
         raise NotFoundError("Employee was not found")
     entries, total = await repository.list_work_entries(
         session,
@@ -279,9 +279,7 @@ async def update_work_entry(
         if employee.compensation_type == EmployeeCompensationType.HOURLY:
             entry.rate_snapshot = employee.hourly_rate
         else:
-            operation = await operation_repository.get_operation(
-                session, entry.operation_id
-            )
+            operation = await operation_repository.get_operation(session, entry.operation_id)
             if operation is None:
                 raise NotFoundError("Operation was not found")
             entry.rate_snapshot = operation.price_per_operation
@@ -344,6 +342,7 @@ def to_payment_read(
     return PaymentRead(
         id=payment.id,
         funding_source_id=payment.funding_source_id,
+        funding_allocations=payment.funding_allocations,
         employee_id=payment.employee_id,
         employee_name=employee_name,
         amount=payment.amount,
@@ -410,11 +409,12 @@ async def create_payment(
         if remaining != 0:
             raise ConflictError("Payment allocation could not be completed")
     now = datetime.now(UTC)
-    from app.modules.business.service import validate_funding
+    from app.modules.finance.funding import validate_allocations
 
-    await validate_funding(session, payload.funding_source_id)
+    funding_allocations = await validate_allocations(session, payload, money(payload.amount))
     payment = EmployeePayment(
         funding_source_id=payload.funding_source_id,
+        funding_allocations=funding_allocations,
         employee_id=employee.id,
         amount=money(payload.amount),
         paid_at=timestamp(payload.paid_at),
@@ -475,16 +475,12 @@ async def list_payments(
     )
 
 
-async def payroll_summary(
-    session: AsyncSession, employee_id: uuid.UUID
-) -> EmployeePayrollSummary:
+async def payroll_summary(session: AsyncSession, employee_id: uuid.UUID) -> EmployeePayrollSummary:
     employee = await employee_repository.get_employee(session, employee_id)
     if employee is None:
         raise NotFoundError("Employee was not found")
     totals = await repository.employee_totals(session, [employee_id])
-    accrued, paid, completed, paid_equivalent = totals.get(
-        employee_id, (Decimal("0"),) * 4
-    )
+    accrued, paid, completed, paid_equivalent = totals.get(employee_id, (Decimal("0"),) * 4)
     rows = await repository.employee_operation_totals(session, employee_id)
     operations = [
         EmployeeOperationSummary(

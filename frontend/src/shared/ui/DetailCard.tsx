@@ -1,21 +1,11 @@
-import {Ellipsis, Xmark} from '@gravity-ui/icons';
-import {Button, Icon, Popup} from '@gravity-ui/uikit';
-import {useId, useState, type ReactNode} from 'react';
+import {Xmark} from '@gravity-ui/icons';
+import {Button, Icon} from '@gravity-ui/uikit';
+import {type ReactNode} from 'react';
 import styles from './DetailCard.module.scss';
 
 export function DetailCardFooter({onClose, children}: {onClose: () => void; children?: ReactNode}) {
-  const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-  const id = useId();
   return <footer className={styles.footer}>
-    {children && <>
-      <Button ref={setAnchor} size="l" view="outlined" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={id}>
-        <Icon data={Ellipsis} />Действия
-      </Button>
-      <Popup id={id} open={open} onOpenChange={setOpen} anchorElement={anchor} placement="top-start" keepMounted disablePortal>
-        <div className={styles.actions}>{children}</div>
-      </Popup>
-    </>}
+    {children && <div className={styles.actions}>{children}</div>}
     <Button size="l" view="normal" onClick={onClose}><Icon data={Xmark} />Закрыть</Button>
   </footer>;
 }

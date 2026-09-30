@@ -1,6 +1,9 @@
-import {apiRequest} from '@/shared/api';
-import {FundingSelect} from '@/entities/Funding';
-import {Archive} from '@gravity-ui/icons';
+import { FundingSplit } from "@/entities/Funding/FundingSplit";
+import { useFundingSplit, fundingTotal } from "@/entities/Funding/split";
+import { Select, TextInput } from "@/shared/ui/FormControls";
+import { apiRequest } from "@/shared/api";
+import { FundingSelect } from "@/entities/Funding";
+import { Archive } from "@gravity-ui/icons";
 import {
   Alert,
   Button,
@@ -8,21 +11,19 @@ import {
   Dialog,
   Pagination,
   PlaceholderContainer,
-  Select,
   Skeleton,
   Table,
   Text,
-  TextInput,
   type TableColumnConfig,
-} from '@gravity-ui/uikit';
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {useRef, useState} from 'react';
-import {useSearchParams} from 'react-router-dom';
+} from "@gravity-ui/uikit";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   manufacturedItemKeys,
   useManufacturedItemsQuery,
-} from '@/entities/ManufacturedItem';
+} from "@/entities/ManufacturedItem";
 import {
   registerSale,
   saleKeys,
@@ -31,25 +32,25 @@ import {
   type Sale,
   type SaleCreate,
   type SaleSortField,
-} from '@/entities/Sale';
-import {financeKeys} from '@/entities/Finance';
-import {ExportExcelButton} from '@/features/ExportExcel';
-import {getErrorMessage} from '@/shared/api';
+} from "@/entities/Sale";
+import { financeKeys } from "@/entities/Finance";
+import { ExportExcelButton } from "@/features/ExportExcel";
+import { getErrorMessage } from "@/shared/api";
 import {
   formatDateTime,
   formatDecimal,
   formatMoney,
   isDecimal,
   normalizeDecimal,
-} from '@/shared/lib';
+} from "@/shared/lib";
 
-import styles from './SalesPage.module.scss';
+import styles from "./SalesPage.module.scss";
 
-const sortOptions: Array<{value: SaleSortField; content: string}> = [
-  {value: 'sold_at', content: 'По дате'},
-  {value: 'product', content: 'По продукту'},
-  {value: 'quantity', content: 'По количеству'},
-  {value: 'total_amount', content: 'По сумме'},
+const sortOptions: Array<{ value: SaleSortField; content: string }> = [
+  { value: "sold_at", content: "По дате" },
+  { value: "product", content: "По продукту" },
+  { value: "quantity", content: "По количеству" },
+  { value: "total_amount", content: "По сумме" },
 ];
 
 function positiveInteger(value: string | null, fallback: number): number {
@@ -77,25 +78,50 @@ function isMoney(value: string): boolean {
 
 function RegisterSaleButton() {
   const [open, setOpen] = useState(false);
-  const [productId, setProductId] = useState('');
+  const [productId, setProductId] = useState("");
   const [serialNumbers, setSerialNumbers] = useState<string[]>([]);
-  const units = useQuery({queryKey: ['sale-units', productId], enabled: Boolean(productId), queryFn: async () => {const all: {serial_number: string; sale_id: string | null; issued_for_repair_id: string | null}[] = []; for (let offset = 0; ; offset += 500) {const batch = await apiRequest<{serial_number: string; sale_id: string | null; issued_for_repair_id: string | null}[]>(`/product-units?product_id=${productId}&limit=500&offset=${offset}`); all.push(...batch); if (batch.length < 500) return all;}}});
-  const [quantity, setQuantity] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
+  const units = useQuery({
+    queryKey: ["sale-units", productId],
+    enabled: Boolean(productId),
+    queryFn: async () => {
+      const all: {
+        serial_number: string;
+        sale_id: string | null;
+        issued_for_repair_id: string | null;
+      }[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const batch = await apiRequest<
+          {
+            serial_number: string;
+            sale_id: string | null;
+            issued_for_repair_id: string | null;
+          }[]
+        >(`/product-units?product_id=${productId}&limit=500&offset=${offset}`);
+        all.push(...batch);
+        if (batch.length < 500) return all;
+      }
+    },
+  });
+  const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const [soldAt, setSoldAt] = useState(currentDateTime);
-  const [comment, setComment] = useState('');
-  const [fundingSource, setFundingSource] = useState('');
+  const [comment, setComment] = useState("");
+  const [fundingSource, setFundingSource] = useState("");
+  const fundingSplit = useFundingSplit(
+    fundingTotal(quantity, unitPrice),
+    fundingSource,
+  );
   const [validationError, setValidationError] = useState<string>();
   const commandKey = useRef(crypto.randomUUID());
   const queryClient = useQueryClient();
   const products = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
-    kind: 'product',
+    kind: "product",
     include_archived: false,
-    sort_by: 'name',
-    sort_order: 'asc',
-    availability: 'all',
+    sort_by: "name",
+    sort_order: "asc",
+    availability: "all",
   });
   const selected = products.data?.items.find((item) => item.id === productId);
   const mutation = useMutation({
@@ -103,16 +129,17 @@ function RegisterSaleButton() {
       registerSale(payload, commandKey.current),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({queryKey: saleKeys.all}),
-          queryClient.invalidateQueries({queryKey: ["sale-units"]}),
-          queryClient.invalidateQueries({queryKey: ["product-units"]}),
-        queryClient.invalidateQueries({queryKey: financeKeys.all}),
-        queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all}),
+        queryClient.invalidateQueries({ queryKey: saleKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["sale-units"] }),
+        queryClient.invalidateQueries({ queryKey: ["product-units"] }),
+        queryClient.invalidateQueries({ queryKey: financeKeys.all }),
+        queryClient.invalidateQueries({ queryKey: manufacturedItemKeys.all }),
       ]);
       setOpen(false);
-      setQuantity('');
-      setUnitPrice('');
-      setComment('');
+      setQuantity("");
+      setUnitPrice("");
+      setComment("");
+      fundingSplit.reset();
       commandKey.current = crypto.randomUUID();
     },
   });
@@ -125,26 +152,37 @@ function RegisterSaleButton() {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
-    if (!fundingSource) {setValidationError("Выберите источник финансирования."); return;}
+    if (!fundingSplit.valid) return;
+    if (!fundingSource) {
+      setValidationError("Выберите источник финансирования.");
+      return;
+    }
     const normalizedQuantity = normalizeDecimal(quantity);
     if (!productId) {
-      setValidationError('Выберите продукт.');
+      setValidationError("Выберите продукт.");
       return;
     }
     if (!isDecimal(quantity) || Number(normalizedQuantity) <= 0) {
-      setValidationError('Укажите положительное количество с точностью до 6 знаков.');
+      setValidationError(
+        "Укажите положительное количество с точностью до 6 знаков.",
+      );
       return;
     }
-    if (selected && Number(normalizedQuantity) > Number(selected.free_quantity)) {
-      setValidationError('Количество продажи превышает свободный остаток продукта.');
+    if (
+      selected &&
+      Number(normalizedQuantity) > Number(selected.free_quantity)
+    ) {
+      setValidationError(
+        "Количество продажи превышает свободный остаток продукта.",
+      );
       return;
     }
     if (!isMoney(unitPrice)) {
-      setValidationError('Укажите неотрицательную цену с точностью до копеек.');
+      setValidationError("Укажите неотрицательную цену с точностью до копеек.");
       return;
     }
     if (!soldAt) {
-      setValidationError('Укажите дату продажи.');
+      setValidationError("Укажите дату продажи.");
       return;
     }
     setValidationError(undefined);
@@ -155,6 +193,7 @@ function RegisterSaleButton() {
       sold_at: new Date(soldAt).toISOString(),
       comment: comment.trim() || null,
       funding_source_id: fundingSource,
+      ...fundingSplit.payload,
       serial_numbers: serialNumbers,
     });
   };
@@ -184,7 +223,10 @@ function RegisterSaleButton() {
                 content: `${item.name} · доступно ${formatDecimal(item.free_quantity)} ${item.unit}`,
               }))}
               value={productId ? [productId] : []}
-              onUpdate={(values) => {setProductId(values[0] ?? ''); setSerialNumbers([]);}}
+              onUpdate={(values) => {
+                setProductId(values[0] ?? "");
+                setSerialNumbers([]);
+              }}
               loading={products.isPending}
               width="max"
               size="l"
@@ -192,10 +234,13 @@ function RegisterSaleButton() {
               aria-label="Продаваемый продукт"
             />
             <TextInput
-              label={`Количество${selected ? `, ${selected.unit}` : ''}`}
+              label={`Количество${selected ? `, ${selected.unit}` : ""}`}
               value={quantity}
               onUpdate={setQuantity}
-              controlProps={{inputMode: 'decimal', 'aria-label': 'Количество продажи'}}
+              controlProps={{
+                inputMode: "decimal",
+                "aria-label": "Количество продажи",
+              }}
               placeholder="0"
               size="l"
             />
@@ -203,7 +248,10 @@ function RegisterSaleButton() {
               label="Цена за единицу"
               value={unitPrice}
               onUpdate={setUnitPrice}
-              controlProps={{inputMode: 'decimal', 'aria-label': 'Цена продажи'}}
+              controlProps={{
+                inputMode: "decimal",
+                "aria-label": "Цена продажи",
+              }}
               placeholder="0,00"
               size="l"
             />
@@ -216,15 +264,42 @@ function RegisterSaleButton() {
                 onChange={(event) => setSoldAt(event.target.value)}
               />
             </label>
-            <Select label="Номера изделий" multiple filterable width="max" value={serialNumbers} options={(units.data ?? []).filter((unit) => !unit.sale_id && !unit.issued_for_repair_id).map((unit) => ({value: unit.serial_number, content: unit.serial_number}))} onUpdate={(ids) => {setSerialNumbers(ids); if (ids.length) setQuantity(String(ids.length));}} />
-            <FundingSelect value={fundingSource} onChange={setFundingSource} />
-            <TextInput label="Комментарий" value={comment} onUpdate={setComment} size="l" />
+            <Select
+              label="Номера изделий"
+              multiple
+              filterable
+              width="max"
+              value={serialNumbers}
+              options={(units.data ?? [])
+                .filter((unit) => !unit.sale_id && !unit.issued_for_repair_id)
+                .map((unit) => ({
+                  value: unit.serial_number,
+                  content: unit.serial_number,
+                }))}
+              onUpdate={(ids) => {
+                setSerialNumbers(ids);
+                if (ids.length) setQuantity(String(ids.length));
+              }}
+            />
+            <>
+              <FundingSelect
+                value={fundingSource}
+                onChange={setFundingSource}
+              />
+              <FundingSplit split={fundingSplit} primary={fundingSource} />
+            </>
+            <TextInput
+              label="Комментарий"
+              value={comment}
+              onUpdate={setComment}
+              size="l"
+            />
             <Alert
               theme="info"
               view="outlined"
               message={
                 total === null
-                  ? 'После подтверждения продукт будет списан со склада.'
+                  ? "После подтверждения продукт будет списан со склада."
                   : `Итого: ${total.toFixed(2)} ₽. Продукт будет списан со склада.`
               }
             />
@@ -242,7 +317,7 @@ function RegisterSaleButton() {
   );
 }
 
-function SaleDetailsButton({sale}: {sale: Sale}) {
+function SaleDetailsButton({ sale }: { sale: Sale }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -258,12 +333,17 @@ function SaleDetailsButton({sale}: {sale: Sale}) {
               Количество: {formatDecimal(sale.quantity)} {sale.product_unit}
             </Text>
             <Text>Цена: {formatMoney(sale.unit_price)}</Text>
-            <Text variant="subheader-2">Итого: {formatMoney(sale.total_amount)}</Text>
+            <Text variant="subheader-2">
+              Итого: {formatMoney(sale.total_amount)}
+            </Text>
             <Text color="secondary">
-              Остаток после продажи: {formatDecimal(sale.balance_after)} {sale.product_unit}
+              Остаток после продажи: {formatDecimal(sale.balance_after)}{" "}
+              {sale.product_unit}
             </Text>
             <Text color="secondary">Провёл: {sale.created_by}</Text>
-            <Text color="secondary">Складское движение: {sale.inventory_movement_id}</Text>
+            <Text color="secondary">
+              Складское движение: {sale.inventory_movement_id}
+            </Text>
             {sale.comment ? <Text>Комментарий: {sale.comment}</Text> : null}
           </div>
         </Dialog.Body>
@@ -277,54 +357,62 @@ function SaleDetailsButton({sale}: {sale: Sale}) {
 }
 
 const columns: TableColumnConfig<Sale>[] = [
-  {id: 'sold_at', name: 'Дата', template: (sale) => formatDateTime(sale.sold_at)},
-  {id: 'product_name', name: 'Продукт', primary: true},
   {
-    id: 'quantity',
-    name: 'Количество',
-    align: 'center',
+    id: "sold_at",
+    name: "Дата",
+    template: (sale) => formatDateTime(sale.sold_at),
+  },
+  { id: "product_name", name: "Продукт", primary: true },
+  {
+    id: "quantity",
+    name: "Количество",
+    align: "center",
     template: (sale) => `${formatDecimal(sale.quantity)} ${sale.product_unit}`,
   },
   {
-    id: 'unit_price',
-    name: 'Цена',
-    align: 'center',
+    id: "unit_price",
+    name: "Цена",
+    align: "center",
     template: (sale) => formatMoney(sale.unit_price),
   },
   {
-    id: 'total_amount',
-    name: 'Сумма',
-    align: 'center',
+    id: "total_amount",
+    name: "Сумма",
+    align: "center",
     template: (sale) => formatMoney(sale.total_amount),
   },
   {
-    id: 'balance_after',
-    name: 'Остаток после',
-    align: 'center',
+    id: "balance_after",
+    name: "Остаток после",
+    align: "center",
     template: (sale) => formatDecimal(sale.balance_after),
   },
-  {id: 'comment', name: 'Комментарий', template: (sale) => sale.comment ?? '—'},
   {
-    id: 'actions',
-    name: 'Действия',
-    sticky: 'end',
+    id: "comment",
+    name: "Комментарий",
+    template: (sale) => sale.comment ?? "—",
+  },
+  {
+    id: "actions",
+    name: "Действия",
+    sticky: "end",
     template: (sale) => <SaleDetailsButton sale={sale} />,
   },
 ];
 
 export function SalesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = positiveInteger(searchParams.get('page'), 1);
-  const pageSize = positiveInteger(searchParams.get('page_size'), 20);
-  const productId = searchParams.get('product_id') ?? '';
-  const dateFrom = searchParams.get('date_from') ?? '';
-  const dateTo = searchParams.get('date_to') ?? '';
-  const sortBy = (searchParams.get('sort_by') ?? 'sold_at') as SaleSortField;
-  const sortOrder = searchParams.get('sort_order') === 'asc' ? 'asc' : 'desc';
+  const page = positiveInteger(searchParams.get("page"), 1);
+  const pageSize = positiveInteger(searchParams.get("page_size"), 20);
+  const productId = searchParams.get("product_id") ?? "";
+  const dateFrom = searchParams.get("date_from") ?? "";
+  const dateTo = searchParams.get("date_to") ?? "";
+  const sortBy = (searchParams.get("sort_by") ?? "sold_at") as SaleSortField;
+  const sortOrder = searchParams.get("sort_order") === "asc" ? "asc" : "desc";
   const apiFilters = {
-    ...(productId ? {product_id: productId} : {}),
-    ...(dateFrom ? {date_from: startIso(dateFrom)!} : {}),
-    ...(dateTo ? {date_to: endIso(dateTo)!} : {}),
+    ...(productId ? { product_id: productId } : {}),
+    ...(dateFrom ? { date_from: startIso(dateFrom)! } : {}),
+    ...(dateTo ? { date_to: endIso(dateTo)! } : {}),
   };
   const query = useSalesQuery({
     page,
@@ -337,19 +425,19 @@ export function SalesPage() {
   const products = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
-    kind: 'product',
+    kind: "product",
     include_archived: true,
-    sort_by: 'name',
-    sort_order: 'asc',
-    availability: 'all',
+    sort_by: "name",
+    sort_order: "asc",
+    availability: "all",
   });
   const updateUrl = (updates: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === '') next.delete(key);
+      if (value === undefined || value === "") next.delete(key);
       else next.set(key, String(value));
     });
-    setSearchParams(next, {replace: true});
+    setSearchParams(next, { replace: true });
   };
   return (
     <main className={styles.root}>
@@ -372,35 +460,38 @@ export function SalesPage() {
       <div className={styles.summary}>
         <Card view="outlined">
           <Text color="secondary">Выручка</Text>
-          <strong>{summary.data ? formatMoney(summary.data.total_amount) : '—'}</strong>
+          <strong>
+            {summary.data ? formatMoney(summary.data.total_amount) : "—"}
+          </strong>
         </Card>
         <Card view="outlined">
           <Text color="secondary">Продано единиц</Text>
           <strong>
-            {summary.data ? formatDecimal(summary.data.total_quantity) : '—'}
+            {summary.data ? formatDecimal(summary.data.total_quantity) : "—"}
           </strong>
         </Card>
         <Card view="outlined">
           <Text color="secondary">Средняя цена</Text>
           <strong>
-            {summary.data ? formatMoney(summary.data.average_unit_price) : '—'}
+            {summary.data ? formatMoney(summary.data.average_unit_price) : "—"}
           </strong>
         </Card>
       </div>
-      <p>Продажа передаёт готовые изделия покупателю: остаток склада уменьшается, сумма поступает в доходы. Изготовление изделий регистрируется в планировании на вкладке «Выпуск продукции».</p>
       <Card className={styles.tableCard} view="outlined">
         <div className={styles.filters}>
           <Select
             label="Продукт"
             options={[
-              {value: '', content: 'Все продукты'},
+              { value: "", content: "Все продукты" },
               ...(products.data?.items ?? []).map((item) => ({
                 value: item.id,
                 content: item.name,
               })),
             ]}
             value={[productId]}
-            onUpdate={(values) => updateUrl({product_id: values[0] ?? '', page: 1})}
+            onUpdate={(values) =>
+              updateUrl({ product_id: values[0] ?? "", page: 1 })
+            }
             width="max"
             size="l"
           />
@@ -410,7 +501,9 @@ export function SalesPage() {
               className={styles.nativeInput}
               type="date"
               value={dateFrom}
-              onChange={(event) => updateUrl({date_from: event.target.value, page: 1})}
+              onChange={(event) =>
+                updateUrl({ date_from: event.target.value, page: 1 })
+              }
             />
           </label>
           <label className={styles.nativeField}>
@@ -419,7 +512,9 @@ export function SalesPage() {
               className={styles.nativeInput}
               type="date"
               value={dateTo}
-              onChange={(event) => updateUrl({date_to: event.target.value, page: 1})}
+              onChange={(event) =>
+                updateUrl({ date_to: event.target.value, page: 1 })
+              }
             />
           </label>
           <Select
@@ -427,7 +522,7 @@ export function SalesPage() {
             options={sortOptions}
             value={[sortBy]}
             onUpdate={(values) =>
-              updateUrl({sort_by: values[0] ?? 'sold_at', page: 1})
+              updateUrl({ sort_by: values[0] ?? "sold_at", page: 1 })
             }
             width="max"
             size="l"
@@ -436,10 +531,13 @@ export function SalesPage() {
             view="outlined"
             size="l"
             onClick={() =>
-              updateUrl({sort_order: sortOrder === 'asc' ? 'desc' : 'asc', page: 1})
+              updateUrl({
+                sort_order: sortOrder === "asc" ? "desc" : "asc",
+                page: 1,
+              })
             }
           >
-            {sortOrder === 'asc' ? 'По возрастанию' : 'По убыванию'}
+            {sortOrder === "asc" ? "По возрастанию" : "По убыванию"}
           </Button>
         </div>
         {query.isPending ? (
@@ -469,7 +567,8 @@ export function SalesPage() {
             </div>
             <div className={styles.pagination}>
               <Text color="secondary">
-                Всего: {query.data.total} · сумма: {formatMoney(query.data.filtered_amount)}
+                Всего: {query.data.total} · сумма:{" "}
+                {formatMoney(query.data.filtered_amount)}
               </Text>
               <Pagination
                 page={page}
@@ -477,7 +576,7 @@ export function SalesPage() {
                 total={query.data.total}
                 pageSizeOptions={[10, 20, 50, 100]}
                 onUpdate={(nextPage, nextSize) =>
-                  updateUrl({page: nextPage, page_size: nextSize})
+                  updateUrl({ page: nextPage, page_size: nextSize })
                 }
               />
             </div>

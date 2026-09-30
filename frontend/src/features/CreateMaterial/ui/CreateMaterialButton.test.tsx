@@ -20,6 +20,19 @@ vi.mock('@/entities/Material', async (importOriginal) => {
 });
 
 describe('CreateMaterialButton', () => {
+  it('creates a linked defect with inherited properties from a material card', async () => {
+    vi.mocked(createMaterial).mockResolvedValue(materialFixture);
+    renderWithProviders(<CreateMaterialButton sourceMaterial={materialFixture} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Новый брак'}));
+    expect(screen.queryByLabelText('Цена')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Начальный остаток')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Название материала'), 'Царапины');
+    await userEvent.click(screen.getByRole('button', {name: 'Создать'}));
+    await waitFor(() => expect(createMaterial).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Царапины', source_material_id: materialFixture.id, unit: materialFixture.unit,
+      price: materialFixture.price, initial_quantity: '0',
+    })));
+  });
   it('creates a material with exact decimal strings', async () => {
     vi.mocked(createMaterial).mockResolvedValue(materialFixture);
     const user = userEvent.setup();

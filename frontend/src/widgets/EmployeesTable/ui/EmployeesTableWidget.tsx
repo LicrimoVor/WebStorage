@@ -1,16 +1,8 @@
+import {useState} from 'react';
+import {EmployeeDetails} from './EmployeeDetails';
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Persons } from "@gravity-ui/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Skeleton,
-  Switch,
-  Text,
-  TextInput,
-} from "@gravity-ui/uikit";
+import {Alert, Button, Card, Pagination, PlaceholderContainer, Skeleton, Switch, Text} from '@gravity-ui/uikit';
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -42,6 +34,7 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export function EmployeesTableWidget() {
+  const [selectedId, setSelectedId] = useState<string>();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
   const pageSize = positiveInteger(searchParams.get("page_size"), 20);
@@ -171,7 +164,7 @@ export function EmployeesTableWidget() {
         <div className={styles.content}>
           <EmployeesTable
             items={query.data.items}
-            renderActions={renderActions}
+            onSelect={(item) => setSelectedId(item.id)}
           />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
@@ -188,6 +181,7 @@ export function EmployeesTableWidget() {
           </div>
         </div>
       )}
+      {selectedId && <EmployeeDetails id={selectedId} onClose={() => setSelectedId(undefined)} renderActions={renderActions} />}
     </Card>
   );
 }

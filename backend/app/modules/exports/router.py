@@ -80,6 +80,7 @@ async def export_dataset_to_excel(
     result = await service.create_export(
         session,
         dataset=dataset,
+        include_finance_author=Role.ADMIN in actor.roles,
         filters=ExportFilters(
             search=search,
             include_archived=include_archived,

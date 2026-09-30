@@ -16,6 +16,8 @@ export type InventoryMovementCreate = components['schemas']['InventoryMovementCr
 export type ManualMovementType = components['schemas']['ManualMovementType'];
 
 export interface MaterialFormValue {
+  isDefect?: boolean;
+  sourceMaterialId?: string;
   name: string;
   unit: string;
   initialQuantity: string;

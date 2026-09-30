@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,7 @@ from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import SortOrder
 from app.core.security import Actor, Role, get_current_actor, require_any_role
-from app.modules.finance import service
+from app.modules.finance import editing, service
 from app.modules.finance.schemas import (
     FinanceEntryList,
     FinanceSource,
@@ -28,6 +28,22 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
+@router.get("/entries/{entry_id}")
+async def financial_entry_details(
+    entry_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> dict[str, Any]:
+    require_any_role(actor, Role.ADMIN)
+    return await editing.details(session, entry_id)
+
+
+@router.patch("/entries/{entry_id}")
+async def edit_financial_entry(
+    entry_id: uuid.UUID, payload: editing.FinanceEdit, session: Session, actor: ActorDependency
+) -> dict[str, Any]:
+    require_any_role(actor, Role.ADMIN)
+    return await editing.edit(session, entry_id, payload, actor.subject)
+
+
 @router.post(
     "/transactions",
     response_model=FinancialTransactionRead,
@@ -40,12 +56,20 @@ async def create_financial_transaction(
     actor: ActorDependency,
 ) -> FinancialTransactionRead:
     require_any_role(actor, Role.FINANCE)
-    return await service.create_manual_transaction(
+    result = await service.create_manual_transaction(
         session, payload=payload, created_by=actor.subject
     )
+    if Role.ADMIN not in actor.roles:
+        result.created_by = None
+    return result
 
 
-@router.get("/entries", response_model=FinanceEntryList, operation_id="listFinanceEntries")
+@router.get(
+    "/entries",
+    response_model=FinanceEntryList,
+    response_model_exclude_none=True,
+    operation_id="listFinanceEntries",
+)
 async def list_finance_entries(
     session: Session,
     actor: ActorDependency,
@@ -69,6 +93,7 @@ async def list_finance_entries(
         date_to=date_to,
         sort_order=sort_order,
         funding_source_id=funding_source_id,
+        include_author=Role.ADMIN in actor.roles,
     )
 
 

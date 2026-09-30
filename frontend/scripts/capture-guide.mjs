@@ -30,7 +30,7 @@ function sample(value = {}, depth = 0) {
   if (value.format === 'date-time') return stamp;
   return '0';
 }
-const material = {...sample(schema.components.schemas.MaterialRead), id, name: 'Лист алюминиевый', unit: 'шт', free_quantity: '24', required_quantity: '4', defective_quantity: '2', price: '1500', image: null, url: null, groups: []};
+const material = {...sample(schema.components.schemas.MaterialRead), id, name: 'Лист алюминиевый', unit: 'шт', free_quantity: '24', required_quantity: '4', source_material_id: null, price: '1500', image: null, url: null, groups: []};
 const operation = {...sample(schema.components.schemas.OperationRead), id, name: 'Сборка корпуса', time_norm: '20', price_per_operation: '350', group_id: null};
 const employee = {...sample(schema.components.schemas.EmployeeRead), id, full_name: 'Учебный сотрудник', active: true, compensation_type: 'piecework', hourly_rate: null, comment: 'Пример для инструкции'};
 const product = {...sample(schema.components.schemas.ManufacturedItemRead), id, name: 'Корпус К-1', is_product: true, unit: 'шт', product_id: null, image: null};
@@ -38,8 +38,11 @@ const permissions = ['planning', 'processes', 'warehouse', 'operations', 'person
 function api(url) {
   const pathname = new URL(url).pathname;
   if (pathname.endsWith('/auth/session')) return {username: 'Учебный администратор', roles: ['admin'], permissions};
+  if (pathname.endsWith('/auth/appearance')) return {light: null, dark: null};
   if (pathname.endsWith('/auth/profile')) return {username: 'Учебный администратор', roles: ['admin'], can_change_password: true, created_at: stamp, last_login_at: stamp};
   if (pathname === `/api/v1/materials/${id}`) return material;
+  if (pathname.endsWith("/defects")) return [];
+  if (pathname === `/api/v1/employees/${id}`) return employee;
   if (pathname === `/api/v1/operations/${id}`) return {...operation, required_quantity: '12', completed_quantity: '8', required_time_minutes: '240'};
   if (pathname === `/api/v1/manufactured-items/${id}`) return product;
   if (pathname === '/api/v1/manufactured-items/55555555-5555-4555-8555-555555555555') return {...product, id: '55555555-5555-4555-8555-555555555555', name: 'Заготовка К-1', is_product: false, product_id: id, free_quantity: '12', required_quantity: '16', to_produce_quantity: '4'};
@@ -49,7 +52,11 @@ function api(url) {
     {id: '33333333-3333-4333-8333-333333333333', name: 'Электроника', parent_id: id},
   ];
   if (pathname.endsWith('/users')) return [{id, username: 'operator', is_admin: false, active: true, permissions: ['warehouse'], created_at: stamp, last_login_at: stamp}];
-  if (pathname.endsWith('/funding-sources')) return [{id, name: 'Основной счёт'}];
+  if (pathname.endsWith('/funding-sources')) return [{id, name: 'Основной счёт'}, {id: '66666666-6666-4666-8666-666666666666', name: 'Резервный счёт'}];
+  if (pathname.endsWith('/audit-events')) return {items: [
+    {id: 1, created_at: stamp, actor: 'admin', action: 'update', entity: 'materials', entity_id: id, request_id: null, method: null, status_code: null, before: {name: 'Алюминий', price: '1400'}, after: {name: material.name, price: '1500'}},
+    {id: 2, created_at: stamp, actor: 'operator', action: 'request', entity: '/api/v1/warehouse/receipts', entity_id: null, request_id: null, method: 'POST', status_code: 201, before: null, after: null},
+  ], total: 2, page: 1, page_size: 20, pages: 1, through_id: 2};
   if (pathname.endsWith('/inventory-groups')) return [
     {id, name: 'Металлы', parent_id: null},
     {id: '22222222-2222-4222-8222-222222222222', name: 'Листовой металл', parent_id: id},
@@ -81,7 +88,8 @@ const server = createServer((req, res) => {
   const type = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp'}[path.extname(file)] ?? 'application/octet-stream';
   res.writeHead(200, {'Content-Type': type}); res.end(readFileSync(file));
 });
-await new Promise((resolve) => server.listen(4178, '127.0.0.1', resolve));
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const serverPort = server.address().port;
 const browser = spawn(browserPath, ['--headless=new', '--remote-debugging-port=9333', `--user-data-dir=${mkdtempSync(path.join(tmpdir(), 'webstorage-guide-'))}`, '--no-first-run', 'about:blank'], {windowsHide: true, stdio: 'ignore'});
 let ws;
 try {
@@ -121,11 +129,12 @@ try {
     ['receipt', '/warehouse/receipt'], ['revision', '/warehouse/revision'],
     ['operations', '/operations'], ['personnel', '/personnel'], ['repairs', '/repairs'],
     ['operation-card', '/operations', 'Сборка корпуса'],
+    ['employee-card', '/personnel', 'Учебный сотрудник'], ['audit', '/settings/audit'],
     ['sales', '/sales'], ['finance', '/finance'], ['settings', '/settings'],
     ['users', '/settings/users', 'Добавить пользователя'], ['profile', '/profile'],
   ]) {
     if (process.env.GUIDE_CHAPTERS && !process.env.GUIDE_CHAPTERS.split(',').includes(name)) continue;
-    await send('Page.navigate', {url: `http://127.0.0.1:4178${route}`});
+    await send('Page.navigate', {url: `http://127.0.0.1:${serverPort}${route}`});
     for (let i = 0; i < 80; i++) {if (await evaluate(`Boolean(document.querySelector('main h1'))`)) break; await delay(100);}
     await delay(500);
     if (button) {await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes(${JSON.stringify(button)}))?.click()`); await delay(400);}

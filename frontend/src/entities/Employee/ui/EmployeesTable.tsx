@@ -1,5 +1,4 @@
 import {Label, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
-import type {ReactNode} from 'react';
 
 import {formatDecimal, formatMoney} from '@/shared/lib';
 
@@ -8,16 +7,16 @@ import styles from './EmployeesTable.module.scss';
 
 interface EmployeesTableProps {
   items: Employee[];
-  renderActions: (employee: Employee) => ReactNode;
+  onSelect: (employee: Employee) => void;
 }
 
-export function EmployeesTable({items, renderActions}: EmployeesTableProps) {
+export function EmployeesTable({items, onSelect}: EmployeesTableProps) {
   const columns: TableColumnConfig<Employee>[] = [
     {
       id: 'full_name',
       name: 'ФИО',
       primary: true,
-      template: (item) => <Text variant="body-2">{item.full_name}</Text>,
+      template: (item) => <button type="button" className={styles.name} onClick={() => onSelect(item)}>{item.full_name}</button>,
     },
     {
       id: 'compensation_type',
@@ -73,12 +72,6 @@ export function EmployeesTable({items, renderActions}: EmployeesTableProps) {
       template: (item) => formatDecimal(item.paid_operations_equivalent),
     },
     {id: 'comment', name: 'Комментарий', template: (item) => item.comment ?? '—'},
-    {
-      id: 'actions',
-      name: 'Действия',
-      sticky: 'end',
-      template: renderActions,
-    },
   ];
   return (
     <div className={styles.scrollArea}>
@@ -88,6 +81,7 @@ export function EmployeesTable({items, renderActions}: EmployeesTableProps) {
         columns={columns}
         getRowId={(item) => item.id}
         verticalAlign="middle"
+        onRowClick={(item, _, event) => {if (!(event.target as HTMLElement).closest('button, a')) onSelect(item);}}
       />
     </div>
   );

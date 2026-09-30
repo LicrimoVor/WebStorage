@@ -1,14 +1,19 @@
+import {AppearanceSettings} from './AppearanceSettings';
+import {FundingSplit} from '@/entities/Funding/FundingSplit';
+import {useFundingSplit} from '@/entities/Funding/split';
+import {ManageFundingSources} from '@/entities/Funding/ManageFundingSources';
+import {Select, TextInput, TextArea} from '@/shared/ui/FormControls';
 import {useAuthSessionQuery} from '@/entities/Auth';
-import {isAdmin} from '@/shared/lib/access';
+import {isAdmin, canAccess} from '@/shared/lib/access';
 import { isDecimal } from '@/shared/lib';
 import { useProductionPlansQuery } from '@/entities/ProductionPlan';
 import { PlanRelease } from './PlanRelease';
-import { Alert, Button, Icon, Select, TextInput, TextArea } from '@gravity-ui/uikit';
+import {Alert, Button, Icon} from '@gravity-ui/uikit';
 import {ClockArrowRotateLeft, Persons} from '@gravity-ui/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FundingSelect, useFundingSources } from '@/entities/Funding';
+import { FundingSelect } from '@/entities/Funding';
 import { useStockRevisionRowsQuery, type StockRevisionRow } from '@/entities/StockRevision';
 import { useInventoryGroupsQuery } from '@/entities/InventoryGroup';
 import { useProductOptionsQuery } from '@/entities/ManufacturedItem';
@@ -25,21 +30,10 @@ interface Unit { issued_for_repair_id: string | null; id: string; serial_number:
 export function SettingsPage() {
   const session = useAuthSessionQuery();
   const admin = Boolean(session.data && isAdmin(session.data));
-  const sources = useFundingSources();
-  const client = useQueryClient();
-  const [name, setName] = useState('');
-  const mutation = useMutation({ mutationFn: () => apiRequest('/funding-sources', { method: 'POST', body: JSON.stringify({ name }) }), onSuccess: async () => { setName(''); await client.invalidateQueries({ queryKey: ['funding-sources'] }); } });
   return <main className={styles.page}>
     <h1>Настройки</h1>
-    <section className={styles.form}>
-      <h2>Источники финансирования</h2>
-      <div className={styles.row}>
-        <TextInput label="Название" value={name} onUpdate={setName} />
-        <Button view="action" loading={mutation.isPending} disabled={!name.trim()} onClick={() => mutation.mutate()}>Создать источник</Button>
-      </div>
-      {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
-      {sources.data?.map((source) => <div key={source.id}>{source.name}</div>)}
-    </section>
+    {session.data && <AppearanceSettings key={session.data.username} username={session.data.username} />}
+    {session.data && canAccess(session.data, 'finance') && <ManageFundingSources />}
     {admin && <div className={styles.row}><Button component={Link} to="/settings/users" view="outlined" size="l"><Icon data={Persons} size={20} />Пользователи</Button><Button component={Link} to="/settings/audit" view="outlined" size="l"><Icon data={ClockArrowRotateLeft} size={20} />Журнал событий</Button></div>}
   </main>;
 }
@@ -47,17 +41,18 @@ export function SettingsPage() {
 export function ReceiptPage() {
   const rows = useStockRevisionRowsQuery({ type: 'material' });
   const groups = useInventoryGroupsQuery();
-  const [values, setValues] = useState<Record<string, { quantity: string; defect: string }>>({});
+  const [values, setValues] = useState<Record<string, { quantity: string }>>({});
   const [amount, setAmount] = useState('');
   const [source, setSource] = useState('');
   const [comment, setComment] = useState('');
   const [date, setDate] = useState(now);
+  const fundingSplit = useFundingSplit(amount, source);
   const key = useRef(crypto.randomUUID());
   const client = useQueryClient();
-  const mutation = useMutation({ mutationFn: () => apiRequest('/warehouse/receipts', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, comment, total_amount: decimal(amount.trim()), occurred_at: new Date(date).toISOString(), entries: Object.entries(values).filter(([, v]) => Number(decimal(v.quantity.trim())) > 0).map(([id, v]) => ({ material_id: id, quantity: decimal(v.quantity.trim()), defective_quantity: decimal(v.defect.trim() || '0') })) }) }), onSuccess: async () => { setValues({}); setAmount(''); setComment(''); key.current = crypto.randomUUID(); await client.invalidateQueries(); } });
+  const mutation = useMutation({ mutationFn: () => apiRequest('/warehouse/receipts', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, ...fundingSplit.payload, comment, total_amount: decimal(amount.trim()), occurred_at: new Date(date).toISOString(), entries: Object.entries(values).filter(([, v]) => Number(decimal(v.quantity.trim())) > 0).map(([id, v]) => ({ material_id: id, quantity: decimal(v.quantity.trim()) })) }) }), onSuccess: async () => { setValues({}); setAmount(''); fundingSplit.reset(); setComment(''); key.current = crypto.randomUUID(); await client.invalidateQueries(); } });
   const invalidLine = Object.values(values).some((v) => {
-    const quantity = v.quantity.trim() || '0'; const defect = v.defect.trim() || '0';
-    return !isDecimal(quantity) || Number(decimal(quantity)) < 0 || !isDecimal(defect) || Number(decimal(defect)) < 0 || Number(decimal(defect)) > Number(decimal(quantity));
+    const quantity = v.quantity.trim() || '0';
+    return !isDecimal(quantity) || Number(decimal(quantity)) < 0;
   });
   const sections = new Map<string, StockRevisionRow[]>();
   for (const row of rows.data ?? []) {
@@ -69,8 +64,8 @@ export function ReceiptPage() {
   return <main className={styles.page}>
     <h1>Приход материалов</h1>
     <section className={styles.form}>
-      <p>Заполните только поступившие материалы. Пустые строки и нулевой приход пропускаются. В количестве укажите всю партию, включая брак; на склад поступит годное количество. Сумма задаётся один раз за весь приход.</p>
-      <FundingSelect value={source} onChange={setSource} />
+      <p>Заполните только поступившие материалы. Пустые строки и нулевой приход пропускаются. Сумма задаётся один раз за весь приход.</p>
+      <FundingSelect value={source} onChange={setSource} /><FundingSplit split={fundingSplit} primary={source} />
       <TextInput label="Сумма за приход, ₽" value={amount} onUpdate={setAmount} controlProps={{inputMode: 'decimal', 'aria-label': 'Сумма за приход'}} placeholder="0,00" />
       <label>Дата <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
       </label>
@@ -83,26 +78,25 @@ export function ReceiptPage() {
               <th>Материал</th>
               <th data-numeric>Остаток</th>
               <th data-numeric>Приход</th>
-              <th data-numeric>Брак</th>
             </tr>
           </thead>
           <tbody>
             {[...sections].sort(([a], [b]) => a.localeCompare(b)).map(([title, materials]) => <Fragment key={title}>
               <tr className={styles.group}>
-                <td colSpan={4}>{title.split(" / ")[0]}</td>
+                <td colSpan={3}>{title.split(" / ")[0]}</td>
               </tr>{title.includes(" / ") && <tr className={styles.group}>
-                <td colSpan={4} style={{ paddingLeft: 30 }}>{title.split(" / ")[1]}</td>
+                <td colSpan={3} style={{ paddingLeft: 30 }}>{title.split(" / ")[1]}</td>
               </tr>}{materials.map((row) => <tr key={row.id}>
                 <td>{row.name}</td>
-                <td data-numeric>{row.current_quantity} {row.unit}</td>{(['quantity', 'defect'] as const).map((field) => <td data-numeric key={field}>
-                  <TextInput value={values[row.id]?.[field] ?? ''} controlProps={{ 'aria-label': `${field === 'quantity' ? 'Приход' : 'Брак'}: ${row.name}`, inputMode: 'decimal' }} onUpdate={(value) => setValues((current) => ({ ...current, [row.id]: { ...(current[row.id] ?? { quantity: '', defect: '' }), [field]: value } }))} />
+                <td data-numeric>{row.current_quantity} {row.unit}</td>{(['quantity'] as const).map((field) => <td data-numeric key={field}>
+                  <TextInput value={values[row.id]?.[field] ?? ''} controlProps={{ 'aria-label': `${field === 'quantity' ? 'Приход' : 'Брак'}: ${row.name}`, inputMode: 'decimal' }} onUpdate={(value) => setValues((current) => ({ ...current, [row.id]: { ...(current[row.id] ?? { quantity: '' }), [field]: value } }))} />
                 </td>)}</tr>)}</Fragment>)}
           </tbody>
         </table>
       </div>
-      {invalidLine && <Alert theme="warning" message="Количество и брак должны быть неотрицательными, брак не может превышать количество партии." />}
+      {invalidLine && <Alert theme="warning" message="Количество должно быть неотрицательным числом с точностью до 6 знаков." />}
       {amount && !isMoney(amount) && <Alert theme="warning" message="Укажите сумму от нуля с точностью до копеек." />}
-      <Button view="action" loading={mutation.isPending} disabled={invalidLine || !isMoney(amount) || !source || !date || !Object.values(values).some((v) => Number(decimal(v.quantity)) > 0)} onClick={() => mutation.mutate()}>Провести приход</Button>
+      <Button view="action" loading={mutation.isPending} disabled={!fundingSplit.valid || invalidLine || !isMoney(amount) || !source || !date || !Object.values(values).some((v) => Number(decimal(v.quantity)) > 0)} onClick={() => mutation.mutate()}>Провести приход</Button>
       {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}{mutation.isSuccess && <Alert theme="success" message="Приход сохранён" />}
     </section>
     <History kind="receipt" />
@@ -120,12 +114,13 @@ queryKey: ['repair-operations'], queryFn: async () => {
   const [source, setSource] = useState(''); const [date, setDate] = useState(now);
   const [serial, setSerial] = useState(''); const [replacement, setReplacement] = useState('');
   const [comment, setComment] = useState(''); const [cost, setCost] = useState('0');
+  const fundingSplit = useFundingSplit(cost, source);
   const [copiedFrom, setCopiedFrom] = useState<string | null>(null);
   const [lines, setLines] = useState<Line[]>([{ material_id: '', quantity: '1' }]);
   const [works, setWorks] = useState<OperationLine[]>([{ operation_id: '', quantity: '1' }]);
   const key = useRef(crypto.randomUUID()); const client = useQueryClient();
-  const mutation = useMutation({ mutationFn: () => apiRequest('/repairs', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, occurred_at: new Date(date).toISOString(), serial_number: serial, replacement_serial_number: replacement.trim() || null, comment, service_cost: decimal(cost), copied_from_id: copiedFrom, materials: lines.map((line) => ({ ...line, quantity: decimal(line.quantity) })), operations: works.map((line) => ({ ...line, quantity: decimal(line.quantity) })) }) }), onSuccess: async () => { key.current = crypto.randomUUID(); setSerial(''); setReplacement(''); setComment(''); setCopiedFrom(null); await client.invalidateQueries(); } });
-  const copy = (doc: Document) => { setSource(doc.funding_source_id); setDate(now()); setSerial(''); setReplacement(''); setComment(doc.comment); setCost(doc.service_cost ?? '0'); setLines(doc.materials ?? []); setWorks(doc.operations ?? []); setCopiedFrom(doc.id); key.current = crypto.randomUUID(); mutation.reset(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const mutation = useMutation({ mutationFn: () => apiRequest('/repairs', { method: 'POST', headers: { 'Idempotency-Key': key.current }, body: JSON.stringify({ funding_source_id: source, ...fundingSplit.payload, occurred_at: new Date(date).toISOString(), serial_number: serial, replacement_serial_number: replacement.trim() || null, comment, service_cost: decimal(cost), copied_from_id: copiedFrom, materials: lines.map((line) => ({ ...line, quantity: decimal(line.quantity) })), operations: works.map((line) => ({ ...line, quantity: decimal(line.quantity) })) }) }), onSuccess: async () => { key.current = crypto.randomUUID(); setSerial(''); setReplacement(''); setComment(''); setCopiedFrom(null); fundingSplit.reset(); await client.invalidateQueries(); } });
+  const copy = (doc: Document) => { setSource(doc.funding_source_id); fundingSplit.setParts((doc.funding_allocations ?? []).filter((part) => part.funding_source_id !== doc.funding_source_id)); setDate(now()); setSerial(''); setReplacement(''); setComment(doc.comment); setCost(doc.service_cost ?? '0'); setLines(doc.materials ?? []); setWorks(doc.operations ?? []); setCopiedFrom(doc.id); key.current = crypto.randomUUID(); mutation.reset(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   return <main className={styles.page}>
     <h1>Ремонт</h1>
     <div className={styles.repairLayout}>
@@ -140,7 +135,7 @@ queryKey: ['repair-operations'], queryFn: async () => {
         <label>Описание ремонта
           <TextArea placeholder="Причина обращения, выполненные работы и дополнения" value={comment} onUpdate={setComment} controlProps={{'aria-label': 'Описание ремонта'}} />
         </label>
-        <FundingSelect value={source} onChange={setSource} />
+        <FundingSelect value={source} onChange={setSource} /><FundingSplit split={fundingSplit} primary={source} />
         <h2>Потраченные материалы</h2>{lines.map((line, index) => <div className={styles.row} key={index}>
           <Select width="max" filterable placeholder="Материал" value={line.material_id ? [line.material_id] : []} options={(materials.data ?? []).map((m) => ({ value: m.id, content: `${m.name} (${m.unit})` }))} onUpdate={(ids) => setLines(lines.map((l, i) => i === index ? { ...l, material_id: ids[0] ?? '' } : l))} />
           <TextInput label="Количество" value={line.quantity} onUpdate={(quantity) => setLines(lines.map((l, i) => i === index ? { ...l, quantity } : l))} />
@@ -155,7 +150,7 @@ queryKey: ['repair-operations'], queryFn: async () => {
         <Button onClick={() => setWorks([...works, { operation_id: '', quantity: '1' }])}>Добавить операцию</Button>
         <TextInput label="Дополнительные расходы на ремонт" value={cost} onUpdate={setCost} />
         <p>Материалы учитываются в закупках; здесь укажите дополнительные оплаченные услуги ремонта.</p>
-        <Button view="action" loading={mutation.isPending} disabled={!source || !serial.trim() || !comment.trim() || !date || lines.some((l) => !l.material_id) || works.some((l) => !l.operation_id)} onClick={() => mutation.mutate()}>Сохранить ремонт</Button>
+        <Button view="action" loading={mutation.isPending} disabled={!fundingSplit.valid || !source || !serial.trim() || !comment.trim() || !date || lines.some((l) => !l.material_id) || works.some((l) => !l.operation_id)} onClick={() => mutation.mutate()}>Сохранить ремонт</Button>
         {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}{mutation.isSuccess && <Alert theme="success" message="Ремонт сохранён, материалы списаны" />}
       </section>
       <aside className={styles.repairHistory}>

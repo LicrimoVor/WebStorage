@@ -5,10 +5,11 @@ from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.types import Money, Quantity
+from app.modules.finance.funding import FundingWrite
 from app.modules.inventory.types import ManualMovementType
 
 
-class InventoryMovementCreate(BaseModel):
+class InventoryMovementCreate(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     movement_type: ManualMovementType
     quantity: Quantity
@@ -22,7 +23,7 @@ class InventoryMovementCreate(BaseModel):
         return value
 
 
-class InventoryMovementRead(BaseModel):
+class InventoryMovementRead(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     material_id: uuid.UUID

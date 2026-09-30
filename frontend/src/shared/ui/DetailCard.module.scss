@@ -86,6 +86,8 @@
 
 .footer {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
   padding: 20px 32px;
@@ -94,22 +96,31 @@
 
 .actions {
   display: flex;
-  flex-direction: column;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 12px;
-  max-width: calc(100vw - 48px);
-  max-height: 60vh;
-  overflow-y: auto;
+  min-width: 0;
+
+  :global(.g-button) {
+    --g-button-border-width: 1px;
+    --g-button-border-color: var(--g-color-line-generic);
+    --g-button-background-color: var(--g-color-base-background);
+    --g-button-background-color-hover: var(--g-color-base-generic-hover);
+    --g-button-height: 36px;
+  }
 
   > div {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
     gap: 8px;
   }
 }
 
 @media (width <= 480px) {
+  .actions :global(.g-button) {
+    --g-button-height: 44px;
+  }
+
   .metadata {
     padding: 16px;
     gap: 16px;

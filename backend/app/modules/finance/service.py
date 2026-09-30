@@ -50,6 +50,7 @@ def to_transaction_read(transaction: FinancialTransaction) -> FinancialTransacti
     return FinancialTransactionRead(
         id=transaction.id,
         funding_source_id=transaction.funding_source_id,
+        funding_allocations=transaction.funding_allocations,
         transaction_type=FinancialDirection(transaction.transaction_type),
         amount=transaction.amount,
         occurred_at=transaction.occurred_at,
@@ -66,11 +67,12 @@ async def create_manual_transaction(
     payload: FinancialTransactionCreate,
     created_by: str,
 ) -> FinancialTransactionRead:
-    from app.modules.business.service import validate_funding
+    from app.modules.finance.funding import validate_allocations
 
-    await validate_funding(session, payload.funding_source_id)
+    funding_allocations = await validate_allocations(session, payload, money(payload.amount))
     transaction = FinancialTransaction(
         funding_source_id=payload.funding_source_id,
+        funding_allocations=funding_allocations,
         transaction_type=payload.transaction_type.value,
         amount=money(payload.amount),
         occurred_at=timestamp(payload.occurred_at),
@@ -95,6 +97,7 @@ async def list_entries(
     date_to: datetime | None,
     sort_order: SortOrder,
     funding_source_id: uuid.UUID | None = None,
+    include_author: bool = False,
 ) -> FinanceEntryList:
     date_from = period_timestamp(date_from)
     date_to = period_timestamp(date_to)
@@ -123,7 +126,8 @@ async def list_entries(
                 amount=Decimal(row.amount),
                 occurred_at=row.occurred_at,
                 comment=row.comment,
-                created_by=row.created_by,
+                created_by=(row.created_by or "unknow") if include_author else None,
+                funding_allocations=row.funding_allocations,
             )
             for row in rows
         ],
@@ -154,19 +158,16 @@ async def get_summary(
     ) = await repository.summary_values(
         session, date_from=date_from, date_to=date_to, funding_source_id=funding_source_id
     )
+    entries = repository.entry_union(funding_source_id)
     repair_statement = repository.with_period(
-        select(func.coalesce(func.sum(FinancialTransaction.amount), Decimal("0"))).where(
-            FinancialTransaction.category == "Ремонт",
-            FinancialTransaction.transaction_type == "expense",
+        select(func.coalesce(func.sum(entries.c.amount), Decimal("0"))).where(
+            entries.c.source_type == "repair",
+            entries.c.direction == "expense",
         ),
-        FinancialTransaction.occurred_at,
+        entries.c.occurred_at,
         date_from,
         date_to,
     )
-    if funding_source_id is not None:
-        repair_statement = repair_statement.where(
-            FinancialTransaction.funding_source_id == funding_source_id
-        )
     repair_expense = Decimal((await session.execute(repair_statement)).scalar_one())
     total_income = money(sales + manual_income)
     total_expense = money(materials + labour + manual_expense)

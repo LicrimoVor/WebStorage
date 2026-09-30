@@ -1,0 +1,41 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-end;
+
+  --g-text-input-border-radius: 8px;
+  --g-text-area-border-radius: 8px;
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--g-color-text-hint);
+    font-weight: 400;
+  }
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--g-color-text-secondary);
+}
+
+.popup {
+  max-width: calc(100vw - 24px);
+
+  :global(.g-select-list) {
+    max-height: min(280px, 45dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.sheet {
+  :global(.g-select-list) {
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+}

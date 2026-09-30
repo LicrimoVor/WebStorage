@@ -47,6 +47,9 @@ def timestamp(value: datetime | None) -> datetime:
 def request_fingerprint(payload: SaleCreate) -> str:
     document = {
         "funding_source_id": str(payload.funding_source_id),
+        "funding_allocations": [
+            part.model_dump(mode="json") for part in payload.funding_allocations
+        ],
         "serial_numbers": sorted(payload.serial_numbers),
         "product_id": str(payload.product_id),
         "quantity": format(quantity(payload.quantity), "f"),
@@ -54,6 +57,8 @@ def request_fingerprint(payload: SaleCreate) -> str:
         "sold_at": timestamp(payload.sold_at).isoformat() if payload.sold_at else None,
         "comment": payload.comment,
     }
+    if not payload.funding_allocations:
+        document.pop("funding_allocations")
     encoded = json.dumps(document, ensure_ascii=False, sort_keys=True).encode()
     return hashlib.sha256(encoded).hexdigest()
 
@@ -63,6 +68,7 @@ def to_read_model(row: repository.SaleRow) -> SaleRead:
     return SaleRead(
         id=sale.id,
         funding_source_id=sale.funding_source_id,
+        funding_allocations=sale.funding_allocations,
         product_id=product.id,
         product_name=product.name,
         product_unit=product.unit,
@@ -109,11 +115,14 @@ async def _execute(
         raise ConflictError("An archived product cannot be sold")
     sale_quantity = quantity(payload.quantity)
     unit_price = money(payload.unit_price)
-    from app.modules.business.service import validate_funding
+    from app.modules.finance.funding import validate_allocations
 
-    await validate_funding(session, payload.funding_source_id)
+    funding_allocations = await validate_allocations(
+        session, payload, money(sale_quantity * unit_price)
+    )
     sale = Sale(
         funding_source_id=payload.funding_source_id,
+        funding_allocations=funding_allocations,
         product_id=product.id,
         quantity=sale_quantity,
         unit_price=unit_price,
@@ -194,9 +203,7 @@ async def register(
         if existing is None:
             raise ConflictError("Sale registration conflicted") from error
         if existing.request_fingerprint != fingerprint:
-            raise ConflictError(
-                "Idempotency key was already used for another request"
-            ) from error
+            raise ConflictError("Idempotency key was already used for another request") from error
         return await _read(session, existing.id)
 
 

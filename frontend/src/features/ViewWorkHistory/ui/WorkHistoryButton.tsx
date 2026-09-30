@@ -1,17 +1,6 @@
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Archive } from "@gravity-ui/icons";
-import {
-  Alert,
-  Button,
-  Dialog,
-  Label,
-  Pagination,
-  PlaceholderContainer,
-  Select,
-  Spin,
-  Table,
-  TextInput,
-  type TableColumnConfig,
-} from "@gravity-ui/uikit";
+import {Alert, Button, Dialog, Label, Pagination, PlaceholderContainer, Spin, Table, type TableColumnConfig} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 

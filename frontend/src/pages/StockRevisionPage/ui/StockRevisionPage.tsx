@@ -1,18 +1,6 @@
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import { ArrowLeft, Picture } from "@gravity-ui/icons";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  Icon,
-  Label,
-  Select,
-  Skeleton,
-  Table,
-  Text,
-  TextInput,
-  type TableColumnConfig,
-} from "@gravity-ui/uikit";
+import {Alert, Box, Button, Card, Icon, Label, Skeleton, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";

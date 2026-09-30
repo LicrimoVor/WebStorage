@@ -1,4 +1,5 @@
-import {Alert, Button, Card, Dialog, Select, Text, TextInput} from '@gravity-ui/uikit';
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Button, Card, Dialog, Text} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useMemo, useState} from 'react';
 import {useNavigate} from 'react-router-dom';

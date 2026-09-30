@@ -1,5 +1,6 @@
+import {TextInput} from '@/shared/ui/FormControls';
 import { Lock } from "@gravity-ui/icons";
-import { Alert, Button, Card, Icon, Text, TextInput } from "@gravity-ui/uikit";
+import {Alert, Button, Card, Icon, Text} from '@gravity-ui/uikit';
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 

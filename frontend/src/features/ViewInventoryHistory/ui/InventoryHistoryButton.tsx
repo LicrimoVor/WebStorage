@@ -40,7 +40,7 @@ const columns: TableColumnConfig<InventoryMovement>[] = [
   {
     id: "movement_type",
     name: "Тип",
-    template: (item) => labels[item.movement_type] ?? item.movement_type,
+    template: (item) => item.source_type === 'defect_conversion' ? 'Перевод в брак' : item.source_type === 'defect_recovery' ? 'Восстановление из брака' : labels[item.movement_type] ?? item.movement_type,
   },
   {
     id: "quantity",

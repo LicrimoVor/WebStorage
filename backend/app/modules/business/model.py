@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.modules.finance.funding import FundingMixin
 
 
 class FundingSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -15,9 +16,10 @@ class FundingSource(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ux_funding_sources_name_lower", func.lower(text("name")), unique=True),
     )
     name: Mapped[str] = mapped_column(String(200), unique=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
-class BusinessDocument(UUIDPrimaryKeyMixin, Base):
+class BusinessDocument(FundingMixin, UUIDPrimaryKeyMixin, Base):
     __tablename__ = "business_documents"
     kind: Mapped[str] = mapped_column(String(24), index=True)
     idempotency_key: Mapped[str] = mapped_column(String(100), unique=True)

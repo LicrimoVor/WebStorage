@@ -106,6 +106,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Appearance */
+        get: operations["get_appearance_api_v1_auth_appearance_get"];
+        /** Save Appearance */
+        put: operations["save_appearance_api_v1_auth_appearance_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/funding-sources": {
         parameters: {
             query?: never;
@@ -122,6 +140,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/funding-sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Source */
+        delete: operations["delete_source_api_v1_funding_sources__source_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Source */
+        patch: operations["update_source_api_v1_funding_sources__source_id__patch"];
         trace?: never;
     };
     "/api/v1/warehouse/receipts": {
@@ -342,6 +378,40 @@ export interface paths {
         put?: never;
         /** Archive Material */
         post: operations["archiveMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{material_id}/defects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Material Defects */
+        get: operations["material_defects_api_v1_materials__material_id__defects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materials/{material_id}/defect-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer Defects */
+        post: operations["transfer_defects_api_v1_materials__material_id__defect_transfers_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -814,7 +884,8 @@ export interface paths {
         get: operations["getTechnologicalProcess"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Technological Process */
+        delete: operations["deleteTechnologicalProcess"];
         options?: never;
         head?: never;
         /** Update Technological Process */
@@ -1203,6 +1274,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Financial Entry Details */
+        get: operations["financial_entry_details_api_v1_finance_entries__entry_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Financial Entry */
+        patch: operations["edit_financial_entry_api_v1_finance_entries__entry_id__patch"];
+        trace?: never;
+    };
     "/api/v1/finance/transactions": {
         parameters: {
             query?: never;
@@ -1474,6 +1563,11 @@ export interface components {
             date_to: string;
             bucket: components["schemas"]["AnalyticsBucket"];
         };
+        /** Appearance */
+        Appearance: {
+            light?: components["schemas"]["Palette"] | null;
+            dark?: components["schemas"]["Palette"] | null;
+        };
         /** AuditEventList */
         AuditEventList: {
             /** Through Id */
@@ -1575,6 +1669,31 @@ export interface components {
             unit: string;
             /** Quantity */
             quantity: string;
+        };
+        /** DefectTransfer */
+        DefectTransfer: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Entries */
+            entries: components["schemas"]["DefectTransferLine"][];
+        };
+        /** DefectTransferLine */
+        DefectTransferLine: {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
         };
         /** DemandedMaterialRow */
         DemandedMaterialRow: {
@@ -1868,6 +1987,32 @@ export interface components {
          * @enum {string}
          */
         ExportDataset: "procurement" | "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
+        /** FinanceEdit */
+        FinanceEdit: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
+            /** Amount */
+            amount: number | string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /** Reason */
+            reason: string;
+            /** Revision */
+            revision: number;
+        };
         /** FinanceEntryList */
         FinanceEntryList: {
             /** Items */
@@ -1883,6 +2028,8 @@ export interface components {
         };
         /** FinanceEntryRead */
         FinanceEntryRead: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Output"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             /**
@@ -1911,7 +2058,7 @@ export interface components {
             /** Comment */
             comment: string | null;
             /** Created By */
-            created_by: string;
+            created_by?: string | null;
         };
         /**
          * FinanceSource
@@ -1978,6 +2125,8 @@ export interface components {
         FinancialDirection: "income" | "expense";
         /** FinancialTransactionCreate */
         FinancialTransactionCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /**
              * Funding Source Id
              * Format: uuid
@@ -1995,6 +2144,8 @@ export interface components {
         };
         /** FinancialTransactionRead */
         FinancialTransactionRead: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Output"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             /**
@@ -2015,12 +2166,32 @@ export interface components {
             /** Comment */
             comment: string | null;
             /** Created By */
-            created_by: string;
+            created_by?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+        };
+        /** FundingPart */
+        "FundingPart-Input": {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /** Amount */
+            amount: number | string;
+        };
+        /** FundingPart */
+        "FundingPart-Output": {
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /** Amount */
+            amount: string;
         };
         /** FundingSourceCreate */
         FundingSourceCreate: {
@@ -2036,6 +2207,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
         };
         /** GraphEdge */
         "GraphEdge-Input": {
@@ -2293,6 +2469,8 @@ export interface components {
         };
         /** InventoryMovementCreate */
         InventoryMovementCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             movement_type: components["schemas"]["ManualMovementType"];
@@ -2316,6 +2494,8 @@ export interface components {
         };
         /** InventoryMovementRead */
         InventoryMovementRead: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Output"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             /**
@@ -2538,9 +2718,14 @@ export interface components {
         };
         /** MaterialCreate */
         MaterialCreate: {
+            /** Source Material Id */
+            source_material_id?: string | null;
             /** Name */
             name: string;
-            /** Unit */
+            /**
+             * Unit
+             * @default шт.
+             */
             unit: string;
             /**
              * Initial Quantity
@@ -2598,11 +2783,8 @@ export interface components {
             unit: string;
             /** Free Quantity */
             free_quantity: string;
-            /**
-             * Defective Quantity
-             * @default 0
-             */
-            defective_quantity: string;
+            /** Source Material Id */
+            source_material_id?: string | null;
             /**
              * Required Quantity
              * @default 0
@@ -2802,6 +2984,17 @@ export interface components {
             /** Operations */
             operations: components["schemas"]["OperationEntry"][];
         };
+        /** Palette */
+        Palette: {
+            /** Accent */
+            accent: string;
+            /** Link */
+            link: string;
+            /** Background */
+            background: string;
+            /** Surface */
+            surface: string;
+        };
         /** PaymentAllocationCreate */
         PaymentAllocationCreate: {
             /**
@@ -2836,6 +3029,8 @@ export interface components {
         };
         /** PaymentCreate */
         PaymentCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /**
              * Funding Source Id
              * Format: uuid
@@ -2865,6 +3060,8 @@ export interface components {
         };
         /** PaymentRead */
         PaymentRead: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Output"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             /**
@@ -3650,6 +3847,8 @@ export interface components {
         };
         /** ReceiptCreate */
         ReceiptCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /** Total Amount */
             total_amount?: number | string | null;
             /**
@@ -3679,11 +3878,6 @@ export interface components {
             material_id: string;
             /** Quantity */
             quantity: number | string;
-            /**
-             * Defective Quantity
-             * @default 0
-             */
-            defective_quantity: number | string;
             /** Unit Price */
             unit_price?: number | string | null;
         };
@@ -3694,6 +3888,8 @@ export interface components {
         };
         /** RepairCreate */
         RepairCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /**
              * Funding Source Id
              * Format: uuid
@@ -3749,6 +3945,8 @@ export interface components {
         Role: "user" | "admin" | "production" | "warehouse" | "manager" | "finance";
         /** SaleCreate */
         SaleCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
             /** Serial Numbers */
             serial_numbers?: string[];
             /**
@@ -3789,6 +3987,8 @@ export interface components {
         };
         /** SaleRead */
         SaleRead: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Output"][];
             /** Funding Source Id */
             funding_source_id?: string | null;
             /**
@@ -4581,6 +4781,59 @@ export interface operations {
             };
         };
     };
+    get_appearance_api_v1_auth_appearance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appearance"];
+                };
+            };
+        };
+    };
+    save_appearance_api_v1_auth_appearance_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Appearance"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appearance"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sources_api_v1_funding_sources_get: {
         parameters: {
             query?: never;
@@ -4616,6 +4869,70 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FundingSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v1_funding_sources__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_source_api_v1_funding_sources__source_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FundingSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5193,6 +5510,70 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
                 };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    material_defects_api_v1_materials__material_id__defects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialRead"][];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    transfer_defects_api_v1_materials__material_id__defect_transfers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DefectTransfer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unprocessable Content */
             422: {
@@ -6716,6 +7097,35 @@ export interface operations {
             };
         };
     };
+    deleteTechnologicalProcess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                process_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     updateTechnologicalProcess: {
         parameters: {
             query?: never;
@@ -8143,6 +8553,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SaleSummary"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    financial_entry_details_api_v1_finance_entries__entry_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    edit_financial_entry_api_v1_finance_entries__entry_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinanceEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Unprocessable Content */

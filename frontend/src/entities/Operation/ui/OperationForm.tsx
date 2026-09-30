@@ -1,4 +1,5 @@
-import { Alert, Select, TextInput } from "@gravity-ui/uikit";
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert} from '@gravity-ui/uikit';
 import {operationGroupLabel, useOperationGroupsQuery} from '@/entities/OperationGroup/api';
 
 import type { OperationFormValue } from "../model/types";

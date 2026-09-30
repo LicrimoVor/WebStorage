@@ -8,9 +8,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UUIDPrimaryKeyMixin
+from app.modules.finance.funding import FundingMixin
 
 
-class Sale(UUIDPrimaryKeyMixin, Base):
+class Sale(FundingMixin, UUIDPrimaryKeyMixin, Base):
     __tablename__ = "sales"
     __table_args__ = (
         CheckConstraint("quantity > 0", name="quantity_positive"),

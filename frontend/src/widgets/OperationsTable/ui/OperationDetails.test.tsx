@@ -1,4 +1,3 @@
-import userEvent from '@testing-library/user-event';
 import {screen, within} from '@testing-library/react';
 import {expect, it, vi} from 'vitest';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
@@ -19,6 +18,5 @@ it('shows operation fields, full group path and actions inside its card', async 
   const dialog = screen.getByRole('dialog');
   expect(await within(dialog).findByText('Обработка / Разное')).toBeInTheDocument();
   expect(within(dialog).getByText('12,4 ₽')).toBeInTheDocument();
-  await userEvent.click(within(dialog).getByRole('button', {name: 'Действия'}));
   expect(screen.getByRole('button', {name: 'Работа'})).toBeInTheDocument();
 });

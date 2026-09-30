@@ -1,15 +1,5 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  Label,
-  Select,
-  Tab,
-  TabList,
-  Text,
-  TextInput,
-} from "@gravity-ui/uikit";
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Button, Card, Dialog, Label, Tab, TabList, Text} from '@gravity-ui/uikit';
 import { useMutation } from "@tanstack/react-query";
 import {
   forwardRef,

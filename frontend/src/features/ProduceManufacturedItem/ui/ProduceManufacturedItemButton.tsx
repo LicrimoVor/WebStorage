@@ -1,5 +1,6 @@
+import {Select, TextInput, TextArea} from '@/shared/ui/FormControls';
 import {ImageUploadField} from '@/shared/ui';
-import {Alert, Button, Dialog, Select, Skeleton, Text, TextInput, TextArea} from '@gravity-ui/uikit';
+import {Alert, Button, Dialog, Skeleton, Text} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useRef, useState} from 'react';
 

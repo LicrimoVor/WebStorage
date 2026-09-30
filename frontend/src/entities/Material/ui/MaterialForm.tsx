@@ -1,4 +1,8 @@
-import {Alert, Select, TextInput} from '@gravity-ui/uikit';
+import {Select, TextInput} from '@/shared/ui/FormControls';
+import {Alert, Checkbox} from '@gravity-ui/uikit';
+import {useQuery} from '@tanstack/react-query';
+import {listMaterials} from '../api/materialApi';
+import type {Material} from '../model/types';
 
 import {measurementUnitOptions} from '@/shared/lib';
 import {ImageUploadField} from '@/shared/ui';
@@ -11,6 +15,7 @@ interface MaterialFormProps {
   value: MaterialFormValue;
   onChange: (value: MaterialFormValue) => void;
   includeInitialQuantity?: boolean;
+  fixedSource?: boolean;
   error?: string | undefined;
 }
 
@@ -18,9 +23,18 @@ export function MaterialForm({
   value,
   onChange,
   includeInitialQuantity = false,
+  fixedSource = false,
   error,
 }: MaterialFormProps) {
   const groupsQuery = useInventoryGroupsQuery();
+  const sources = useQuery({queryKey: ['materials', 'defect-sources'], enabled: !fixedSource && includeInitialQuantity && Boolean(value.isDefect), queryFn: async () => {
+    const items: Material[] = [];
+    for (let page = 1; ; page++) {
+      const result = await listMaterials({page, page_size: 100});
+      items.push(...result.items.filter((m) => !m.source_material_id));
+      if (page >= result.pages) return items;
+    }
+  }});
   const update = (field: keyof MaterialFormValue, fieldValue: string) => {
     onChange({...value, [field]: fieldValue});
   };
@@ -28,7 +42,14 @@ export function MaterialForm({
   return (
     <div className={styles.root}>
       {error ? <Alert theme="danger" message={error} /> : null}
-      <p>Укажите название, единицу измерения и группу. Цену, ссылку и фотографию можно добавить позже.</p>
+      {includeInitialQuantity && !fixedSource && <>
+        <Checkbox checked={Boolean(value.isDefect)} onUpdate={(checked) => onChange({...value, isDefect: checked, sourceMaterialId: ''})}>Является браком</Checkbox>
+        {value.isDefect && <Select label="Исходный материал" value={value.sourceMaterialId ? [value.sourceMaterialId] : []} loading={sources.isPending}
+          options={(sources.data ?? []).map((m) => ({value: m.id, content: `${m.name} · ${m.groups?.map((g) => g.name).join(' / ') || 'Без группы'}`}))}
+          onUpdate={([id]) => {const m = sources.data?.find((item) => item.id === id); if (m) onChange({...value, sourceMaterialId: m.id, unit: m.unit, price: m.price ?? '', url: m.url ?? '', image: m.image ?? ''});}} />}
+        {value.isDefect && sources.isError && <Alert theme="danger" message="Не удалось загрузить материалы" />}
+      </>}
+      <p>{fixedSource ? 'Укажите название вида брака и группу или подгруппу. Остальные свойства копируются из исходного материала. После создания используйте «Перевести в брак».' : 'Укажите название, единицу измерения и группу. Цену, ссылку и фотографию можно добавить позже.'}</p>
       <TextInput
         label="Название"
         value={value.name}
@@ -37,15 +58,16 @@ export function MaterialForm({
         autoFocus
         size="l"
       />
-      <Select
+      {!fixedSource && <Select
         label="Единица"
+        disabled={Boolean(value.isDefect)}
         options={measurementUnitOptions}
         value={value.unit ? [value.unit] : []}
         onUpdate={(next) => update('unit', next[0] ?? '')}
         aria-label="Единица измерения"
         width="max"
         size="l"
-      />
+      />}
       <Select
         label="Группы"
         options={(groupsQuery.data ?? []).map((group) => ({
@@ -62,7 +84,7 @@ export function MaterialForm({
         width="max"
         size="l"
       />
-      {includeInitialQuantity ? (
+      {includeInitialQuantity && !fixedSource ? (
         <TextInput
           label="Начальный остаток"
           value={value.initialQuantity}
@@ -71,8 +93,9 @@ export function MaterialForm({
           size="l"
         />
       ) : null}
-      <TextInput
+      {!fixedSource && <><TextInput
         label="Цена, ₽"
+        disabled={Boolean(value.isDefect)}
         value={value.price}
         onUpdate={(next) => update('price', next)}
         controlProps={{'aria-label': 'Цена', inputMode: 'decimal'}}
@@ -81,17 +104,18 @@ export function MaterialForm({
       />
       <TextInput
         label="Ссылка"
+        disabled={Boolean(value.isDefect)}
         value={value.url}
         onUpdate={(next) => update('url', next)}
         controlProps={{'aria-label': 'Ссылка на материал'}}
         placeholder="https://…"
         size="l"
       />
-      <ImageUploadField
+      {!value.isDefect && <ImageUploadField
         value={value.image}
         onUpdate={(next) => update('image', next)}
         alt="Предпросмотр материала"
-      />
+      />}</>}
     </div>
   );
 }

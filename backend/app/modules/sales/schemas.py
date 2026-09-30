@@ -6,6 +6,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.types import Money, Quantity
+from app.modules.finance.funding import FundingWrite
 
 
 class SaleSortField(StrEnum):
@@ -15,7 +16,7 @@ class SaleSortField(StrEnum):
     TOTAL_AMOUNT = "total_amount"
 
 
-class SaleCreate(BaseModel):
+class SaleCreate(FundingWrite):
     serial_numbers: list[str] = Field(default_factory=list, max_length=10000)
     funding_source_id: uuid.UUID
     product_id: uuid.UUID
@@ -30,7 +31,7 @@ class SaleCreate(BaseModel):
         return value.strip() or None if value is not None else None
 
 
-class SaleRead(BaseModel):
+class SaleRead(FundingWrite):
     funding_source_id: uuid.UUID | None = None
     id: uuid.UUID
     product_id: uuid.UUID
