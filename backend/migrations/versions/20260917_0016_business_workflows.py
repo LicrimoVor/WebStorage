@@ -86,7 +86,9 @@ def upgrade() -> None:
     op.create_index("ix_business_documents_kind", "business_documents", ["kind"])
     op.create_table(
         "product_units",
-        sa.Column("issued_for_repair_id", sa.UUID(), sa.ForeignKey("business_documents.id"), nullable=True),
+        sa.Column(
+            "issued_for_repair_id", sa.UUID(), sa.ForeignKey("business_documents.id"), nullable=True
+        ),
         sa.Column("id", sa.UUID(), primary_key=True),
         sa.Column("serial_number", sa.String(200), nullable=False, unique=True),
         sa.Column("product_id", sa.UUID(), sa.ForeignKey("manufactured_items.id"), nullable=False),
