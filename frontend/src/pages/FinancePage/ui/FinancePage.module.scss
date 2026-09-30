@@ -5,6 +5,7 @@
   gap: var(--g-spacing-6);
   margin: 0 auto;
   padding: 32px;
+  max-width: 1500px;
 }
 
 .header,
@@ -52,7 +53,9 @@
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr)) repeat(2, minmax(150px, 1fr)) auto;
+  grid-template-columns:
+    repeat(2, minmax(180px, 1fr)) repeat(2, minmax(150px, 1fr))
+    auto;
   gap: var(--g-spacing-3);
   align-items: end;
 }

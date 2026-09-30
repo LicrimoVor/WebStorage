@@ -45,12 +45,14 @@ describe('CreateManufacturedItemButton', () => {
     );
     await user.click(screen.getByRole('combobox', {name: 'Продукт полуфабриката'}));
     await user.click(screen.getByText('Редуктор', {exact: true}));
+    await user.click(screen.getByRole('checkbox', {name: 'Побочный продукт — можно продавать'}));
     await user.click(screen.getByRole('button', {name: 'Создать'}));
 
     await waitFor(() =>
       expect(createManufacturedItem).toHaveBeenCalledWith({
         name: 'Корпус редуктора',
         is_product: false,
+        is_byproduct: true,
         product_id: "owner-id",
         unit: 'шт.',
         initial_quantity: '4.5',

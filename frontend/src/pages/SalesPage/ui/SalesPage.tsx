@@ -85,14 +85,14 @@ function RegisterSaleButton() {
     enabled: Boolean(productId),
     queryFn: async () => {
       const all: {
-        serial_number: string;
+        serial_number: string | null;
         sale_id: string | null;
         issued_for_repair_id: string | null;
       }[] = [];
       for (let offset = 0; ; offset += 500) {
         const batch = await apiRequest<
           {
-            serial_number: string;
+            serial_number: string | null;
             sale_id: string | null;
             issued_for_repair_id: string | null;
           }[]
@@ -117,7 +117,7 @@ function RegisterSaleButton() {
   const products = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
-    kind: "product",
+    kind: "saleable",
     include_archived: false,
     sort_by: "name",
     sort_order: "asc",
@@ -129,6 +129,7 @@ function RegisterSaleButton() {
       registerSale(payload, commandKey.current),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['materials']}),
         queryClient.invalidateQueries({ queryKey: saleKeys.all }),
         queryClient.invalidateQueries({ queryKey: ["sale-units"] }),
         queryClient.invalidateQueries({ queryKey: ["product-units"] }),
@@ -220,7 +221,7 @@ function RegisterSaleButton() {
               label="Продукт"
               options={(products.data?.items ?? []).map((item) => ({
                 value: item.id,
-                content: `${item.name} · доступно ${formatDecimal(item.free_quantity)} ${item.unit}`,
+                content: `${item.name}${item.is_byproduct ? ' (побочный продукт)' : ''} · доступно ${formatDecimal(item.free_quantity)} ${item.unit}`,
               }))}
               value={productId ? [productId] : []}
               onUpdate={(values) => {
@@ -266,15 +267,16 @@ function RegisterSaleButton() {
             </label>
             <Select
               label="Номера изделий"
+              placeholder="Без номера (анонимные изделия)"
               multiple
               filterable
               width="max"
               value={serialNumbers}
               options={(units.data ?? [])
-                .filter((unit) => !unit.sale_id && !unit.issued_for_repair_id)
+                .filter((unit) => unit.serial_number && !unit.sale_id && !unit.issued_for_repair_id)
                 .map((unit) => ({
-                  value: unit.serial_number,
-                  content: unit.serial_number,
+                  value: unit.serial_number!,
+                  content: unit.serial_number!,
                 }))}
               onUpdate={(ids) => {
                 setSerialNumbers(ids);
@@ -425,7 +427,7 @@ export function SalesPage() {
   const products = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
-    kind: "product",
+    kind: "saleable",
     include_archived: true,
     sort_by: "name",
     sort_order: "asc",

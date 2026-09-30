@@ -1,6 +1,7 @@
 import type {ManufacturedItem} from './model/types';
 
 export const manufacturedItemFixture: ManufacturedItem = {
+  is_byproduct: false,
   id: '62600f8e-68c1-4c72-9ad9-38578f482bce',
   name: 'Корпус редуктора',
   is_product: false,

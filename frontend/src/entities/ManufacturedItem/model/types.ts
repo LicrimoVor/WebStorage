@@ -22,6 +22,7 @@ export type AvailabilityFilter = components['schemas']['AvailabilityFilter'];
 export interface ManufacturedItemFormValue {
   name: string;
   isProduct: boolean;
+  isByproduct?: boolean;
   productId?: string;
   unit: string;
   initialQuantity: string;

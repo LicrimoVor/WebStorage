@@ -32,7 +32,7 @@ class BusinessDocument(FundingMixin, UUIDPrimaryKeyMixin, Base):
 
 class ProductUnit(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "product_units"
-    serial_number: Mapped[str] = mapped_column(String(200), unique=True)
+    serial_number: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("manufactured_items.id"))
     production_record_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("production_records.id"))
     photo: Mapped[str | None] = mapped_column(String(2000), nullable=True)

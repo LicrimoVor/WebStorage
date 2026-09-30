@@ -55,7 +55,7 @@ export function AppHeader({
         { path: routes.operations, label: "Операции", icon: ListCheck },
         { path: routes.personnel, label: "Персонал", icon: Persons },
         { path: "/repairs", label: "Ремонт", icon: Wrench },
-        { path: routes.sales, label: "Продажа продукции", icon: ShoppingCart },
+        { path: routes.sales, label: "Продажа", icon: ShoppingCart },
         { path: routes.finance, label: "Финансы", icon: ChartColumn },
       ]
         .filter(({ path }) => canOpenPath(access, path))

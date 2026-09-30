@@ -12,15 +12,14 @@ vi.mock('@/shared/api', () => ({getErrorMessage: () => 'Ошибка', apiReques
   return {entry: {id: 'entry', amount: '100.00', occurred_at: '2026-09-30T10:00:00Z', funding_source_id: 'source', funding_allocations: [], comment: 'Old', created_by: 'admin', source_type: 'manual', category: 'Материалы', description: 'Закупка'}, revision: 2, history: []};
 })}));
 
-it('loads the full amount and submits the revision and mandatory reason', async () => {
+it('loads the full amount and submits the revision without requiring a reason', async () => {
   renderWithProviders(<FinanceEditor id="entry" onClose={vi.fn()} />);
   const amount = await screen.findByLabelText('Сумма, ₽');
   expect(amount).toHaveValue('100.00');
-  expect(screen.getByRole('button', {name: 'Сохранить'})).toBeDisabled();
+  expect(screen.getByRole('button', {name: 'Сохранить'})).toBeEnabled();
   fireEvent.change(amount, {target: {value: '120,50'}});
-  fireEvent.change(screen.getByLabelText('Причина изменения'), {target: {value: 'Исправление накладной'}});
   await userEvent.click(screen.getByRole('button', {name: 'Сохранить'}));
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('/finance/entries/entry', expect.objectContaining({method: 'PATCH'})));
   const request = vi.mocked(apiRequest).mock.calls.find(([, options]) => options?.method === 'PATCH');
-  expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({amount: '120.50', revision: 2, reason: 'Исправление накладной', funding_source_id: 'source'});
+  expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({amount: '120.50', revision: 2, funding_source_id: 'source'});
 });

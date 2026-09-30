@@ -119,7 +119,7 @@ async def units(
     if product_id:
         query = query.where(ProductUnit.product_id == product_id)
     rows = await session.scalars(
-        query.order_by(ProductUnit.created_at.desc()).offset(offset).limit(limit)
+        query.order_by(ProductUnit.created_at.desc(), ProductUnit.id).offset(offset).limit(limit)
     )
     return [
         {

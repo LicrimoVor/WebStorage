@@ -3,6 +3,7 @@ import type {ManufacturedItem, ManufacturedItemFormValue} from './types';
 export const emptyManufacturedItemForm: ManufacturedItemFormValue = {
   name: '',
   isProduct: false,
+  isByproduct: false,
   unit: 'шт.',
   initialQuantity: '0',
   image: '',
@@ -15,6 +16,7 @@ export function manufacturedItemToForm(
   return {
     name: item.name,
     isProduct: item.is_product,
+    isByproduct: item.is_byproduct ?? false,
     productId: item.product_id ?? "",
     unit: item.unit,
     initialQuantity: '0',

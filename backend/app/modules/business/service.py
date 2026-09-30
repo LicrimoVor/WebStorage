@@ -213,9 +213,11 @@ async def register_units(
         if serial_numbers:
             raise DomainValidationError("Номера назначаются готовой продукции")
         return
-    numbers = [number.strip() for number in serial_numbers]
-    if quantity != len(numbers) or any(not number for number in numbers):
-        raise DomainValidationError("Укажите уникальный номер каждой единицы продукции")
+    numbers = [number.strip() for number in serial_numbers if number.strip()]
+    if quantity != quantity.to_integral_value() or quantity > 10000 or len(numbers) > quantity:
+        raise DomainValidationError(
+            "Выпускайте от 1 до 10000 целых изделий; номеров не может быть больше количества"
+        )
     if len(set(numbers)) != len(numbers):
         raise DomainValidationError("Номера изделий не должны повторяться")
     if await session.scalar(select(ProductUnit.id).where(ProductUnit.serial_number.in_(numbers))):
@@ -228,6 +230,6 @@ async def register_units(
                 production_record_id=record_id,
                 photo=photo,
             )
-            for number in numbers
+            for number in [*numbers, *([None] * (int(quantity) - len(numbers)))]
         ]
     )

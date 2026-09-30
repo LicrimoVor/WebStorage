@@ -109,7 +109,7 @@ async def _execute(
     ).scalar_one_or_none()
     if product is None:
         raise NotFoundError("Product was not found")
-    if not product.is_product:
+    if not product.is_product and not product.is_byproduct:
         raise DomainValidationError("Only products can be sold")
     if product.archived:
         raise ConflictError("An archived product cannot be sold")
@@ -149,10 +149,12 @@ async def _execute(
             )
         ).all()
     )
+    if units and sale_quantity != sale_quantity.to_integral_value():
+        raise DomainValidationError("Выпущенные изделия продаются только целиком")
     if payload.serial_numbers:
         if (
             len(payload.serial_numbers) != len(set(payload.serial_numbers))
-            or len(payload.serial_numbers) != sale_quantity
+            or len(payload.serial_numbers) > sale_quantity
         ):
             raise DomainValidationError("Укажите уникальный номер каждой продаваемой единицы")
         selected_units = [unit for unit in units if unit.serial_number in payload.serial_numbers]
@@ -160,8 +162,24 @@ async def _execute(
             raise ConflictError("Изделие не найдено, принадлежит другому продукту или уже продано")
         for unit in selected_units:
             unit.sale_id = sale.id
-    elif units:
-        raise DomainValidationError("Выберите номера продаваемых изделий")
+    unnamed_quantity = sale_quantity - len(payload.serial_numbers)
+    if units and unnamed_quantity:
+        from app.modules.manufactured_items.repository import balance_expression
+
+        balance = await session.scalar(
+            select(balance_expression()).where(ManufacturedItem.id == product.id)
+        )
+        named_count = sum(unit.serial_number is not None for unit in units)
+        if unnamed_quantity > (balance or Decimal("0")) - named_count:
+            raise DomainValidationError(
+                "Недостаточно изделий без номера. Выберите номера продаваемых изделий"
+            )
+        anonymous = sorted(
+            (unit for unit in units if unit.serial_number is None),
+            key=lambda unit: (unit.created_at, str(unit.id)),
+        )
+        for unit in anonymous[: int(unnamed_quantity)]:
+            unit.sale_id = sale.id
     await movement_repository.create_movement(
         session,
         item_id=product.id,

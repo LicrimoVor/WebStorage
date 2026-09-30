@@ -18,7 +18,7 @@ export function PlanRelease({ plan }: { plan: ProductionPlan }) {
   const client = useQueryClient();
   const numbers = serials.split('\n').map((s) => s.trim()).filter(Boolean);
   const valid = Number.isInteger(Number(quantity)) && Number(quantity) > 0 &&
-    Number(quantity) <= Number(plan.remaining_quantity) && numbers.length === Number(quantity) &&
+    Number(quantity) <= Number(plan.remaining_quantity) && numbers.length <= Number(quantity) &&
     new Set(numbers).size === numbers.length;
   const mutation = useMutation({
     mutationFn: () => registerProduction(plan.id, {
@@ -43,7 +43,7 @@ export function PlanRelease({ plan }: { plan: ProductionPlan }) {
           <label>Номера изделий
             <TextArea placeholder="Каждый номер с новой строки" value={serials} onUpdate={setSerials} controlProps={{'aria-label': 'Номера изделий'}} />
           </label>
-          <p>Введено номеров: {numbers.length} из {quantity || '0'}. Для каждого изделия нужен отдельный уникальный номер.</p>
+          <p>Введено номеров: {numbers.length} из {quantity || '0'}. Остальные изделия будут выпущены анонимно. Номера можно не заполнять.</p>
           <ImageUploadField value={photo} onUpdate={setPhoto} alt="Фото выпуска" />
           <TextInput label="Комментарий" value={comment} onUpdate={setComment} />
           {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}

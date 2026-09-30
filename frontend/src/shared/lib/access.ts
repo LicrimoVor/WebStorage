@@ -7,7 +7,7 @@ export const sections = [
   { id: "repairs", title: "Ремонт", path: "/repairs" },
   { id: "personnel", title: "Персонал", path: "/personnel" },
   { id: "planning", title: "Планирование", path: "/production-plans" },
-  { id: "sales", title: "Продажа продукции", path: "/sales" },
+  { id: "sales", title: "Продажа", path: "/sales" },
   { id: "finance", title: "Финансы", path: "/finance" },
 ] as const;
 export type Section = (typeof sections)[number]["id"];

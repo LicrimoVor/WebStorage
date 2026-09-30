@@ -58,6 +58,7 @@ describe('FinancePage', () => {
   it('shows unified entries and creates a manual expense', async () => {
     const user = userEvent.setup();
     renderWithProviders(<FinancePage />, '/finance');
+    expect(screen.getByRole('combobox', {name: 'Финансирование'})).toHaveTextContent('Все источники');
     expect(screen.getByText('Готовое изделие')).toBeInTheDocument();
     expect(screen.getByText('124,68 ₽')).toBeInTheDocument();
 

@@ -38,6 +38,7 @@ def to_read_model(
         id=item.id,
         name=item.name,
         is_product=item.is_product,
+        is_byproduct=item.is_byproduct,
         product_id=item.product_id,
         unit=item.unit,
         free_quantity=free_quantity,
@@ -60,6 +61,7 @@ async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> Manu
         product_id=payload.product_id,
         name=payload.name,
         is_product=payload.is_product,
+        is_byproduct=payload.is_byproduct and not payload.is_product,
         unit=payload.unit,
         image=_url_value(payload.image),
     )
@@ -172,6 +174,7 @@ async def update(
             value = _url_value(value)
         setattr(item, field, value)
     if next_is_product:
+        item.is_byproduct = False
         await warehouse_repository.set_item_groups(session, item.id, [])
     elif group_ids is not None:
         await warehouse_repository.set_item_groups(session, item.id, group_ids)

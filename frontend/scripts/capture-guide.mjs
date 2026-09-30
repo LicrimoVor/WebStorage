@@ -37,6 +37,16 @@ const product = {...sample(schema.components.schemas.ManufacturedItemRead), id, 
 const permissions = ['planning', 'processes', 'warehouse', 'operations', 'personnel', 'repairs', 'sales', 'finance'];
 function api(url) {
   const pathname = new URL(url).pathname;
+  if (pathname === '/api/v1/warehouse/catalog') {
+    const kind = new URL(url).searchParams.get('kind');
+    const semi = {...material, id: '55555555-5555-4555-8555-555555555555', kind: 'semi_finished', name: 'Заготовка К-1', free_quantity: '12', required_quantity: '16', deficit_quantity: '4'};
+    const items = kind === 'product' ? [{...material, ...product, kind: 'product'}] : kind === 'semi_finished' ? [semi] : [{...material, kind: 'material'}, semi];
+    return {items, page: 1, page_size: 20, total: items.length, pages: 1};
+  }
+  if (pathname.endsWith('/product-units')) return [
+    {id: '77777777-7777-4777-8777-777777777777', serial_number: null, created_at: stamp, sale_id: null, issued_for_repair_id: null, photo: null},
+    {id: '88888888-8888-4888-8888-888888888888', serial_number: 'N-001', created_at: stamp, sale_id: null, issued_for_repair_id: null, photo: null},
+  ];
   if (pathname.endsWith('/auth/session')) return {username: 'Учебный администратор', roles: ['admin'], permissions};
   if (pathname.endsWith('/auth/appearance')) return {light: null, dark: null};
   if (pathname.endsWith('/auth/profile')) return {username: 'Учебный администратор', roles: ['admin'], can_change_password: true, created_at: stamp, last_login_at: stamp};
@@ -124,7 +134,9 @@ try {
   for (const [name, route, button] of [
     ['planning', '/production-plans'], ['processes', '/processes'], ['warehouse', '/warehouse'],
     ['material-card', '/warehouse', 'Лист алюминиевый'],
-    ['manufactured', '/warehouse?tab=manufactured'],
+    ['manufactured', '/warehouse?tab=semi_finished'],
+    ['products', '/warehouse?tab=products'],
+    ['product-card', '/warehouse?tab=products', 'Корпус К-1'],
     ['composition', '/warehouse?tab=manufactured', 'Заготовка К-1'],
     ['receipt', '/warehouse/receipt'], ['revision', '/warehouse/revision'],
     ['operations', '/operations'], ['personnel', '/personnel'], ['repairs', '/repairs'],

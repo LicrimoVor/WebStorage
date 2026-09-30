@@ -16,12 +16,14 @@ class ManufacturedItemSortField(StrEnum):
 
 
 class ManufacturedItemKind(StrEnum):
+    SALEABLE = "saleable"
     ALL = "all"
     SEMI_FINISHED = "semi_finished"
     PRODUCT = "product"
 
 
 class ManufacturedItemCreate(BaseModel):
+    is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
     is_product: bool
@@ -40,6 +42,7 @@ class ManufacturedItemCreate(BaseModel):
 
 
 class ManufacturedItemUpdate(BaseModel):
+    is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     is_product: bool | None = None
@@ -59,6 +62,7 @@ class ManufacturedItemUpdate(BaseModel):
 
 
 class ManufacturedItemRead(BaseModel):
+    is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     model_config = ConfigDict(from_attributes=True)
 

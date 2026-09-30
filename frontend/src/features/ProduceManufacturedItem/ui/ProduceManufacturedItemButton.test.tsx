@@ -73,9 +73,11 @@ describe('ProduceManufacturedItemButton', () => {
     expect(within(dialog).getByText('Поддерево производства')).toBeInTheDocument();
     expect(within(dialog).getByText('Сталь')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', {name: 'Произвести'}));
-    expect(registerDirectProduction).not.toHaveBeenCalled();
+    await waitFor(() => expect(registerDirectProduction).toHaveBeenCalledWith('product-id', expect.objectContaining({serial_numbers: []}), expect.any(String)));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', {name: 'Произвести'}));
     await user.type(screen.getByPlaceholderText('Номера изделий — каждый с новой строки'), 'N1');
-    await user.click(within(dialog).getByRole('button', {name: 'Произвести'}));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Произвести'}));
 
     await waitFor(() =>
       expect(registerDirectProduction).toHaveBeenCalledWith(

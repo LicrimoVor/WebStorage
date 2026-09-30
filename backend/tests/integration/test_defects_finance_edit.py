@@ -83,6 +83,12 @@ async def test_finance_edit_permissions_history_conflicts_and_receipt(client: As
     assert Decimal((await client.get(f"/api/v1/materials/{material['id']}")).json()['free_quantity']) == 10
     documents = (await client.get('/api/v1/business-documents?kind=receipt')).json()
     assert documents[0]['total_amount'] == '120'
+    without_reason = {key: value for key, value in payload.items() if key != 'reason'}
+    without_reason.update(revision=1, comment='No reason needed')
+    corrected = await client.patch(url, json=without_reason)
+    assert corrected.status_code == 200, corrected.text
+    assert corrected.json()['revision'] == 2
+    assert corrected.json()['history'][-1]['after']['comment'] == 'No reason needed'
 
 
 async def test_edit_sale_payment_repair_and_manual_transaction(client: AsyncClient) -> None:

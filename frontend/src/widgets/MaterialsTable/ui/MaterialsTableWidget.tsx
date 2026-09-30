@@ -3,12 +3,15 @@ import {Alert, Button, Card, Pagination, PlaceholderContainer, Skeleton, Switch,
 import { Boxes3 } from "@gravity-ui/icons";
 import { useSearchParams } from "react-router-dom";
 import {useState} from 'react';
+import {useQuery} from '@tanstack/react-query';
+import {ManufacturedDetails} from '@/widgets/ManufacturedItemsTable/ui/ManufacturedDetails';
+import {CreateManufacturedItemButton} from '@/features/CreateManufacturedItem';
+import type {components} from '@/shared/api/generated/schema';
 import {MaterialDetails} from './MaterialDetails';
 import {DefectTransferButton} from './DefectTransferButton';
 
 import {
   MaterialsTable,
-  useMaterialsQuery,
   type AvailabilityFilter,
   type Material,
   type MaterialListParams,
@@ -21,7 +24,7 @@ import { CreateMaterialButton } from "@/features/CreateMaterial";
 import { EditMaterialButton } from "@/features/EditMaterial";
 import { ExportExcelButton } from "@/features/ExportExcel";
 import { InventoryHistoryButton } from "@/features/ViewInventoryHistory";
-import { getErrorMessage } from "@/shared/api";
+import { apiRequest, getErrorMessage } from "@/shared/api";
 
 import styles from "./MaterialsTableWidget.module.scss";
 
@@ -46,8 +49,9 @@ function positiveInteger(value: string | null, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-export function MaterialsTableWidget() {
-  const [selected, setSelected] = useState<Material>();
+export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?: 'all' | 'semi_finished' | 'product'; hideCreate?: boolean}) {
+  const [selected, setSelected] = useState<Material & {kind?: string}>();
+  const title = kind === 'product' ? 'Продукты' : kind === 'semi_finished' ? 'Полуфабрикаты' : 'Материалы';
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
   const pageSize = positiveInteger(searchParams.get("page_size"), 20);
@@ -71,7 +75,11 @@ export function MaterialsTableWidget() {
     product_id: productId || null,
     group_id: groupId || null,
   };
-  const query = useMaterialsQuery(params);
+  const query = useQuery({queryKey: ['materials', 'catalog', kind, params], queryFn: () => {
+    const url = new URLSearchParams({kind});
+    Object.entries(params).forEach(([key, value]) => {if (value !== null && value !== undefined && value !== '') url.set(key, String(value));});
+    return apiRequest<components['schemas']['CatalogList']>(`/warehouse/catalog?${url}`);
+  }});
 
   const updateUrl = (
     updates: Record<string, string | number | boolean | undefined>,
@@ -100,21 +108,24 @@ export function MaterialsTableWidget() {
       <div className={styles.heading}>
         <div>
           <Text as="h2" variant="header-2">
-            Материалы
+            {title}
           </Text>
         </div>
         <div className={styles.actions}>
-          <ExportExcelButton
+          {kind === 'all' && <ExportExcelButton
             dataset="materials"
+            label="Экспорт материалов"
             params={{
               ...(search ? { search } : {}),
               sort_by: sortBy,
               sort_order: sortOrder,
               availability,
               deficit_only: deficitOnly,
+              ...(groupId ? {group_id: groupId} : {}),
+              ...(productId ? {product_id: productId} : {}),
             }}
-          />
-          <CreateMaterialButton defaultGroupId={groupId} />
+          />}
+          {!hideCreate && (kind === 'all' ? <CreateMaterialButton defaultGroupId={groupId} /> : <CreateManufacturedItemButton defaultIsProduct={kind === 'product'} buttonLabel={kind === 'product' ? 'Создать продукт' : 'Создать полуфабрикат'} />)}
         </div>
       </div>
 
@@ -188,18 +199,14 @@ export function MaterialsTableWidget() {
           title={
             search || deficitOnly || productId || groupId
               ? "Ничего не найдено"
-              : "Материалов пока нет"
+              : `${title}: пока нет позиций`
           }
           description={
             search || deficitOnly || productId || groupId
               ? "Измените поисковый запрос или фильтры."
-              : "Создайте первый материал и укажите его начальный остаток."
+              : "Создайте позицию и укажите её свойства."
           }
-          actions={
-            !search && !deficitOnly && !productId && !groupId ? (
-              <CreateMaterialButton defaultGroupId={groupId} />
-            ) : null
-          }
+
         />
       ) : (
         <div className={styles.content}>
@@ -222,7 +229,7 @@ export function MaterialsTableWidget() {
           </div>
         </div>
       )}
-      {selected && <MaterialDetails id={selected.id} onClose={() => setSelected(undefined)} renderActions={renderActions} />}
+      {selected && (selected.kind && selected.kind !== 'material' ? <ManufacturedDetails row={selected} onClose={() => setSelected(undefined)} /> : <MaterialDetails id={selected.id} onClose={() => setSelected(undefined)} renderActions={renderActions} />)}
     </Card>
   );
 }

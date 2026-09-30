@@ -7125,6 +7125,165 @@
         }
       }
     },
+    "/api/v1/warehouse/catalog": {
+      "get": {
+        "tags": [
+          "warehouse"
+        ],
+        "summary": "Catalog",
+        "operationId": "getWarehouseCatalog",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "semi_finished",
+                "product"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "availability",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/AvailabilityFilter",
+              "default": "all"
+            }
+          },
+          {
+            "name": "deficit_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Deficit Only"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/MaterialSortField",
+              "default": "name"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder",
+              "default": "asc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogList"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/v1/warehouse/revision": {
       "get": {
         "tags": [
@@ -7967,6 +8126,171 @@
           "out_of_stock"
         ],
         "title": "AvailabilityFilter"
+      },
+      "CatalogList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "CatalogList"
+      },
+      "CatalogRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "free_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Free Quantity"
+          },
+          "source_material_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Material Id"
+          },
+          "required_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Required Quantity",
+            "default": "0"
+          },
+          "deficit_quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Deficit Quantity",
+            "default": "0"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryGroupSummary"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "material",
+              "semi_finished",
+              "product"
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "free_quantity",
+          "price",
+          "url",
+          "image",
+          "archived",
+          "created_at",
+          "updated_at",
+          "kind"
+        ],
+        "title": "CatalogRow"
       },
       "ChangePasswordRequest": {
         "properties": {
@@ -8894,8 +9218,8 @@
           "reason": {
             "type": "string",
             "maxLength": 2000,
-            "minLength": 1,
-            "title": "Reason"
+            "title": "Reason",
+            "default": ""
           },
           "revision": {
             "type": "integer",
@@ -8908,7 +9232,6 @@
           "amount",
           "occurred_at",
           "funding_source_id",
-          "reason",
           "revision"
         ],
         "title": "FinanceEdit"
@@ -10364,6 +10687,11 @@
       },
       "ManufacturedItemCreate": {
         "properties": {
+          "is_byproduct": {
+            "type": "boolean",
+            "title": "Is Byproduct",
+            "default": false
+          },
           "product_id": {
             "anyOf": [
               {
@@ -10439,6 +10767,7 @@
       "ManufacturedItemKind": {
         "type": "string",
         "enum": [
+          "saleable",
           "all",
           "semi_finished",
           "product"
@@ -10631,6 +10960,11 @@
       },
       "ManufacturedItemRead": {
         "properties": {
+          "is_byproduct": {
+            "type": "boolean",
+            "title": "Is Byproduct",
+            "default": false
+          },
           "product_id": {
             "anyOf": [
               {
@@ -10750,6 +11084,11 @@
       },
       "ManufacturedItemUpdate": {
         "properties": {
+          "is_byproduct": {
+            "type": "boolean",
+            "title": "Is Byproduct",
+            "default": false
+          },
           "product_id": {
             "anyOf": [
               {

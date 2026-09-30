@@ -1,13 +1,13 @@
 import {screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 
-import {useStockRevisionRowsQuery} from '@/entities/StockRevision';
+import {apiRequest} from '@/shared/api';
 import type * as ManufacturedItemExports from '@/entities/ManufacturedItem';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {ManufacturedItemsTableWidget} from './ManufacturedItemsTableWidget';
 
-vi.mock('@/entities/StockRevision', () => ({useStockRevisionRowsQuery: vi.fn()}));
+vi.mock('@/shared/api', () => ({apiRequest: vi.fn(), getErrorMessage: () => 'Network error'}));
 
 vi.mock('@/entities/ManufacturedItem', async (importOriginal) => {
   const actual = await importOriginal<typeof ManufacturedItemExports>();
@@ -24,32 +24,18 @@ vi.mock('@/entities/InventoryGroup', () => ({
 
 describe('ManufacturedItemsTableWidget states', () => {
   it('renders loading state', () => {
-    vi.mocked(useStockRevisionRowsQuery).mockReturnValue({
-      isPending: true,
-      isError: false,
-    } as unknown as ReturnType<typeof useStockRevisionRowsQuery>);
+    vi.mocked(apiRequest).mockImplementation(() => new Promise(() => {}));
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Загрузка материалов')).toBeInTheDocument();
   });
-
-  it('renders empty state', () => {
-    vi.mocked(useStockRevisionRowsQuery).mockReturnValue({
-      isPending: false,
-      isError: false,
-      data: [],
-    } as unknown as ReturnType<typeof useStockRevisionRowsQuery>);
+  it('renders empty state', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({items: [], total: 0, pages: 0});
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(screen.getByText('Полуфабрикаты и продукты пока не добавлены')).toBeInTheDocument();
+    expect(await screen.findByText('Полуфабрикаты: пока нет позиций')).toBeInTheDocument();
   });
-
-  it('renders recoverable error state', () => {
-    vi.mocked(useStockRevisionRowsQuery).mockReturnValue({
-      isPending: false,
-      isError: true,
-      error: new Error('network'),
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useStockRevisionRowsQuery>);
+  it('renders recoverable error state', async () => {
+    vi.mocked(apiRequest).mockRejectedValue(new Error('network'));
     renderWithProviders(<ManufacturedItemsTableWidget />);
-    expect(screen.getByRole('button', {name: 'Повторить'})).toBeInTheDocument();
+    expect(await screen.findByRole('button', {name: 'Повторить'})).toBeInTheDocument();
   });
 });

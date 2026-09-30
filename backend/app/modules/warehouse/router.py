@@ -8,6 +8,7 @@ from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.security import Actor, get_current_actor
 from app.modules.warehouse import service
+from app.modules.warehouse.catalog import CatalogList, catalog
 from app.modules.warehouse.schemas import (
     InventoryGroupCreate,
     InventoryGroupRead,
@@ -30,6 +31,13 @@ warehouse_router = APIRouter(
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
+warehouse_router.add_api_route(
+    "/catalog",
+    catalog,
+    methods=["GET"],
+    response_model=CatalogList,
+    operation_id="getWarehouseCatalog",
+)
 
 
 @groups_router.get("", response_model=list[InventoryGroupRead], operation_id="listInventoryGroups")

@@ -1,6 +1,6 @@
 import {Select, TextInput} from '@/shared/ui/FormControls';
 import {useProductOptionsQuery} from '../api/manufacturedItemApi';
-import {Alert, Switch} from '@gravity-ui/uikit';
+import {Alert, Checkbox, Switch} from '@gravity-ui/uikit';
 
 import {measurementUnitOptions} from '@/shared/lib';
 import {ImageUploadField} from '@/shared/ui';
@@ -50,13 +50,14 @@ export function ManufacturedItemForm({
       >
         Готовый продукт
       </Switch>
+      {!value.isProduct && <Checkbox checked={Boolean(value.isByproduct)} onUpdate={(next) => update('isByproduct', next)}>Побочный продукт — можно продавать</Checkbox>}
       {!value.isProduct && <Select aria-label="Продукт полуфабриката" label="Продукт" placeholder="Выберите продукт" width="max" value={value.productId ? [value.productId] : []} options={(products.data ?? []).map((p) => ({value: p.id, content: p.name}))} onUpdate={(ids) => update("productId", ids[0] ?? "")} />}
       {!value.isProduct ? (
         <Select
-          label="Группы"
+          label="Группа / подгруппа"
           options={(groupsQuery.data ?? []).map((group) => ({
             value: group.id,
-            content: group.name,
+            content: group.parent_id ? `${groupsQuery.data?.find((g) => g.id === group.parent_id)?.name ?? ''} / ${group.name}` : group.name,
           }))}
           value={value.groupIds}
           onUpdate={(next) => update('groupIds', next)}

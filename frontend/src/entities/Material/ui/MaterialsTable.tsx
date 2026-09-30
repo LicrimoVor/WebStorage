@@ -7,12 +7,12 @@ import { MaterialImage } from "./MaterialImage";
 import styles from "./MaterialsTable.module.scss";
 
 interface MaterialsTableProps {
-  items: Material[];
+  items: (Material & {kind?: string})[];
   onSelect: (material: Material) => void;
 }
 
 export function MaterialsTable({ items, onSelect }: MaterialsTableProps) {
-  const columns: TableColumnConfig<Material>[] = [
+  const columns: TableColumnConfig<Material & {kind?: string}>[] = [
     {
       id: "image",
       name: "Изображение",
@@ -23,7 +23,7 @@ export function MaterialsTable({ items, onSelect }: MaterialsTableProps) {
       id: "name",
       name: "Название",
       primary: true,
-      template: (item) => <><Button view="flat" onClick={() => onSelect(item)}>{item.name}</Button>{item.source_material_id && <Text color="secondary"> · Брак</Text>}</>,
+      template: (item) => <><Button view="flat" onClick={() => onSelect(item)}>{item.name}</Button>{item.kind === 'semi_finished' && <Text color="secondary"> · Полуфабрикат</Text>}{item.source_material_id && <Text color="secondary"> · Брак</Text>}</>,
     },
     {
       id: "groups",

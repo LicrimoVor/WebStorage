@@ -26,7 +26,7 @@ class FinanceEdit(FundingWrite):
     occurred_at: datetime
     comment: str = Field(default="", max_length=2000)
     funding_source_id: uuid.UUID
-    reason: str = Field(min_length=1, max_length=2000)
+    reason: str = Field(default="", max_length=2000)
     revision: int = Field(ge=0)
 
 
@@ -82,8 +82,6 @@ async def details(session: AsyncSession, entry_id: uuid.UUID) -> dict[str, Any]:
 async def edit(
     session: AsyncSession, entry_id: uuid.UUID, payload: FinanceEdit, actor: str
 ) -> dict[str, Any]:
-    if not payload.reason.strip():
-        raise DomainValidationError("Укажите причину изменения")
     # Payroll operations use the same employee lock as registration/voiding work.
     payment = await session.get(EmployeePayment, entry_id)
     if payment:

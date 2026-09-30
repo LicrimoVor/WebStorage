@@ -19,7 +19,7 @@ class SerializedOutput(BaseModel):
     @field_validator("serial_numbers")
     @classmethod
     def clean_serials(cls, values: list[str]) -> list[str]:
-        result = [value.strip() for value in values]
+        result = [value.strip() for value in values if value.strip()]
         if any(not value or len(value) > 200 for value in result):
             raise ValueError("Номер изделия должен содержать от 1 до 200 символов")
         if len(result) != len(set(result)):

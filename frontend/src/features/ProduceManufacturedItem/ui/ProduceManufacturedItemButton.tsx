@@ -106,6 +106,8 @@ export function ProduceManufacturedItemButton({
       ),
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['product-units']}),
+        queryClient.invalidateQueries({queryKey: ['sale-units']}),
         queryClient.invalidateQueries({queryKey: manufacturedItemKeys.all}),
         queryClient.invalidateQueries({queryKey: materialKeys.all}),
         queryClient.invalidateQueries({queryKey: operationKeys.all}),
@@ -135,7 +137,7 @@ export function ProduceManufacturedItemButton({
     }
     if (serialized) {
       const ids = numbers.split(/\n/).map((n) => n.trim()).filter(Boolean);
-      if (ids.length !== Number(normalizedQuantity) || new Set(ids).size !== ids.length) {setValidationError("Введите отдельный уникальный номер для каждого изделия."); return;}
+      if (ids.length > Number(normalizedQuantity) || new Set(ids).size !== ids.length) {setValidationError("Номера должны быть уникальными, их не может быть больше количества."); return;}
     }
     setValidationError(undefined);
     mutation.mutate();

@@ -1413,6 +1413,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/warehouse/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["getWarehouseCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/warehouse/revision": {
         parameters: {
             query?: never;
@@ -1644,6 +1661,70 @@ export interface components {
          * @enum {string}
          */
         AvailabilityFilter: "all" | "in_stock" | "out_of_stock";
+        /** CatalogList */
+        CatalogList: {
+            /** Items */
+            items: components["schemas"]["CatalogRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /** Pages */
+            pages: number;
+        };
+        /** CatalogRow */
+        CatalogRow: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Free Quantity */
+            free_quantity: string;
+            /** Source Material Id */
+            source_material_id?: string | null;
+            /**
+             * Required Quantity
+             * @default 0
+             */
+            required_quantity: string;
+            /**
+             * Deficit Quantity
+             * @default 0
+             */
+            deficit_quantity: string;
+            /** Price */
+            price: string | null;
+            /** Url */
+            url: string | null;
+            /** Image */
+            image: string | null;
+            /** Groups */
+            groups?: components["schemas"]["InventoryGroupSummary"][];
+            /** Archived */
+            archived: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "material" | "semi_finished" | "product";
+        };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
             /** Current Password */
@@ -2008,7 +2089,10 @@ export interface components {
              * Format: uuid
              */
             funding_source_id: string;
-            /** Reason */
+            /**
+             * Reason
+             * @default
+             */
             reason: string;
             /** Revision */
             revision: number;
@@ -2565,6 +2649,11 @@ export interface components {
         ManualMovementType: "receipt" | "consumption" | "adjustment" | "write_off";
         /** ManufacturedItemCreate */
         ManufacturedItemCreate: {
+            /**
+             * Is Byproduct
+             * @default false
+             */
+            is_byproduct: boolean;
             /** Product Id */
             product_id?: string | null;
             /** Name */
@@ -2587,7 +2676,7 @@ export interface components {
          * ManufacturedItemKind
          * @enum {string}
          */
-        ManufacturedItemKind: "all" | "semi_finished" | "product";
+        ManufacturedItemKind: "saleable" | "all" | "semi_finished" | "product";
         /** ManufacturedItemList */
         ManufacturedItemList: {
             /** Items */
@@ -2652,6 +2741,11 @@ export interface components {
         };
         /** ManufacturedItemRead */
         ManufacturedItemRead: {
+            /**
+             * Is Byproduct
+             * @default false
+             */
+            is_byproduct: boolean;
             /** Product Id */
             product_id?: string | null;
             /**
@@ -2703,6 +2797,11 @@ export interface components {
         ManufacturedItemSortField: "name" | "free_quantity" | "created_at";
         /** ManufacturedItemUpdate */
         ManufacturedItemUpdate: {
+            /**
+             * Is Byproduct
+             * @default false
+             */
+            is_byproduct: boolean;
             /** Product Id */
             product_id?: string | null;
             /** Name */
@@ -8977,6 +9076,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getWarehouseCatalog: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                search?: string | null;
+                kind?: "all" | "semi_finished" | "product";
+                group_id?: string | null;
+                product_id?: string | null;
+                availability?: components["schemas"]["AvailabilityFilter"];
+                deficit_only?: boolean;
+                sort_by?: components["schemas"]["MaterialSortField"];
+                sort_order?: components["schemas"]["SortOrder"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogList"];
                 };
             };
             /** @description Unprocessable Content */

@@ -72,3 +72,9 @@
 .root {
   font-weight: 600;
 }
+
+.sidebarColumn {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}

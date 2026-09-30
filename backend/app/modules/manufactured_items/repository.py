@@ -18,7 +18,7 @@ from app.modules.production_plans.model import (
     ProductionPlan,
     ProductionPlanItemRequirement,
 )
-from app.modules.warehouse.model import InventoryGroupManufacturedItem
+from app.modules.warehouse.model import InventoryGroup, InventoryGroupManufacturedItem
 
 
 def balance_expression() -> ColumnElement[Decimal]:
@@ -65,14 +65,23 @@ def _apply_filters(
     if allowed_ids is not None:
         statement = statement.where(ManufacturedItem.id.in_(allowed_ids))
     if group_id is not None:
-        statement = statement.join(
-            InventoryGroupManufacturedItem,
-            InventoryGroupManufacturedItem.manufactured_item_id == ManufacturedItem.id,
-        ).where(InventoryGroupManufacturedItem.group_id == group_id)
+        statement = statement.where(
+            ManufacturedItem.id.in_(
+                select(InventoryGroupManufacturedItem.manufactured_item_id).where(
+                    InventoryGroupManufacturedItem.group_id.in_(
+                        select(InventoryGroup.id).where(
+                            (InventoryGroup.id == group_id) | (InventoryGroup.parent_id == group_id)
+                        )
+                    )
+                )
+            )
+        )
     if kind == ManufacturedItemKind.PRODUCT:
         statement = statement.where(ManufacturedItem.is_product.is_(True))
     elif kind == ManufacturedItemKind.SEMI_FINISHED:
         statement = statement.where(ManufacturedItem.is_product.is_(False))
+    elif kind == ManufacturedItemKind.SALEABLE:
+        statement = statement.where(ManufacturedItem.is_product | ManufacturedItem.is_byproduct)
 
     balance = balance_expression()
     if availability == AvailabilityFilter.IN_STOCK:

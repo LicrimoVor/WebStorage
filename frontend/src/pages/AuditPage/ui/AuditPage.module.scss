@@ -1,7 +1,11 @@
 .root {
   display: grid;
-  gap: var(--g-spacing-5);
-  padding: var(--g-spacing-7);
+  width: 100%;
+  box-sizing: border-box;
+  gap: var(--g-spacing-6);
+  margin: 0 auto;
+  padding: 32px;
+  max-width: 1500px;
 }
 
 .filters {

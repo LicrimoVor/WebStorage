@@ -326,7 +326,7 @@ export function FinancePage() {
       ) : null}
       <Card className={styles.tableCard} view="outlined">
         <div className={styles.filters}>
-            <Select label="Финансирование" placeholder="Все источники финансирования" hasClear value={searchParams.get("funding_source_id") ? [searchParams.get("funding_source_id")!] : []} options={(fundingSources.data ?? []).map((s) => ({value: s.id, content: s.name}))} onUpdate={(ids) => updateUrl({funding_source_id: ids[0] ?? "", page: 1})} />
+            <Select label="Финансирование" placeholder="Все источники финансирования" hasClear value={[searchParams.get("funding_source_id") || "all"]} options={[{value: "all", content: "Все источники"}, ...(fundingSources.data ?? []).map((s) => ({value: s.id, content: s.name}))]} onUpdate={(ids) => updateUrl({funding_source_id: ids[0] ?? "", page: 1})} />
           <Select
             label="Источник"
             options={sourceOptions}
