@@ -2,7 +2,6 @@ import { Button } from '@gravity-ui/uikit';
 import { ImportCatalogButton } from '@/features/ImportCatalog/ImportCatalogButton';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MaterialsTableWidget } from '@/widgets/MaterialsTable';
-import { CreateManufacturedItemButton } from '@/features/CreateManufacturedItem';
 import { ManageInventoryGroupsButton } from '@/features/ManageInventoryGroups';
 import { useInventoryGroupsQuery } from '@/entities/InventoryGroup';
 import styles from '@/pages/BusinessPages/BusinessPages.module.scss';
@@ -12,9 +11,9 @@ export function WarehousePage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const groups = useInventoryGroupsQuery();
-  const tab = params.get('tab') === 'products' ? 'products' : ['manufactured', 'semi_finished'].includes(params.get('tab') ?? '') ? 'semi_finished' : 'materials';
+  const tab = params.get('tab') === 'products' ? 'products' : 'materials';
   const setTab = (value: string) => {const next = new URLSearchParams(); next.set('tab', value); setParams(next);};
-  const select = (id: string) => { const next = new URLSearchParams(params); next.set('group_id', id); next.set('page', '1'); setParams(next); };
+  const select = (id: string, ungrouped = false) => { const next = new URLSearchParams(params); next.set('group_id', id); if (ungrouped) next.set('ungrouped', 'true'); else next.delete('ungrouped'); next.set('page', '1'); setParams(next); };
   return <main className={styles.page}>
     <div className={styles.row}>
       <h1>Склад</h1>
@@ -25,15 +24,13 @@ export function WarehousePage() {
     </div>
     <div className={styles.row}>
       <Button selected={tab === 'materials'} onClick={() => setTab('materials')}>Материалы</Button>
-      <Button selected={tab === 'semi_finished'} onClick={() => setTab('semi_finished')}>Полуфабрикаты</Button>
       <Button selected={tab === 'products'} onClick={() => setTab('products')}>Продукты</Button>
     </div>
     {tab === 'products' ? <MaterialsTableWidget key={tab} kind="product" /> : <div className={styles.warehouse}>
       <div className={tree.sidebarColumn}>
-      {tab === 'semi_finished' && <CreateManufacturedItemButton buttonLabel="Создать полуфабрикат" />}
       <aside className={styles.sidebar} aria-label="Группы материалов">
         <nav className={tree.tree} aria-label="Фильтр по группе материалов">
-          <button type="button" className={`${tree.node} ${tree.root}`} aria-pressed={!params.get('group_id')} onClick={() => select('')}>{tab === 'semi_finished' ? 'Все полуфабрикаты' : 'Все материалы'}</button>
+          <button type="button" className={`${tree.node} ${tree.root}`} aria-pressed={!params.get('group_id') && params.get('ungrouped') !== 'true'} onClick={() => select('')}>Все материалы</button>
           <ul className={tree.branches}>
             {(groups.data ?? []).filter((g) => !g.parent_id).map((parent) => {
               const children = (groups.data ?? []).filter((g) => g.parent_id === parent.id);
@@ -46,11 +43,14 @@ export function WarehousePage() {
                 </ul>}
               </li>;
             })}
+            <li className={tree.branch}>
+              <button type="button" className={tree.node} aria-pressed={params.get('ungrouped') === 'true'} onClick={() => select('', true)}>Без группы</button>
+            </li>
           </ul>
         </nav>
       </aside>
       </div>
-      <MaterialsTableWidget key={tab} kind={tab === 'semi_finished' ? 'semi_finished' : 'all'} hideCreate={tab === 'semi_finished'} />
+      <MaterialsTableWidget key={tab} kind="all" />
     </div>}
   </main>;
 }

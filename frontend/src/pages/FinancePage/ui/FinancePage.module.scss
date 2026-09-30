@@ -1,11 +1,11 @@
+@use '@/shared/styles/page' as layout;
+
 .root {
+  @include layout.page;
+
   display: grid;
-  width: 100%;
-  box-sizing: border-box;
   gap: var(--g-spacing-6);
-  margin: 0 auto;
-  padding: 32px;
-  max-width: 1500px;
+
 }
 
 .header,
@@ -126,10 +126,6 @@
 }
 
 @media (width <= 680px) {
-  .root {
-    padding: 20px 16px;
-  }
-
   .header,
   .pagination {
     align-items: stretch;

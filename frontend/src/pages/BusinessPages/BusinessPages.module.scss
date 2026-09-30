@@ -1,9 +1,11 @@
+@use '@/shared/styles/page' as layout;
+
 .page {
+  @include layout.page;
+
   display: grid;
   gap: 24px;
-  max-width: 1500px;
-  margin: auto;
-  padding: 32px;
+
 }
 
 .form {
@@ -197,16 +199,12 @@
     grid-template-columns: 1fr;
   }
 
-  .page {
-    padding: 16px;
-  }
 }
 
 @media (width <= 680px) {
   .page {
     gap: 16px;
-    padding: 16px 12px;
-  }
+}
 
   .form {
     gap: 16px;

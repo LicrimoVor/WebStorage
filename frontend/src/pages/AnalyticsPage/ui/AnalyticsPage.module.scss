@@ -1,9 +1,11 @@
+@use '@/shared/styles/page' as layout;
+
 .root {
+  @include layout.page;
+
   display: grid;
-  width: min(1540px, calc(100% - var(--g-spacing-8)));
   gap: var(--g-spacing-6);
-  margin: 0 auto;
-  padding: var(--g-spacing-8) 0 var(--g-spacing-10);
+
 }
 
 .header,
@@ -174,11 +176,6 @@
 }
 
 @media (width <= 680px) {
-  .root {
-    width: calc(100% - var(--g-spacing-4));
-    padding-top: var(--g-spacing-5);
-  }
-
   .header,
   .periodControls {
     align-items: stretch;

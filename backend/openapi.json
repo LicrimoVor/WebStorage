@@ -7206,6 +7206,16 @@
             }
           },
           {
+            "name": "ungrouped",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Ungrouped"
+            }
+          },
+          {
             "name": "product_id",
             "in": "query",
             "required": false,

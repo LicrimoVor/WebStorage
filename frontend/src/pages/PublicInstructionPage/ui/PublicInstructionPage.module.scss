@@ -1,7 +1,8 @@
+@use '@/shared/styles/page' as layout;
+
 .page {
-  width: min(900px, calc(100% - 48px));
-  margin: 0 auto;
-  padding: 48px 0 72px;
+  @include layout.page;
+
 }
 
 .skeleton {
@@ -95,11 +96,6 @@
 }
 
 @media (width <= 680px) {
-  .page {
-    width: calc(100% - 32px);
-    padding: 28px 0 48px;
-  }
-
   .header {
     flex-direction: column;
   }
@@ -127,11 +123,6 @@
 }
 
 @media print {
-  .page {
-    width: 100%;
-    padding: 0;
-  }
-
   .footer {
     display: none;
   }

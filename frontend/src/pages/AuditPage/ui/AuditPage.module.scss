@@ -1,11 +1,11 @@
+@use '@/shared/styles/page' as layout;
+
 .root {
+  @include layout.page;
+
   display: grid;
-  width: 100%;
-  box-sizing: border-box;
   gap: var(--g-spacing-6);
-  margin: 0 auto;
-  padding: 32px;
-  max-width: 1500px;
+
 }
 
 .filters {
@@ -56,10 +56,6 @@
 }
 
 @media (width <= 680px) {
-  .root {
-    padding: var(--g-spacing-4);
-  }
-
   .snapshots {
     grid-template-columns: 1fr;
   }

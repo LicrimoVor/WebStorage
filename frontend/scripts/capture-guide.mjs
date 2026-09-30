@@ -134,10 +134,10 @@ try {
   for (const [name, route, button] of [
     ['planning', '/production-plans'], ['processes', '/processes'], ['warehouse', '/warehouse'],
     ['material-card', '/warehouse', 'Лист алюминиевый'],
-    ['manufactured', '/warehouse?tab=semi_finished'],
+    ['manufactured', '/warehouse'],
     ['products', '/warehouse?tab=products'],
     ['product-card', '/warehouse?tab=products', 'Корпус К-1'],
-    ['composition', '/warehouse?tab=manufactured', 'Заготовка К-1'],
+    ['composition', '/warehouse', 'Заготовка К-1'],
     ['receipt', '/warehouse/receipt'], ['revision', '/warehouse/revision'],
     ['operations', '/operations'], ['personnel', '/personnel'], ['repairs', '/repairs'],
     ['operation-card', '/operations', 'Сборка корпуса'],

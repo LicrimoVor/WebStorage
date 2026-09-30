@@ -3,12 +3,14 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {apiRequest} from '@/shared/api';
 import {useProductOptionsQuery} from '@/entities/ManufacturedItem';
+import type * as ManufacturedItemModule from '@/entities/ManufacturedItem';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {MaterialsTableWidget} from './MaterialsTableWidget';
 
 vi.mock('@/shared/api', () => ({apiRequest: vi.fn(), getErrorMessage: () => 'Network error'}));
-vi.mock('@/entities/ManufacturedItem', () => ({
+vi.mock('@/entities/ManufacturedItem', async (importOriginal) => ({
+  ...await importOriginal<typeof ManufacturedItemModule>(),
   useProductOptionsQuery: vi.fn(),
 }));
 vi.mock('@/entities/InventoryGroup', () => ({

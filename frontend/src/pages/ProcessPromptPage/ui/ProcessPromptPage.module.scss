@@ -1,7 +1,8 @@
+@use '@/shared/styles/page' as layout;
+
 .page {
-  width: min(1320px, calc(100% - var(--g-spacing-8)));
-  margin: 0 auto;
-  padding: var(--g-spacing-7) 0 var(--g-spacing-10);
+  @include layout.page;
+
 }
 
 .header,
@@ -60,11 +61,6 @@
 }
 
 @media (width <= 760px) {
-  .page {
-    width: calc(100% - var(--g-spacing-4));
-    padding-top: var(--g-spacing-4);
-  }
-
   .header,
   .actions,
   .cardHeading {

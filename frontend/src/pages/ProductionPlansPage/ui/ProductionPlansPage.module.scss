@@ -1,7 +1,8 @@
+@use '@/shared/styles/page' as layout;
+
 .root {
-  width: min(1540px, calc(100% - var(--g-spacing-8)));
-  margin: 0 auto;
-  padding: var(--g-spacing-8) 0 var(--g-spacing-10);
+  @include layout.page;
+
 }
 
 .header,
@@ -210,11 +211,6 @@
 }
 
 @media (width <= 680px) {
-  .root {
-    width: calc(100% - var(--g-spacing-4));
-    padding-top: var(--g-spacing-5);
-  }
-
   .header,
   .toolbar,
   .planHeading {
@@ -237,11 +233,17 @@
 }
 
 .tabs {
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   gap: 12px;
   max-width: 1500px;
   margin: 24px auto 0;
   padding: 0 32px;
+}
+
+@media (width <= 1000px) {
+  .tabs { padding-inline: 16px; }
 }
 
 @media (width <= 680px) {

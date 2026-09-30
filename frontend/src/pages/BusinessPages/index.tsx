@@ -533,7 +533,7 @@ export function ProductionPage() {
     page: 1,
     page_size: 100,
   });
-  const products = useProductOptionsQuery();
+  const products = useProductOptionsQuery(true, "saleable");
   const [offset, setOffset] = useState(0);
   const units = useQuery({
     queryKey: ["product-units", offset],
@@ -542,11 +542,6 @@ export function ProductionPage() {
   return (
     <main className={styles.page}>
       <h1>Выпуск продукции</h1>
-      <p>
-        Зафиксируйте изготовление: материалы спишутся, а готовые изделия с
-        уникальными номерами поступят на склад. Доход от покупателя учитывается
-        отдельно в продажах.
-      </p>
       <section className={styles.form}>
         <h2>По активным планам</h2>
         {plans.data?.items.map((plan) => (
@@ -568,7 +563,7 @@ export function ProductionPage() {
             <ProduceManufacturedItemButton
               itemId={item.id}
               itemName={item.name}
-              serialized
+              serialized={item.is_product}
               label="Выпустить"
             />
           </div>

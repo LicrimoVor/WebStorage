@@ -18,12 +18,14 @@ import {normalizeDecimal} from '@/shared/lib';
 const titleId = 'create-manufactured-item-title';
 
 interface CreateManufacturedItemButtonProps {
+  defaultGroupId?: string;
   defaultProductId?: string;
   defaultIsProduct?: boolean;
   buttonLabel?: string;
 }
 
 export function CreateManufacturedItemButton({
+  defaultGroupId = '',
   defaultProductId = '',
   defaultIsProduct = false,
   buttonLabel = 'Создать позицию',
@@ -33,6 +35,7 @@ export function CreateManufacturedItemButton({
     ...emptyManufacturedItemForm,
     isProduct: defaultIsProduct,
     productId: defaultProductId,
+    groupIds: defaultIsProduct || !defaultGroupId ? [] : [defaultGroupId],
   });
   const [form, setForm] = useState<ManufacturedItemFormValue>(initialForm);
   const [validationError, setValidationError] = useState<string>();

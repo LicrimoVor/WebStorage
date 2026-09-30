@@ -1,7 +1,8 @@
+@use '@/shared/styles/page' as layout;
+
 .page {
-  max-width: 1100px;
-  margin: auto;
-  padding: 28px;
+  @include layout.page;
+
   display: grid;
   gap: 24px;
 }
@@ -44,6 +45,6 @@
 }
 
 @media (width <= 680px) {
-  .page { padding: 16px; }
+
   .permissions { grid-template-columns: 1fr; }
 }

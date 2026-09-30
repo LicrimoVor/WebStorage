@@ -13,6 +13,12 @@ async def test_shared_catalog_groups_pagination_and_byproduct_sales(client: Asyn
     await client.patch(f"/api/v1/materials/{material['id']}", json={'group_ids': [child['id']]})
     semi = await post(client, '/manufactured-items', {'name': 'Semi', 'is_product': False, 'product_id': product['id'], 'unit': 'pcs', 'initial_quantity': '5'})
     assert semi['groups'] == []
+    ungrouped = (await client.get('/api/v1/warehouse/catalog', params={'ungrouped': True})).json()
+    assert [row['id'] for row in ungrouped['items']] == [semi['id']]
+    await client.patch(f"/api/v1/materials/{material['id']}", json={'group_ids': []})
+    ungrouped = (await client.get('/api/v1/warehouse/catalog', params={'ungrouped': True})).json()
+    assert {row['id'] for row in ungrouped['items']} == {material['id'], semi['id']}
+    await client.patch(f"/api/v1/materials/{material['id']}", json={'group_ids': [child['id']]})
     await client.patch(f"/api/v1/manufactured-items/{semi['id']}", json={'group_ids': [root['id'], child['id']], 'is_byproduct': True})
     for group in [root, child]:
         response = await client.get('/api/v1/warehouse/catalog', params={'group_id': group['id']})
@@ -22,7 +28,10 @@ async def test_shared_catalog_groups_pagination_and_byproduct_sales(client: Asyn
         assert {r['kind'] for r in catalog['items']} == {'material', 'semi_finished'}
     filtered = (await client.get('/api/v1/warehouse/catalog', params={'kind': 'semi_finished', 'availability': 'in_stock', 'group_id': root['id']})).json()
     assert [r['id'] for r in filtered['items']] == [semi['id']]
-    assert (await client.get('/api/v1/warehouse/catalog', params={'kind': 'product'})).json()['total'] == 1
+    products = (await client.get('/api/v1/warehouse/catalog', params={'kind': 'product'})).json()
+    assert {r['id'] for r in products['items']} == {product['id'], semi['id']}
+    saleable = (await client.get('/api/v1/manufactured-items', params={'kind': 'saleable'})).json()
+    assert {r['id'] for r in saleable['items']} == {product['id'], semi['id']}
     first = (await client.get('/api/v1/warehouse/catalog?page_size=1&page=1')).json()
     second = (await client.get('/api/v1/warehouse/catalog?page_size=1&page=2')).json()
     assert first['total'] == second['total'] == 2

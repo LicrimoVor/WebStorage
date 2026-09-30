@@ -52,9 +52,9 @@ export function useManufacturedItemsQuery(params: ManufacturedItemListParams) {
   });
 }
 
-export function useProductOptionsQuery(enabled = true) {
+export function useProductOptionsQuery(enabled = true, kind: 'product' | 'saleable' = 'product') {
   return useQuery({
-    queryKey: manufacturedItemKeys.productOptions(),
+    queryKey: [...manufacturedItemKeys.productOptions(), kind],
     queryFn: async ({signal}) => {
       const products: ManufacturedItem[] = [];
       let page = 1;
@@ -64,7 +64,7 @@ export function useProductOptionsQuery(enabled = true) {
           {
             page,
             page_size: 100,
-            kind: 'product',
+            kind,
             sort_by: 'name',
             sort_order: 'asc',
             availability: 'all',

@@ -1,8 +1,9 @@
+@use '@/shared/styles/page' as layout;
+
 .page {
-  max-width: 1440px;
-  margin: auto;
-  padding: 28px;
-  }
+  @include layout.page;
+
+}
 
 .layout {
   display: grid;
@@ -94,10 +95,6 @@
 }
 
 @media (width <= 680px) {
-  .page {
-  padding: 16px;
-  }
-
   .article {
   padding: 16px;
   }

@@ -9097,6 +9097,7 @@ export interface operations {
                 search?: string | null;
                 kind?: "all" | "semi_finished" | "product";
                 group_id?: string | null;
+                ungrouped?: boolean;
                 product_id?: string | null;
                 availability?: components["schemas"]["AvailabilityFilter"];
                 deficit_only?: boolean;

@@ -1,0 +1,16 @@
+@mixin page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1500px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 32px;
+
+  @media (width <= 1000px) {
+    padding: 16px;
+  }
+
+  @media (width <= 680px) {
+    padding: 16px 12px;
+  }
+}

@@ -1,3 +1,4 @@
+import {ReleaseProductsButton} from '@/features/ProduceManufacturedItem/ui/ReleaseProductsButton';
 import {Select, TextInput} from '@/shared/ui/FormControls';
 import {Alert, Button, Card, Pagination, PlaceholderContainer, Skeleton, Switch, Text} from '@gravity-ui/uikit';
 import { Boxes3 } from "@gravity-ui/icons";
@@ -64,7 +65,9 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
   const productId = searchParams.get("product_id") ?? "";
   const groupId = searchParams.get("group_id") ?? "";
 
-  const params: MaterialListParams = {
+  const ungrouped = searchParams.get("ungrouped") === "true";
+  const params: MaterialListParams & {ungrouped: boolean} = {
+    ungrouped,
     page,
     page_size: pageSize,
     search: search || null,
@@ -112,6 +115,7 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
           </Text>
         </div>
         <div className={styles.actions}>
+          {kind === 'product' && <ReleaseProductsButton />}
           {kind === 'all' && <ExportExcelButton
             dataset="materials"
             label="Экспорт материалов"
@@ -125,7 +129,7 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
               ...(productId ? {product_id: productId} : {}),
             }}
           />}
-          {!hideCreate && (kind === 'all' ? <CreateMaterialButton defaultGroupId={groupId} /> : <CreateManufacturedItemButton defaultIsProduct={kind === 'product'} buttonLabel={kind === 'product' ? 'Создать продукт' : 'Создать полуфабрикат'} />)}
+          {!hideCreate && (kind === 'all' ? <><CreateMaterialButton defaultGroupId={groupId} /><CreateManufacturedItemButton defaultGroupId={groupId} buttonLabel="Создать полуфабрикат" /></> : <CreateManufacturedItemButton defaultIsProduct={kind === 'product'} buttonLabel={kind === 'product' ? 'Создать продукт' : 'Создать полуфабрикат'} />)}
         </div>
       </div>
 
@@ -197,12 +201,12 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
         <PlaceholderContainer
           image={<Boxes3 width={100} height={100} />}
           title={
-            search || deficitOnly || productId || groupId
+            search || deficitOnly || productId || groupId || ungrouped
               ? "Ничего не найдено"
               : `${title}: пока нет позиций`
           }
           description={
-            search || deficitOnly || productId || groupId
+            search || deficitOnly || productId || groupId || ungrouped
               ? "Измените поисковый запрос или фильтры."
               : "Создайте позицию и укажите её свойства."
           }

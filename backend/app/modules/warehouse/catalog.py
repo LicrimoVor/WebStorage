@@ -39,6 +39,7 @@ async def catalog(
     search: str | None = Query(default=None, max_length=200),
     kind: Literal["all", "semi_finished", "product"] = "all",
     group_id: uuid.UUID | None = None,
+    ungrouped: bool = False,
     product_id: uuid.UUID | None = None,
     availability: AvailabilityFilter = AvailabilityFilter.ALL,
     deficit_only: bool = False,
@@ -65,8 +66,23 @@ async def catalog(
         cast(literal(None), Numeric(20, 2)).label("price"),
         ManufacturedItem.created_at,
     ).where(ManufacturedItem.archived.is_(False))
-    item_query = item_query.where(ManufacturedItem.is_product.is_(kind == "product"))
-    if group_id and kind != "product":
+    item_query = item_query.where(
+        (ManufacturedItem.is_product | ManufacturedItem.is_byproduct)
+        if kind == "product"
+        else ManufacturedItem.is_product.is_(False)
+    )
+    if ungrouped and kind != "product":
+        material_query = material_query.where(
+            ~select(InventoryGroupMaterial.material_id)
+            .where(InventoryGroupMaterial.material_id == Material.id)
+            .exists()
+        )
+        item_query = item_query.where(
+            ~select(InventoryGroupManufacturedItem.manufactured_item_id)
+            .where(InventoryGroupManufacturedItem.manufactured_item_id == ManufacturedItem.id)
+            .exists()
+        )
+    elif group_id and kind != "product":
         group_ids = select(InventoryGroup.id).where(
             (InventoryGroup.id == group_id) | (InventoryGroup.parent_id == group_id)
         )
