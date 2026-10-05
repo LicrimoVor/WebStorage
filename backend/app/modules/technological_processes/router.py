@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import SortOrder
-from app.core.security import Actor, get_current_actor
+from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.technological_processes import service
 from app.modules.technological_processes.schemas import (
     ProcessCreate,
@@ -22,6 +22,7 @@ from app.modules.technological_processes.schemas import (
     ProcessVersionList,
     ProcessVersionRead,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/technological-processes",
@@ -107,8 +108,13 @@ async def update_technological_process(
     operation_id="archiveTechnologicalProcess",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_technological_process(process_id: uuid.UUID, session: Session) -> ProcessRead:
-    return await service.archive(session, process_id)
+async def archive_technological_process(
+    process_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> ProcessRead:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "process", process_id, actor.subject, hide_process=False)
+    await session.commit()
+    return await service.get(session, process_id)
 
 
 @router.post(
@@ -206,5 +212,9 @@ async def activate_technological_process_version(
 
 
 @router.delete("/{process_id}", status_code=204, operation_id="deleteTechnologicalProcess")
-async def delete_technological_process(process_id: uuid.UUID, session: Session) -> None:
-    await service.delete_process(session, process_id)
+async def delete_technological_process(
+    process_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> None:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "process", process_id, actor.subject)
+    await session.commit()

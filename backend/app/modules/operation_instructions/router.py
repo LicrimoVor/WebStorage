@@ -21,6 +21,7 @@ from app.modules.operation_instructions.schemas import (
     PublicLinkCreate,
     PublicLinkRead,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/operations/{operation_id}/instruction",
@@ -130,8 +131,10 @@ async def delete_operation_instruction_asset(
     session: Session,
     actor: ActorDependency,
 ) -> Response:
-    require_any_role(actor, Role.MANAGER)
-    await service.delete_asset(session, operation_id, asset_id)
+    require_any_role(actor, Role.ADMIN)
+    await service.validate_asset_owner(session, operation_id, asset_id)
+    await move_to_trash(session, "instruction_asset", asset_id, actor.subject)
+    await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

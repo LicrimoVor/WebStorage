@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import SortOrder
+from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.employees import service
 from app.modules.employees.schemas import (
     EmployeeCreate,
@@ -15,6 +16,7 @@ from app.modules.employees.schemas import (
     EmployeeSortField,
     EmployeeUpdate,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/employees",
@@ -22,6 +24,7 @@ router = APIRouter(
     responses={422: {"model": ProblemDetail}},
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
+ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
 @router.post(
@@ -83,5 +86,10 @@ async def update_employee(
     operation_id="archiveEmployee",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_employee(employee_id: uuid.UUID, session: Session) -> EmployeeRead:
-    return await service.archive(session, employee_id)
+async def archive_employee(
+    employee_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> EmployeeRead:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "employee", employee_id, actor.subject)
+    await session.commit()
+    return await service.get(session, employee_id)

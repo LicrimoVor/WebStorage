@@ -30,6 +30,7 @@ import {PageHelp} from '@/shared/ui/PageHelp';
 import {canOpenPath, firstAvailablePath} from "@/shared/lib/access";
 const HelpPage = lazy(() => import("@/pages/HelpPage/HelpPage").then((m) => ({default: m.HelpPage})));
 const UsersPage = lazy(() => import("@/pages/UsersPage/UsersPage").then((m) => ({default: m.UsersPage})));
+const TrashPage = lazy(() => import("@/pages/TrashPage/TrashPage").then((m) => ({default: m.TrashPage})));
 
 import styles from "./App.module.scss";
 import { AppProviders } from "./providers/AppProviders";
@@ -98,6 +99,7 @@ const PublicInstructionPage = lazy(async () => {
 function getPageMetadata(pathname: string) {
   if (pathname.startsWith("/help")) return ["Инструкция пользователя", "Пошаговое руководство по работе с Веб-складом."] as const;
   if (pathname === "/settings/users") return ["Пользователи", "Учётные записи и доступ к разделам."] as const;
+  if (pathname === "/settings/trash") return ["Корзина", "Восстановление удалённых записей."] as const;
   if (pathname === routes.profile) return ["Профиль пользователя", "Учётная запись и пароль."] as const;
   if (pathname === "/production") return ["Выпуск", "Выпуск номерных изделий."] as const;
   if (pathname === "/repairs") return ["Ремонт", "Материалы, операции и история ремонтов."] as const;
@@ -156,6 +158,7 @@ function AppLayout({ session }: { session: AuthSession }) {
         <Routes>
           <Route path="/help/:chapterId?" element={<HelpPage />} />
           <Route path="/settings/users" element={<UsersPage />} />
+          <Route path="/settings/trash" element={<TrashPage />} />
           <Route path={routes.profile} element={<ProfilePage />} />
           <Route path={routes.procurement} element={<Navigate to="/warehouse/receipt" replace />} />
           <Route path="/production" element={<Navigate to="/production-plans?tab=release" replace />} />

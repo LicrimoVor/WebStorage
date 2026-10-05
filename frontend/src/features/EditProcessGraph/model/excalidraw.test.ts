@@ -69,4 +69,17 @@ describe('Excalidraw process adapter', () => {
       {id: 'arrow', source: 'a', target: 'b', quantity: null},
     ]);
   });
+
+  it('preserves separate material copies and a parallelogram comment', () => {
+    const graph = normalizeGraph({schemaVersion: 1, name: 'Схема', nodes: [
+      {id: 'm1', type: 'material', referenceId: 'material', label: 'Сталь'},
+      {id: 'm2', type: 'material', referenceId: 'material', label: 'Сталь'},
+      {id: 'note', type: 'comment', label: 'Проверить размер\nперед сборкой'},
+    ], edges: []});
+    const exported = graphToExcalidraw(graph);
+    const shape = exported.elements.find((element) => element.id === 'note');
+    expect(shape).toMatchObject({type: 'line', strokeColor: '#29975a'});
+    expect(shape?.points).toHaveLength(5);
+    expect(excalidrawToGraph(exported, {name: graph.name, outputItemId: null})).toEqual(graph);
+  });
 });

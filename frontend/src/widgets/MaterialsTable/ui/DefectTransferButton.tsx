@@ -4,7 +4,7 @@ import {useRef, useState} from 'react';
 import type {Material} from '@/entities/Material';
 import {apiRequest, getErrorMessage} from '@/shared/api';
 import {TextInput} from '@/shared/ui/FormControls';
-import {isDecimal, normalizeDecimal} from '@/shared/lib';
+import {formatDecimal, isDecimal, normalizeDecimal} from '@/shared/lib';
 import card from '@/shared/ui/DetailCard.module.scss';
 
 export function DefectTransferButton({material}: {material: Material}) {
@@ -26,7 +26,7 @@ export function DefectTransferButton({material}: {material: Material}) {
     <Button view="outlined" onClick={() => {key.current = crypto.randomUUID(); setValues({}); mutation.reset(); setOpen(true);}}>{title}</Button>
     <Dialog open={open} onClose={close} size="m"><Dialog.Header caption={title} />
       <Dialog.Body><div className={card.body}>
-        <p>{material.name}: доступно {material.free_quantity} {material.unit}. Укажите количество для каждого вида. Пустые строки пропускаются.</p>
+        <p>{material.name}: доступно {formatDecimal(material.free_quantity)} {material.unit}. Укажите количество для каждого вида. Пустые строки пропускаются.</p>
         {query.isPending && <p>Загрузка…</p>}
         {query.isError && <Alert theme="danger" message={getErrorMessage(query.error)} />}
         {query.data?.length === 0 && <Alert theme="info" message="Сначала создайте вид брака кнопкой «Новый брак» в карточке материала." />}

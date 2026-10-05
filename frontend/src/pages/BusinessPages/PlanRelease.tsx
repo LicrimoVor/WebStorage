@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { registerProduction } from '@/entities/Production';
 import type { ProductionPlan } from '@/entities/ProductionPlan';
 import { getErrorMessage } from '@/shared/api';
+import {formatDecimal} from '@/shared/lib';
 import { ImageUploadField } from '@/shared/ui';
 import styles from './BusinessPages.module.scss';
 
@@ -37,7 +38,7 @@ export function PlanRelease({ plan }: { plan: ProductionPlan }) {
       <Dialog.Header caption={`Выпуск: ${plan.product_name}`} />
       <Dialog.Body>
         <div className={styles.form}>
-          <p>Осталось по плану: {plan.remaining_quantity}. Версия техпроцесса: {plan.process_version_number}.</p>
+          <p>Осталось по плану: {formatDecimal(plan.remaining_quantity)}. Версия техпроцесса: {plan.process_version_number}.</p>
           <p>Для сборки материалы и полуфабрикаты должны быть на складе.</p>
           <TextInput label="Количество изделий" value={quantity} onUpdate={setQuantity} />
           <label>Номера изделий

@@ -1,6 +1,7 @@
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
 
 import {apiRequest} from '@/shared/api';
+import {allPages} from '@/shared/api/allPages';
 
 import type {
   InventoryMovementCreate,
@@ -42,10 +43,12 @@ export async function listMaterials(
   );
 }
 
-export function useMaterialsQuery(params: MaterialListParams) {
+export function useMaterialsQuery(params: MaterialListParams, fetchAll = false) {
   return useQuery({
-    queryKey: materialKeys.list(params),
-    queryFn: ({signal}) => listMaterials(params, signal),
+    queryKey: [...materialKeys.list(params), {fetchAll}],
+    queryFn: ({signal}) => fetchAll
+      ? allPages((page) => listMaterials({...params, page, page_size: 100}, signal))
+      : listMaterials(params, signal),
     placeholderData: keepPreviousData,
   });
 }

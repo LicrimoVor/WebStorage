@@ -92,6 +92,56 @@ describe('ProcessCanvas', () => {
     mockCatalogs();
   });
 
+  it('copies materials as independent nodes with the same catalog reference', async () => {
+    const draft: ProcessVersion = {...version, graph: {...version.graph, nodes: [
+      ...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material', referenceId: 'material-id', label: 'Сталь', position: {x: 10, y: 20}},
+    ]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Создать копию материала Сталь'}));
+    await waitFor(() => {
+      const nodes = vi.mocked(saveTechnologicalProcessDraft).mock.calls[0]?.[2].graph.nodes;
+      const copies = nodes?.filter((node) => node.type === 'material');
+      expect(copies).toHaveLength(2);
+      expect(copies?.map((node) => node.referenceId)).toEqual(['material-id', 'material-id']);
+      expect(new Set(copies?.map((node) => node.id)).size).toBe(2);
+      expect(copies?.[1]?.position).toEqual({x: 50, y: 60});
+    }, {timeout: 3000});
+  });
+
+  it('adds a multiline comment without a catalog reference or production connectors', async () => {
+    mockDraftSave(version);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={version} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Добавить узел'}));
+    await userEvent.click(screen.getByRole('radio', {name: 'Комментарий'}));
+    const text = await screen.findByRole('textbox', {name: 'Текст комментария'}, {timeout: 5000});
+    expect(screen.queryByRole('combobox', {name: 'Сущность узла'})).not.toBeInTheDocument();
+    await userEvent.type(text, 'Проверить размер{Enter}перед сборкой');
+    await userEvent.click(screen.getByRole('button', {name: 'Готово'}));
+    await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledWith(version.process_id, version.id,
+      expect.objectContaining({graph: expect.objectContaining({nodes: expect.arrayContaining([
+        expect.objectContaining({type: 'comment', referenceId: null, label: 'Проверить размер\nперед сборкой'}),
+      ])})})), {timeout: 3000});
+    expect(screen.queryByRole('button', {name: 'Потянуть связь из Проверить размер\nперед сборкой'})).not.toBeInTheDocument();
+    expect(screen.getByText('Проверить размер перед сборкой')).toBeInTheDocument();
+  });
+
+  it('excludes an already used operation from the node picker', async () => {
+    vi.mocked(useOperationsQuery).mockReturnValue({data: {items: [
+      {id: 'used', name: 'Резка'}, {id: 'available', name: 'Сборка'},
+    ]}} as unknown as ReturnType<typeof useOperationsQuery>);
+    const draft: ProcessVersion = {...version, graph: {...version.graph, nodes: [
+      ...(version.graph.nodes ?? []), {id: 'op', type: 'operation', referenceId: 'used', label: 'Резка'},
+    ]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Добавить узел'}));
+    await userEvent.click(screen.getByRole('radio', {name: 'Операция'}));
+    await userEvent.click(screen.getByRole('combobox', {name: 'Сущность узла'}));
+    expect(screen.queryByRole('option', {name: 'Резка'})).not.toBeInTheDocument();
+    expect(await screen.findByRole('option', {name: 'Сборка'}, {timeout: 5000})).toBeInTheDocument();
+  });
+
   it('adds a node and autosaves it with the expected revision', async () => {
     mockDraftSave(version);
     const user = userEvent.setup();
@@ -317,7 +367,7 @@ describe('ProcessCanvas', () => {
         onVersionUpdate={vi.fn()}
       />,
     );
-    expect(screen.getByText('5.13', {selector: 'text'})).toBeInTheDocument();
+    expect(screen.getByText('5,126', {selector: 'text'})).toBeInTheDocument();
     const edgeTitle = screen.getByText('Двойной клик — изменить соединение');
     const edgeGroup = edgeTitle.parentElement;
     expect(edgeGroup).not.toBeNull();
@@ -347,7 +397,7 @@ describe('ProcessCanvas', () => {
       },
       {timeout: 3000},
     );
-    expect(screen.getByText('7.13', {selector: 'text'})).toBeInTheDocument();
+    expect(screen.getByText('7,13', {selector: 'text'})).toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByText('rev. 1')).toBeInTheDocument());
     const updatedTitle = screen.getByText('Двойной клик — изменить соединение');

@@ -7,7 +7,7 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 import {ReceiptPage} from './index';
 
 vi.mock('@/entities/StockRevision', () => ({useStockRevisionRowsQuery: () => ({data: [
-  {id: 'first', name: 'Сталь', current_quantity: '0', unit: 'кг', groups: []},
+  {id: 'first', name: 'Сталь', current_quantity: '24.000000', unit: 'кг', groups: []},
   {id: 'second', name: 'Медь', current_quantity: '0', unit: 'кг', groups: []},
   {id: 'third', name: 'Алюминий', current_quantity: '0', unit: 'кг', groups: []},
 ]})}));
@@ -21,6 +21,15 @@ vi.mock('@/shared/api', async (original) => ({...await original<typeof ApiModule
 it('submits only received materials with a single total and no unit prices', async () => {
   renderWithProviders(<ReceiptPage />);
   expect(screen.queryByText('Цена за единицу')).not.toBeInTheDocument();
+  expect(screen.queryByRole('textbox', {name: 'Приход: Сталь'})).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('combobox', {name: 'Материал для прихода'}));
+  await userEvent.click(screen.getByRole('option', {name: 'Сталь · Без группы (кг)'}));
+  await userEvent.click(screen.getByRole('button', {name: 'Добавить материал'}));
+  expect(screen.getByText('24 кг')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('combobox', {name: 'Материал для прихода'}));
+  expect(screen.queryByRole('option', {name: 'Сталь · Без группы (кг)'})).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('option', {name: 'Медь · Без группы (кг)'}));
+  await userEvent.click(screen.getByRole('button', {name: 'Добавить материал'}));
   await userEvent.click(screen.getByRole('button', {name: 'Выбрать счёт'}));
   fireEvent.change(screen.getByRole('textbox', {name: 'Сумма за приход'}), {target: {value: '123,45'}});
   fireEvent.change(screen.getByRole('textbox', {name: 'Приход: Сталь'}), {target: {value: '10'}});
@@ -32,4 +41,21 @@ it('submits only received materials with a single total and no unit prices', asy
     total_amount: '123.45', entries: [{material_id: 'first', quantity: '10'}],
   });
   expect(String(request?.[1]?.body)).not.toContain('unit_price');
+  await waitFor(() => expect(screen.queryByRole('textbox', {name: 'Приход: Сталь'})).not.toBeInTheDocument());
+});
+
+it('removes a material from the receipt and makes it available again', async () => {
+  renderWithProviders(<ReceiptPage />);
+  await userEvent.click(screen.getByRole('combobox', {name: 'Материал для прихода'}));
+  const options = screen.getAllByRole('option');
+  expect(options.map((option) => option.textContent)).toEqual([
+    'Алюминий · Без группы (кг)', 'Медь · Без группы (кг)', 'Сталь · Без группы (кг)',
+  ]);
+  await userEvent.click(screen.getByRole('option', {name: 'Сталь · Без группы (кг)'}));
+  await userEvent.click(screen.getByRole('button', {name: 'Добавить материал'}));
+  fireEvent.change(screen.getByRole('textbox', {name: 'Приход: Сталь'}), {target: {value: '5'}});
+  await userEvent.click(screen.getByRole('button', {name: 'Убрать из прихода: Сталь'}));
+  expect(screen.queryByRole('textbox', {name: 'Приход: Сталь'})).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('combobox', {name: 'Материал для прихода'}));
+  expect(screen.getByRole('option', {name: 'Сталь · Без группы (кг)'})).toBeInTheDocument();
 });

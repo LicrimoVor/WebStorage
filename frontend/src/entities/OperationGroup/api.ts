@@ -7,6 +7,8 @@ export function operationGroupLabel(group: OperationGroup, groups: OperationGrou
 }
 export const operationGroupKeys = ['operation-groups'] as const;
 export function useOperationGroupsQuery() {
-  return useQuery({queryKey: operationGroupKeys, queryFn: ({signal}) =>
-    apiRequest<OperationGroup[]>('/operation-groups', {signal})});
+  return useQuery({queryKey: operationGroupKeys, queryFn: async ({signal}) => {
+    const groups = await apiRequest<OperationGroup[]>('/operation-groups', {signal});
+    return [...groups].sort((a, b) => operationGroupLabel(a, groups).localeCompare(operationGroupLabel(b, groups), 'ru'));
+  }});
 }

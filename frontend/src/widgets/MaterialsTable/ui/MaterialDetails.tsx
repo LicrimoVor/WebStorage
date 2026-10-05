@@ -2,7 +2,7 @@ import {Alert, Button, Dialog} from '@gravity-ui/uikit';
 import {useQuery} from '@tanstack/react-query';
 import type {ReactNode} from 'react';
 import {materialKeys, type Material} from '@/entities/Material';
-import {DetailCardFooter, DetailCardMetrics} from '@/shared/ui/DetailCard';
+import {DetailCardFooter, DetailCardImage, DetailCardMetrics} from '@/shared/ui/DetailCard';
 import card from '@/shared/ui/DetailCard.module.scss';
 import {apiRequest, getErrorMessage} from '@/shared/api';
 import {formatDecimal, formatMoney} from '@/shared/lib';
@@ -19,7 +19,7 @@ export function MaterialDetails({id, onClose, renderActions}: {
       {query.isPending && <p role="status">Загрузка материала…</p>}
       {query.isError && <Alert theme="danger" message={getErrorMessage(query.error)} actions={<Button onClick={() => query.refetch()}>Повторить</Button>} />}
       {item && <>
-        {item.image && <img src={item.image} alt={item.name} className={card.image} />}
+        <DetailCardImage image={item.image} name={item.name} />
         <DetailCardMetrics items={[
           {label: 'Свободно', value: formatDecimal(item.free_quantity), unit: item.unit},
           {label: 'Требуется', value: formatDecimal(item.required_quantity), unit: item.unit},

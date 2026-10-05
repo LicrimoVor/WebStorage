@@ -71,19 +71,10 @@ jobs:
       - name: Start Docker Compose
         run: |
           ssh production 'sudo -n bash -se' <<'REMOTE'
-          cd /opt/webstorage/repository
-          export COMPOSE_FILE=deploy/compose.yml
-          export COMPOSE_ENV_FILES=/opt/webstorage/.env
-          export COMPOSE_PROJECT_NAME=webstorage-production
-          export BACKEND_IMAGE=webstorage-backend:local
-          docker compose build --pull backend
-          docker compose up -d --wait database
-          docker compose stop backend
-          install -d -m 700 /opt/webstorage/backups
-          umask 077
-          docker compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "/opt/webstorage/backups/$(date -u +%Y%m%dT%H%M%S).dump"
+          cd /opt/webstorage/repository/deploy
+          docker compose build
+          docker compose up -d
           docker compose run --rm --no-deps backend alembic upgrade head
-          docker compose up -d --wait --wait-timeout 120
           REMOTE
 
       - name: Update Nginx config

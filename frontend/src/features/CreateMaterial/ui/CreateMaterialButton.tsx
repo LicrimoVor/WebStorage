@@ -20,6 +20,7 @@ const titleId = 'create-material-title';
 
 export function CreateMaterialButton({defaultGroupId = "", sourceMaterial}: {defaultGroupId?: string; sourceMaterial?: Material}) {
   const [open, setOpen] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const [form, setForm] = useState<MaterialFormValue>(emptyMaterialForm);
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
@@ -43,6 +44,7 @@ export function CreateMaterialButton({defaultGroupId = "", sourceMaterial}: {def
   };
 
   const submit = () => {
+    if (imageBusy || mutation.isPending) return;
     if (form.isDefect && !form.sourceMaterialId) {setValidationError('Выберите исходный материал'); return;}
     const error = validateMaterialForm(form, true);
     if (error) {
@@ -78,7 +80,7 @@ export function CreateMaterialButton({defaultGroupId = "", sourceMaterial}: {def
       >
         <Dialog.Header caption={sourceMaterial ? `Новый брак: ${sourceMaterial.name}` : 'Новый материал'} id={titleId} />
         <Dialog.Body>
-          <MaterialForm
+          <MaterialForm onImageBusyChange={setImageBusy}
             value={form}
             onChange={setForm}
             includeInitialQuantity
@@ -92,6 +94,7 @@ export function CreateMaterialButton({defaultGroupId = "", sourceMaterial}: {def
           onClickButtonApply={submit}
           onClickButtonCancel={close}
           loading={mutation.isPending}
+          propsButtonApply={{disabled: imageBusy}}
         />
       </Dialog>
     </>

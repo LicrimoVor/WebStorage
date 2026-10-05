@@ -13,6 +13,7 @@ interface ManufacturedItemFormProps {
   value: ManufacturedItemFormValue;
   onChange: (value: ManufacturedItemFormValue) => void;
   includeInitialQuantity?: boolean;
+  onImageBusyChange?: (busy: boolean) => void;
   error?: string | undefined;
 }
 
@@ -20,6 +21,7 @@ export function ManufacturedItemForm({
   value,
   onChange,
   includeInitialQuantity = false,
+  onImageBusyChange,
   error,
 }: ManufacturedItemFormProps) {
   const products = useProductOptionsQuery();
@@ -91,7 +93,7 @@ export function ManufacturedItemForm({
           size="l"
         />
       ) : null}
-      <ImageUploadField
+      <ImageUploadField onBusyChange={onImageBusyChange}
         value={value.image}
         onUpdate={(next) => update('image', next)}
         alt="Предпросмотр производимой позиции"

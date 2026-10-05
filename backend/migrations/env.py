@@ -41,6 +41,7 @@ from app.modules.technological_processes.model import (  # noqa: F401
     TechnologicalProcessNode,
     TechnologicalProcessVersion,
 )
+from app.modules.trash.model import TrashEntry  # noqa: F401
 from app.modules.warehouse.model import (  # noqa: F401
     InventoryGroup,
     InventoryGroupManufacturedItem,

@@ -5,8 +5,12 @@ import {useState} from 'react';
 import {apiRequest, getErrorMessage} from '@/shared/api';
 import {operationGroupKeys, operationGroupLabel, useOperationGroupsQuery} from './api';
 import styles from '@/features/ManageInventoryGroups/ui/ManageInventoryGroupsButton.module.scss';
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 
 export function ManageOperationGroups() {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
@@ -45,7 +49,7 @@ export function ManageOperationGroups() {
           <div className={styles.actions}>
             {!group.parent_id && <Button view="flat" onClick={() => {setEditing(undefined); setName(''); setParentId(group.id);}}>Добавить подгруппу</Button>}
             <Button view="flat" onClick={() => {setEditing(group.id); setName(group.name); setParentId(group.parent_id ?? '');}}>Изменить</Button>
-            <Button view="flat-danger" onClick={() => setRemoving(group.id)}>Удалить</Button>
+            {admin && <Button view="flat-danger" onClick={() => setRemoving(group.id)}>Удалить</Button>}
           </div>
           {removing === group.id && <div className={styles.confirm}>
             <p>Операции сохранятся в разделе «Без группы».</p>

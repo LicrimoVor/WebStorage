@@ -23,7 +23,7 @@ import {
 } from "@/entities/ProductionPlan";
 import { ExportExcelButton } from "@/features/ExportExcel";
 import { getErrorMessage } from "@/shared/api";
-import { formatDateTime, formatFixedDecimal } from "@/shared/lib";
+import { formatDateTime, formatDecimal } from "@/shared/lib";
 
 import styles from "./ProductionPlansPage.module.scss";
 
@@ -46,7 +46,7 @@ const statusOptions = [
 ];
 
 function amount(value: string | null, suffix = ""): string {
-  return value === null ? "—" : `${formatFixedDecimal(value)}${suffix}`;
+  return value === null ? "—" : `${formatDecimal(value)}${suffix}`;
 }
 
 function CreatePlanButton() {
@@ -340,6 +340,7 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
           </Text>
         </div>
         <div className={styles.planActions}>
+          <DeleteEntityButton kind="production_plan" id={plan.id} name={plan.product_name} />
           {plan.status === "active" || plan.status === "draft" ? (
             <>
               <Button
@@ -555,3 +556,4 @@ export function ProductionPlansPage() {
     </>
   );
 }
+import {DeleteEntityButton} from '@/features/DeleteEntity/DeleteEntityButton';

@@ -218,7 +218,9 @@ async def list_assets(session: AsyncSession, operation_id: uuid.UUID) -> list[In
     return [InstructionAssetRead.model_validate(asset) for asset in assets]
 
 
-async def delete_asset(session: AsyncSession, operation_id: uuid.UUID, asset_id: uuid.UUID) -> None:
+async def validate_asset_owner(
+    session: AsyncSession, operation_id: uuid.UUID, asset_id: uuid.UUID
+) -> None:
     await _operation(session, operation_id)
     instruction = await _instruction(session, operation_id, create=False)
     if instruction is None:
@@ -226,6 +228,12 @@ async def delete_asset(session: AsyncSession, operation_id: uuid.UUID, asset_id:
     asset = await repository.get_asset(session, instruction.id, asset_id)
     if asset is None or asset.deleted_at is not None:
         raise NotFoundError("Instruction asset was not found")
+
+
+async def delete_asset(session: AsyncSession, operation_id: uuid.UUID, asset_id: uuid.UUID) -> None:
+    await validate_asset_owner(session, operation_id, asset_id)
+    asset = await session.get(OperationInstructionAsset, asset_id)
+    assert asset is not None
     asset.deleted_at = datetime.now(UTC)
     await session.commit()
 

@@ -17,6 +17,7 @@ from app.modules.business.schemas import (
     RepairCreate,
 )
 from app.modules.business.service import document_read, register_document
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(tags=["business"])
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -67,11 +68,8 @@ async def update_source(
 
 @router.delete("/funding-sources/{source_id}", status_code=204)
 async def delete_source(source_id: uuid.UUID, session: Session, actor: CurrentActor) -> None:
-    require_any_role(actor, Role.FINANCE)
-    source = await session.get(FundingSource, source_id)
-    if source is None:
-        raise NotFoundError("Источник финансирования не найден")
-    source.archived = True
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "funding_source", source_id, actor.subject)
     await session.commit()
 
 

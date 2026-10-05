@@ -6,6 +6,7 @@ import type * as ManufacturedItemExports from '@/entities/ManufacturedItem';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 
 import {ManufacturedItemsTableWidget} from './ManufacturedItemsTableWidget';
+vi.mock('@/entities/Auth', () => ({useAuthSessionQuery: () => ({data: {roles: ['admin']}})}));
 
 vi.mock('@/shared/api', () => ({apiRequest: vi.fn(), getErrorMessage: () => 'Network error'}));
 

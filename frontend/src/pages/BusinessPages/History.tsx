@@ -5,6 +5,7 @@ import {useState} from 'react';
 import {useFundingSources} from '@/entities/Funding';
 import {useStockRevisionRowsQuery} from '@/entities/StockRevision';
 import {apiRequest, getErrorMessage} from '@/shared/api';
+import {formatDecimal} from '@/shared/lib';
 import styles from './BusinessPages.module.scss';
 
 export interface Line {
@@ -51,15 +52,15 @@ function DocumentDetails({document: doc}: {document: Document}) {
     <section>
       <h3>Материалы</h3>
       <ul>{(doc.entries ?? doc.material_costs ?? doc.materials ?? []).map((line) => <li key={line.material_id}>
-        {line.name ?? catalog.data?.find((m) => m.id === line.material_id)?.name ?? line.material_id}: {line.quantity}
-        {line.defective_quantity && `; брак: ${line.defective_quantity}`}
+        {line.name ?? catalog.data?.find((m) => m.id === line.material_id)?.name ?? line.material_id}: {formatDecimal(line.quantity)}
+        {line.defective_quantity && `; брак: ${formatDecimal(line.defective_quantity)}`}
         {line.unit_price && `; цена: ${line.unit_price}`}
       </li>)}</ul>
     </section>
     {doc.operation_snapshots && <section>
       <h3>Операции</h3>
       <ul>{doc.operation_snapshots.map((line, index) => <li key={index}>
-        {line.name}: {line.quantity} · ставка {line.rate}
+        {line.name}: {formatDecimal(line.quantity)} · ставка {line.rate}
       </li>)}</ul>
     </section>}
     {doc.service_cost && <p>Дополнительные расходы: {doc.service_cost}</p>}

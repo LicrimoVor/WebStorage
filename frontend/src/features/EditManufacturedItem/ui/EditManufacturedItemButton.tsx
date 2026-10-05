@@ -21,6 +21,7 @@ interface EditManufacturedItemButtonProps {
 
 export function EditManufacturedItemButton({item}: EditManufacturedItemButtonProps) {
   const [open, setOpen] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const [form, setForm] = useState<ManufacturedItemFormValue>(() =>
     manufacturedItemToForm(item),
   );
@@ -47,6 +48,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (imageBusy || mutation.isPending) return;
     const error = validateManufacturedItemForm(form, false);
     if (error) {
       setValidationError(error);
@@ -78,7 +80,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
       >
         <Dialog.Header caption={`Редактировать: ${item.name}`} id={titleId} />
         <Dialog.Body>
-          <ManufacturedItemForm
+          <ManufacturedItemForm onImageBusyChange={setImageBusy}
             value={form}
             onChange={setForm}
             error={
@@ -93,6 +95,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
           onClickButtonApply={submit}
           onClickButtonCancel={close}
           loading={mutation.isPending}
+          propsButtonApply={{disabled: imageBusy}}
         />
       </Dialog>
     </>

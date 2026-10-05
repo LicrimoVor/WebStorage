@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import SortOrder
+from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.operations import service
 from app.modules.operations.schemas import (
     OperationCreate,
@@ -15,6 +16,7 @@ from app.modules.operations.schemas import (
     OperationSortField,
     OperationUpdate,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/operations",
@@ -22,6 +24,7 @@ router = APIRouter(
     responses={422: {"model": ProblemDetail}},
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
+ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
 @router.post(
@@ -88,5 +91,10 @@ async def update_operation(
     operation_id="archiveOperation",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_operation(operation_id: uuid.UUID, session: Session) -> OperationRead:
-    return await service.archive(session, operation_id)
+async def archive_operation(
+    operation_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> OperationRead:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "operation", operation_id, actor.subject)
+    await session.commit()
+    return await service.get(session, operation_id)

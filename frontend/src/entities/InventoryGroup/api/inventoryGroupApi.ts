@@ -13,7 +13,11 @@ export const inventoryGroupKeys = {
 };
 
 export async function listInventoryGroups(signal?: AbortSignal) {
-  return apiRequest<InventoryGroup[]>('/inventory-groups', signal ? {signal} : {});
+  const groups = await apiRequest<InventoryGroup[]>('/inventory-groups', signal ? {signal} : {});
+  const label = (group: InventoryGroup) => group.parent_id
+    ? `${groups.find((parent) => parent.id === group.parent_id)?.name ?? ''} / ${group.name}`
+    : group.name;
+  return [...groups].sort((a, b) => label(a).localeCompare(label(b), 'ru'));
 }
 
 export function useInventoryGroupsQuery() {

@@ -23,6 +23,7 @@ const nodeColors: Record<ProcessNode['type'], string> = {
   manufactured_item: '#a8c7fa',
   operation: '#c5a3ff',
   output: '#78d7a7',
+  comment: '#78d7a7',
 };
 
 function baseElement(id: string, x: number, y: number) {
@@ -75,11 +76,17 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
   const rectangles = graph.nodes.map((node) => {
     const x = node.position?.x ?? 0;
     const y = node.position?.y ?? 0;
+    if (node.type === 'comment') return {
+      ...baseElement(node.id, x, y), type: 'line', width: 220, height: 144,
+      points: [[20, 0], [220, 0], [200, 144], [0, 144], [20, 0]],
+      strokeColor: '#29975a', backgroundColor: 'transparent',
+      customData: {webStorage: {kind: 'node', node}},
+    };
     return {
       ...baseElement(node.id, x, y),
       type: 'rectangle',
       width: 220,
-      height: 112,
+      height: 144,
       backgroundColor: nodeColors[node.type],
       roundness: {type: 3},
       customData: {webStorage: {kind: 'node', node}},
@@ -96,7 +103,7 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     fontFamily: 1,
     textAlign: 'left',
     verticalAlign: 'middle',
-    containerId: node.id,
+    containerId: node.type === 'comment' ? null : node.id,
     originalText: node.label ?? node.type,
     autoResize: true,
     lineHeight: 1.25,
@@ -106,9 +113,9 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     const target = nodeById.get(edge.target);
     if (!source || !target) return [];
     const x = (source.position?.x ?? 0) + 220;
-    const y = (source.position?.y ?? 0) + 56;
+    const y = (source.position?.y ?? 0) + 72;
     const targetX = target.position?.x ?? 0;
-    const targetY = (target.position?.y ?? 0) + 56;
+    const targetY = (target.position?.y ?? 0) + 72;
     return [
       {
         ...baseElement(edge.id, x, y),
@@ -154,7 +161,8 @@ function nodeFromCustomData(element: Record<string, unknown>): ProcessNode | nul
     type !== 'material' &&
     type !== 'manufactured_item' &&
     type !== 'operation' &&
-    type !== 'output'
+    type !== 'output' &&
+    type !== 'comment'
   ) {
     return null;
   }
@@ -274,4 +282,3 @@ export function excalidrawToGraph(
   });
   return normalizeGraph({schemaVersion: 1, ...base, nodes, edges});
 }
-

@@ -12,3 +12,7 @@
     width: 100%;
   }
 }
+
+.selectedRow td {
+  background: var(--g-color-base-selection);
+}

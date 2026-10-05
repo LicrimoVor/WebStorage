@@ -1,3 +1,5 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import {Alert, Button, Dialog, Icon} from '@gravity-ui/uikit';
 import {Pencil, TrashBin, Plus} from '@gravity-ui/icons';
 import {useState} from 'react';
@@ -8,6 +10,8 @@ import {useFundingSources, type FundingSource} from './api';
 import styles from '@/pages/BusinessPages/BusinessPages.module.scss';
 
 export function ManageFundingSources() {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const sources = useFundingSources();
   const client = useQueryClient();
   const [name, setName] = useState('');
@@ -30,7 +34,7 @@ export function ManageFundingSources() {
     {sources.data?.filter((source) => !source.archived).map((source) => <div className={styles.row} key={source.id}>
       <strong>{source.name}</strong>
       <Button view="flat" aria-label={`Изменить ${source.name}`} onClick={() => {setEditing(source); setName(source.name); save.reset();}}><Icon data={Pencil} />Изменить</Button>
-      <Button view="flat-danger" onClick={() => {setRemoving(source); remove.reset();}}><Icon data={TrashBin} />Удалить</Button>
+      {admin && <Button view="flat-danger" onClick={() => {setRemoving(source); remove.reset();}}><Icon data={TrashBin} />Удалить</Button>}
     </div>)}
     <Dialog open={Boolean(removing)} onClose={() => setRemoving(undefined)} size="s">
       <Dialog.Header caption="Удалить источник?" />

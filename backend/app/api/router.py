@@ -32,6 +32,7 @@ from app.modules.sales.router import router as sales_router
 from app.modules.technological_processes.router import (
     router as technological_processes_router,
 )
+from app.modules.trash.router import router as trash_router
 from app.modules.warehouse.router import groups_router, warehouse_router
 
 api_router = APIRouter(dependencies=[Depends(require_section_access)])
@@ -60,6 +61,7 @@ api_router.include_router(groups_router)
 api_router.include_router(warehouse_router)
 api_router.include_router(audit_router)
 api_router.include_router(procurement_router)
+api_router.include_router(trash_router)
 ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 

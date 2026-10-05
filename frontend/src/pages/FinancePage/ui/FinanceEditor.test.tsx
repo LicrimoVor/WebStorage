@@ -8,6 +8,7 @@ import {FinanceEditor} from './FinanceEditor';
 vi.mock('@/entities/Funding', () => ({FundingSelect: () => <span>Счёт</span>, useFundingSources: () => ({data: [{id: 'source', name: 'Основной'}]})}));
 vi.mock('@/entities/Funding/api', () => ({useFundingSources: () => ({data: [{id: 'source', name: 'Основной'}]})}));
 vi.mock('@/shared/api', () => ({getErrorMessage: () => 'Ошибка', apiRequest: vi.fn(async (_path, options) => {
+  if (_path === '/auth/session') return {roles: ['admin']};
   if (options?.method === 'PATCH') return {};
   return {entry: {id: 'entry', amount: '100.00', occurred_at: '2026-09-30T10:00:00Z', funding_source_id: 'source', funding_allocations: [], comment: 'Old', created_by: 'admin', source_type: 'manual', category: 'Материалы', description: 'Закупка'}, revision: 2, history: []};
 })}));

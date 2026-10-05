@@ -7,7 +7,7 @@ import {useProductOptionsQuery, type ManufacturedItem} from '@/entities/Manufact
 import {EditManufacturedItemButton} from '@/features/EditManufacturedItem';
 import {ProduceManufacturedItemButton} from '@/features/ProduceManufacturedItem';
 import {ManufacturedInventoryHistoryButton} from '@/features/ViewManufacturedInventoryHistory';
-import {DetailCardFooter, DetailCardMetrics} from '@/shared/ui/DetailCard';
+import {DetailCardFooter, DetailCardImage, DetailCardMetrics} from '@/shared/ui/DetailCard';
 import card from '@/shared/ui/DetailCard.module.scss';
 import {apiRequest, getErrorMessage} from '@/shared/api';
 import type {components} from '@/shared/api/generated/schema';
@@ -16,6 +16,7 @@ import {canAccess} from '@/shared/lib/access';
 import styles from '@/pages/BusinessPages/BusinessPages.module.scss';
 import local from './ManufacturedItemsTable.module.scss';
 import {ProductUnits} from './ProductUnits';
+import {DeleteEntityButton} from '@/features/DeleteEntity/DeleteEntityButton';
 
 type Composition = components['schemas']['ItemComposition'];
 const kindLabels = {material: 'Материал', semi_finished: 'Полуфабрикат', operation: 'Операция'};
@@ -44,7 +45,7 @@ export function ManufacturedDetails({row, onClose}: {row: {id: string; name: str
       {detail.isPending && <p role="status">Загрузка карточки…</p>}
       {detail.isError && <Alert theme="danger" message={getErrorMessage(detail.error)} actions={<Button onClick={() => detail.refetch()}>Повторить</Button>} />}
       {item && <>
-        {item.image && <img src={item.image} alt={item.name} className={card.image} />}
+        <DetailCardImage image={item.image} name={item.name} />
         <DetailCardMetrics items={[
           {label: 'Свободно', value: formatDecimal(item.free_quantity), unit: item.unit},
           {label: 'Требуется', value: formatDecimal(item.required_quantity), unit: item.unit},
@@ -83,6 +84,7 @@ export function ManufacturedDetails({row, onClose}: {row: {id: string; name: str
       {query.data && <ProcessLink processId={query.data.process_id} />}
       {!item.archived && !item.is_product && <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />}
       {!item.archived && <EditManufacturedItemButton item={item} />}
+      {!item.archived && <DeleteEntityButton kind="manufactured_item" id={item.id} name={item.name} onDeleted={onClose} />}
       <ManufacturedInventoryHistoryButton item={item} />
     </>}</DetailCardFooter>
   </Dialog>;

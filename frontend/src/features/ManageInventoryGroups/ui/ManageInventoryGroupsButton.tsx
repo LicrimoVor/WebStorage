@@ -1,3 +1,5 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import {Select, TextInput} from '@/shared/ui/FormControls';
 import {Alert, Button, Dialog, Loader, Text} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
@@ -15,6 +17,8 @@ import {getErrorMessage} from '@/shared/api';
 import styles from './ManageInventoryGroupsButton.module.scss';
 
 export function ManageInventoryGroupsButton({defaultParentId = ''}: {defaultParentId?: string}) {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
@@ -127,6 +131,7 @@ export function ManageInventoryGroupsButton({defaultParentId = ''}: {defaultPare
                       </Button>
                       <Button
                         view="flat-danger"
+                        disabled={!admin}
                         loading={removeMutation.isPending}
                         onClick={() => removeMutation.mutate(group.id)}
                       >

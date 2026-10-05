@@ -1,3 +1,5 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
 import {Alert, Button, Card, Dialog, Label, Skeleton, Tab, TabList, Text} from '@gravity-ui/uikit';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
@@ -64,6 +66,8 @@ function expirationDate(mode: string, custom: string): string | null {
 }
 
 export function OperationInstructionPage() {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const {operationId = ''} = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -327,7 +331,7 @@ export function OperationInstructionPage() {
                       <img src={asset.url} alt={asset.filename} />
                     </button>
                     <Text variant="caption-2" ellipsis>{asset.filename}</Text>
-                    <Button view="flat-danger" size="s" onClick={() => deleteAssetMutation.mutate(asset)}>Удалить</Button>
+                    {admin && <Button view="flat-danger" size="s" onClick={() => deleteAssetMutation.mutate(asset)}>Удалить</Button>}
                   </div>
                 ))}
               </div>

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import AvailabilityFilter, SortOrder
+from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.materials import defects, service
 from app.modules.materials.schemas import (
     DefectTransfer,
@@ -16,6 +17,7 @@ from app.modules.materials.schemas import (
     MaterialSortField,
     MaterialUpdate,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/materials",
@@ -23,6 +25,7 @@ router = APIRouter(
     responses={422: {"model": ProblemDetail}},
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
+ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
 @router.post(
@@ -93,8 +96,13 @@ async def update_material(
     operation_id="archiveMaterial",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_material(material_id: uuid.UUID, session: Session) -> MaterialRead:
-    return await service.archive(session, material_id)
+async def archive_material(
+    material_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> MaterialRead:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "material", material_id, actor.subject)
+    await session.commit()
+    return await service.get(session, material_id)
 
 
 

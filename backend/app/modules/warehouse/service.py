@@ -92,7 +92,7 @@ async def update_group(
     return next(_group_read(*row) for row in rows if row[0].id == group_id)
 
 
-async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
+async def delete_group(session: AsyncSession, group_id: uuid.UUID, *, commit: bool = True) -> None:
     await lock_material_catalog(session)
     group = await session.get(InventoryGroup, group_id)
     if group is None:
@@ -115,7 +115,8 @@ async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
     except ConflictError:
         await session.rollback()
         raise
-    await session.commit()
+    if commit:
+        await session.commit()
 
 
 async def list_revision_rows(

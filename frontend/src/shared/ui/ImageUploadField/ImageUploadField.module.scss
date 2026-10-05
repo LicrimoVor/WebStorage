@@ -15,6 +15,42 @@
   justify-content: space-between;
 }
 
+.actions {
+  flex-wrap: wrap;
+}
+
+.cropStage {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.cropImage {
+  display: block;
+  width: 100%;
+}
+
+.cropSelection {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+  touch-action: none;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 55%);
+}
+
+.cropControls {
+  display: grid;
+  gap: var(--g-spacing-3);
+
+  label {
+    display: grid;
+    gap: var(--g-spacing-1);
+  }
+}
+
 .fileInput {
   position: absolute;
   width: 1px;

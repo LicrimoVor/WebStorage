@@ -27,6 +27,7 @@ export function canAccess(access: Access, section: Section) {
 export function canOpenPath(access: Access, pathname: string) {
   if (
     pathname.startsWith("/settings/audit") ||
+    pathname.startsWith("/settings/trash") ||
     pathname.startsWith("/settings/users")
   )
     return isAdmin(access);

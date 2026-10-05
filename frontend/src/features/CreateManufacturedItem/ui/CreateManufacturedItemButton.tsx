@@ -31,6 +31,7 @@ export function CreateManufacturedItemButton({
   buttonLabel = 'Создать позицию',
 }: CreateManufacturedItemButtonProps) {
   const [open, setOpen] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const initialForm = (): ManufacturedItemFormValue => ({
     ...emptyManufacturedItemForm,
     isProduct: defaultIsProduct,
@@ -62,6 +63,7 @@ export function CreateManufacturedItemButton({
     }
   };
   const submit = () => {
+    if (imageBusy || mutation.isPending) return;
     const error = validateManufacturedItemForm(form, true);
     if (error) {
       setValidationError(error);
@@ -99,7 +101,7 @@ export function CreateManufacturedItemButton({
           id={titleId}
         />
         <Dialog.Body>
-          <ManufacturedItemForm
+          <ManufacturedItemForm onImageBusyChange={setImageBusy}
             value={form}
             onChange={setForm}
             includeInitialQuantity
@@ -115,6 +117,7 @@ export function CreateManufacturedItemButton({
           onClickButtonApply={submit}
           onClickButtonCancel={close}
           loading={mutation.isPending}
+          propsButtonApply={{disabled: imageBusy}}
         />
       </Dialog>
     </>

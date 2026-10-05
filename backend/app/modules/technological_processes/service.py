@@ -41,6 +41,19 @@ from app.modules.technological_processes.schemas import (
 async def validate_recipes(
     session: AsyncSession, document: ProcessGraphDocument, process_id: uuid.UUID | None = None
 ) -> None:
+    references: set[tuple[str, uuid.UUID]] = set()
+    for node in document.nodes:
+        if node.type in {ProcessNodeType.MATERIAL, ProcessNodeType.COMMENT}:
+            continue
+        if node.reference_id is None:
+            continue
+        kind = "operation" if node.type == ProcessNodeType.OPERATION else "manufactured_item"
+        key = (kind, node.reference_id)
+        if key in references:
+            raise ConflictError(
+                "Эта сущность уже добавлена в техпроцесс. Повторять можно материалы."
+            )
+        references.add(key)
     # Serialize recipe changes so two drafts cannot claim a semi-finished item concurrently.
     await session.execute(text("SELECT pg_advisory_xact_lock(781654221)"))
     ids = [
@@ -576,6 +589,7 @@ async def _activation_errors(
         process.id,
     )
     errors: list[str] = []
+    nodes = [node for node in nodes if node.node_type != ProcessNodeType.COMMENT.value]
     if process.output_item_id is None:
         errors.append("final output is not mapped")
     node_map = {node.external_id: node for node in nodes}

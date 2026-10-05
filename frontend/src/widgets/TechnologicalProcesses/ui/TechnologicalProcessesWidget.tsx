@@ -1,3 +1,5 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
 import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Switch, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
@@ -7,7 +9,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
 import {
-  archiveTechnologicalProcess,
   createTechnologicalProcess,
   importTechnologicalProcess,
   technologicalProcessKeys,
@@ -208,43 +209,6 @@ function ImportProcessButton() {
   );
 }
 
-function ArchiveProcessButton({ process }: { process: TechnologicalProcess }) {
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () => archiveTechnologicalProcess(process.id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: technologicalProcessKeys.all,
-      });
-      setOpen(false);
-    },
-  });
-  return (
-    <>
-      <Button view="flat-danger" size="s" onClick={() => setOpen(true)}>
-        В архив
-      </Button>
-      <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)}>
-        <Dialog.Header caption="Архивировать технологический процесс?" />
-        <Dialog.Body>
-          Активная версия «{process.name}» будет отключена, история сохранится.
-        </Dialog.Body>
-        <Dialog.Footer
-          preset="danger"
-          textButtonApply="Архивировать"
-          textButtonCancel="Отмена"
-          onClickButtonApply={() => mutation.mutate()}
-          onClickButtonCancel={() => setOpen(false)}
-          loading={mutation.isPending}
-          errorText={mutation.error ? getErrorMessage(mutation.error) : ""}
-          showError={Boolean(mutation.error)}
-        />
-      </Dialog>
-    </>
-  );
-}
-
 function DeleteProcessButton({ process }: { process: TechnologicalProcess }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -255,6 +219,8 @@ function DeleteProcessButton({ process }: { process: TechnologicalProcess }) {
       setOpen(false);
     },
   });
+  const session = useAuthSessionQuery();
+  if (!session.data || !isAdmin(session.data)) return null;
   return (
     <>
       <Button view="flat-danger" size="s" onClick={() => setOpen(true)}>
@@ -263,7 +229,7 @@ function DeleteProcessButton({ process }: { process: TechnologicalProcess }) {
       <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)}>
         <Dialog.Header caption="Удалить технологический процесс?" />
         <Dialog.Body>
-          Техпроцесс «{process.name}» исчезнет из списка и архива. Записи производства сохранятся.
+          Техпроцесс «{process.name}» будет перемещён в корзину, откуда его можно восстановить.
         </Dialog.Body>
         <Dialog.Footer
           preset="danger"
@@ -374,7 +340,6 @@ export function TechnologicalProcessesWidget() {
       >
         Открыть
       </Button>
-      {!process.archived ? <ArchiveProcessButton process={process} /> : null}
       <DeleteProcessButton process={process} />
     </div>
   );

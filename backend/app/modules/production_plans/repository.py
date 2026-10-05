@@ -9,6 +9,7 @@ from app.modules.production_plans.model import (
     ProductionPlanMaterialRequirement,
     ProductionPlanOperationRequirement,
 )
+from app.modules.trash.model import visible_entry
 
 RequirementRows = tuple[
     list[ProductionPlanMaterialRequirement],
@@ -24,7 +25,7 @@ async def list_plans(
     page_size: int,
     status: str | None,
 ) -> tuple[list[ProductionPlan], int]:
-    statement = select(ProductionPlan)
+    statement = select(ProductionPlan).where(visible_entry(ProductionPlan.id, "production_plan"))
     if status is not None:
         statement = statement.where(ProductionPlan.status == status)
     total = int(
@@ -51,7 +52,9 @@ async def list_plans(
 async def get_plan(
     session: AsyncSession, plan_id: uuid.UUID, *, for_update: bool = False
 ) -> ProductionPlan | None:
-    statement = select(ProductionPlan).where(ProductionPlan.id == plan_id)
+    statement = select(ProductionPlan).where(
+        ProductionPlan.id == plan_id, visible_entry(ProductionPlan.id, "production_plan"),
+    )
     if for_update:
         statement = statement.with_for_update()
     return (await session.execute(statement)).scalar_one_or_none()

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
 from app.core.query import AvailabilityFilter, SortOrder
+from app.core.security import Actor, Role, get_current_actor, require_any_role
 from app.modules.inventory.schemas import InventoryMovementCreate
 from app.modules.manufactured_items import movement_service, service
 from app.modules.manufactured_items.composition import ItemComposition, get_composition
@@ -20,6 +21,7 @@ from app.modules.manufactured_items.schemas import (
     ManufacturedItemSortField,
     ManufacturedItemUpdate,
 )
+from app.modules.trash.service import move_to_trash
 
 router = APIRouter(
     prefix="/manufactured-items",
@@ -27,6 +29,7 @@ router = APIRouter(
     responses={422: {"model": ProblemDetail}},
 )
 Session = Annotated[AsyncSession, Depends(get_session)]
+ActorDependency = Annotated[Actor, Depends(get_current_actor)]
 
 
 @router.get("/{item_id}/composition", operation_id="getManufacturedItemComposition")
@@ -104,8 +107,13 @@ async def update_manufactured_item(
     operation_id="archiveManufacturedItem",
     responses={404: {"model": ProblemDetail}},
 )
-async def archive_manufactured_item(item_id: uuid.UUID, session: Session) -> ManufacturedItemRead:
-    return await service.archive(session, item_id)
+async def archive_manufactured_item(
+    item_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> ManufacturedItemRead:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "manufactured_item", item_id, actor.subject)
+    await session.commit()
+    return await service.get(session, item_id)
 
 
 @router.post(

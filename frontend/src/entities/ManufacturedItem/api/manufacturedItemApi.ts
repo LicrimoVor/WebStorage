@@ -1,6 +1,7 @@
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
 
 import {apiRequest} from '@/shared/api';
+import {allPages} from '@/shared/api/allPages';
 
 import type {
   InventoryMovementCreate,
@@ -44,10 +45,12 @@ export async function listManufacturedItems(
   );
 }
 
-export function useManufacturedItemsQuery(params: ManufacturedItemListParams) {
+export function useManufacturedItemsQuery(params: ManufacturedItemListParams, fetchAll = false) {
   return useQuery({
-    queryKey: manufacturedItemKeys.list(params),
-    queryFn: ({signal}) => listManufacturedItems(params, signal),
+    queryKey: [...manufacturedItemKeys.list(params), {fetchAll}],
+    queryFn: ({signal}) => fetchAll
+      ? allPages((page) => listManufacturedItems({...params, page, page_size: 100}, signal))
+      : listManufacturedItems(params, signal),
     placeholderData: keepPreviousData,
   });
 }

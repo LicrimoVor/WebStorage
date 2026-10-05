@@ -5,7 +5,7 @@ import { ManageFundingSources } from "@/entities/Funding/ManageFundingSources";
 import { Select, TextInput, TextArea } from "@/shared/ui/FormControls";
 import { useAuthSessionQuery } from "@/entities/Auth";
 import { isAdmin, canAccess } from "@/shared/lib/access";
-import { isDecimal } from "@/shared/lib";
+import { formatDecimal, isDecimal } from "@/shared/lib";
 import { useProductionPlansQuery } from "@/entities/ProductionPlan";
 import { PlanRelease } from "./PlanRelease";
 import { Alert, Button, Icon } from "@gravity-ui/uikit";
@@ -79,8 +79,9 @@ export function SettingsPage() {
             size="l"
           >
             <Icon data={ClockArrowRotateLeft} size={20} />
-            Журнал событий
-          </Button>
+              Журнал событий
+            </Button>
+            <Button component={Link} to="/settings/trash" view="outlined" size="l">Корзина</Button>
         </div>
       )}
     </main>
@@ -90,6 +91,7 @@ export function SettingsPage() {
 export function ReceiptPage() {
   const rows = useStockRevisionRowsQuery({ type: "material" });
   const groups = useInventoryGroupsQuery();
+  const [materialId, setMaterialId] = useState("");
   const [values, setValues] = useState<Record<string, { quantity: string }>>(
     {},
   );
@@ -134,6 +136,7 @@ export function ReceiptPage() {
   });
   const sections = new Map<string, StockRevisionRow[]>();
   for (const row of rows.data ?? []) {
+    if (!(row.id in values)) continue;
     const group = groups.data?.find((g) => g.id === row.groups?.[0]?.id);
     const parent = groups.data?.find((g) => g.id === group?.parent_id);
     const title = parent
@@ -169,6 +172,27 @@ export function ReceiptPage() {
         {rows.isError && (
           <Alert theme="danger" message={getErrorMessage(rows.error)} />
         )}
+        <div className={styles.row}>
+          <Select
+            label="Материал"
+            aria-label="Материал для прихода"
+            placeholder="Выберите материал"
+            filterable
+            loading={rows.isPending}
+            disabled={mutation.isPending}
+            value={materialId ? [materialId] : []}
+            options={(rows.data ?? []).filter((row) => !(row.id in values))
+              .map((row) => ({value: row.id, content: `${row.name} · ${row.groups?.map((group) => group.name).join(' / ') || 'Без группы'} (${row.unit})`}))
+              .sort((a, b) => a.content.localeCompare(b.content, 'ru'))}
+            onUpdate={(ids) => setMaterialId(ids[0] ?? "")}
+          />
+          <Button disabled={!materialId || mutation.isPending} onClick={() => {
+            setValues((current) => ({...current, [materialId]: {quantity: ""}}));
+            setMaterialId("");
+            mutation.reset();
+          }}>Добавить материал</Button>
+        </div>
+        {Object.keys(values).length === 0 && <p>Выберите материал и добавьте его в приход.</p>}
         <div className={styles.scroll}>
           <table className={styles.table}>
             <thead>
@@ -176,6 +200,7 @@ export function ReceiptPage() {
                 <th>Материал</th>
                 <th data-numeric>Остаток</th>
                 <th data-numeric>Приход</th>
+                <th aria-label="Действия" />
               </tr>
             </thead>
             <tbody>
@@ -184,11 +209,11 @@ export function ReceiptPage() {
                 .map(([title, materials]) => (
                   <Fragment key={title}>
                     <tr className={styles.group}>
-                      <td colSpan={3}>{title.split(" / ")[0]}</td>
+                      <td colSpan={4}>{title.split(" / ")[0]}</td>
                     </tr>
                     {title.includes(" / ") && (
                       <tr className={styles.group}>
-                        <td colSpan={3} style={{ paddingLeft: 30 }}>
+                        <td colSpan={4} style={{ paddingLeft: 30 }}>
                           {title.split(" / ")[1]}
                         </td>
                       </tr>
@@ -197,11 +222,12 @@ export function ReceiptPage() {
                       <tr key={row.id}>
                         <td>{row.name}</td>
                         <td data-numeric>
-                          {row.current_quantity} {row.unit}
+                          {formatDecimal(row.current_quantity)} {row.unit}
                         </td>
                         {(["quantity"] as const).map((field) => (
                           <td data-numeric key={field}>
                             <TextInput
+                              disabled={mutation.isPending}
                               value={values[row.id]?.[field] ?? ""}
                               controlProps={{
                                 "aria-label": `${field === "quantity" ? "Приход" : "Брак"}: ${row.name}`,
@@ -219,6 +245,14 @@ export function ReceiptPage() {
                             />
                           </td>
                         ))}
+                        <td><Button view="flat-danger" aria-label={`Убрать из прихода: ${row.name}`} disabled={mutation.isPending} onClick={() => {
+                          setValues((current) => {
+                            const next = {...current};
+                            delete next[row.id];
+                            return next;
+                          });
+                          mutation.reset();
+                        }}>Убрать</Button></td>
                       </tr>
                     ))}
                   </Fragment>
@@ -547,7 +581,7 @@ export function ProductionPage() {
         {plans.data?.items.map((plan) => (
           <div className={styles.row} key={plan.id}>
             <strong>{plan.product_name}</strong>
-            <span>Осталось: {plan.remaining_quantity}</span>
+            <span>Осталось: {formatDecimal(plan.remaining_quantity)}</span>
             <PlanRelease plan={plan} />
           </div>
         ))}

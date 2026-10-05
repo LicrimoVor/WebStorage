@@ -14,7 +14,7 @@ import {
   type Material,
 } from '@/entities/Material';
 import {getErrorMessage} from '@/shared/api';
-import {isDecimal, normalizeDecimal} from '@/shared/lib';
+import {formatDecimal, isDecimal, normalizeDecimal} from '@/shared/lib';
 
 import styles from './AdjustStockButton.module.scss';
 
@@ -100,7 +100,7 @@ export function AdjustStockButton({material}: AdjustStockButtonProps) {
             <Alert
               theme="info"
               view="outlined"
-              message={`Текущий остаток: ${material.free_quantity} ${material.unit}`}
+              message={`Текущий остаток: ${formatDecimal(material.free_quantity)} ${material.unit}`}
             />
             <Select
               label="Тип"

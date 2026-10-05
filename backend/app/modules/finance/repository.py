@@ -20,6 +20,7 @@ from app.modules.manufactured_items.model import ManufacturedItem
 from app.modules.materials.model import Material
 from app.modules.payroll.model import EmployeePayment
 from app.modules.sales.model import Sale
+from app.modules.trash.model import visible_finance_entry
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +125,11 @@ def entry_union(funding_source_id: uuid.UUID | None = None) -> Subquery:
         BusinessDocument.kind == "receipt",
         BusinessDocument.data["total_amount"].astext.is_not(None),
     )
+    manual = manual.where(visible_finance_entry(FinancialTransaction.id))
+    sales = sales.where(visible_finance_entry(Sale.id))
+    labour = labour.where(visible_finance_entry(EmployeePayment.id))
+    materials = materials.where(visible_finance_entry(InventoryMovement.id))
+    receipts = receipts.where(visible_finance_entry(BusinessDocument.id))
     entries = union_all(manual, sales, labour, materials, receipts).subquery("finance_entries")
     if funding_source_id is None:
         return entries
@@ -271,6 +277,7 @@ async def summary_values(
             InventoryMovement.movement_type == "receipt",
             InventoryMovement.source_type.in_(["manual", "receipt"]),
             InventoryMovement.total_amount_snapshot.is_(None),
+            visible_finance_entry(InventoryMovement.id),
         ),
         InventoryMovement.created_at,
         date_from,

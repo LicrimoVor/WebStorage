@@ -1,10 +1,13 @@
+import {useAuthSessionQuery} from '@/entities/Auth';
+import {isAdmin} from '@/shared/lib/access';
 import {ReleaseProductsButton} from '@/features/ProduceManufacturedItem/ui/ReleaseProductsButton';
 import {Select, TextInput} from '@/shared/ui/FormControls';
-import {Alert, Button, Card, Pagination, PlaceholderContainer, Skeleton, Switch, Text} from '@gravity-ui/uikit';
+import {Alert, Button, Card, Dialog, Pagination, PlaceholderContainer, Skeleton, Switch, Text} from '@gravity-ui/uikit';
 import { Boxes3 } from "@gravity-ui/icons";
 import { useSearchParams } from "react-router-dom";
 import {useState} from 'react';
-import {useQuery} from '@tanstack/react-query';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {catalogRowId} from '@/entities/Material/model/selection';
 import {ManufacturedDetails} from '@/widgets/ManufacturedItemsTable/ui/ManufacturedDetails';
 import {CreateManufacturedItemButton} from '@/features/CreateManufacturedItem';
 import type {components} from '@/shared/api/generated/schema';
@@ -51,7 +54,12 @@ function positiveInteger(value: string | null, fallback: number): number {
 }
 
 export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?: 'all' | 'semi_finished' | 'product'; hideCreate?: boolean}) {
+  const session = useAuthSessionQuery();
+  const admin = Boolean(session.data && isAdmin(session.data));
   const [selected, setSelected] = useState<Material & {kind?: string}>();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const queryClient = useQueryClient();
   const title = kind === 'product' ? 'Продукты' : kind === 'semi_finished' ? 'Полуфабрикаты' : 'Материалы';
   const [searchParams, setSearchParams] = useSearchParams();
   const page = positiveInteger(searchParams.get("page"), 1);
@@ -83,10 +91,29 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
     Object.entries(params).forEach(([key, value]) => {if (value !== null && value !== undefined && value !== '') url.set(key, String(value));});
     return apiRequest<components['schemas']['CatalogList']>(`/warehouse/catalog?${url}`);
   }});
+  const selectedRows = (query.data?.items ?? []).filter((item) => selectedIds.includes(catalogRowId(item)));
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const results = await Promise.allSettled(selectedRows.map((item) => apiRequest(
+        `/${!item.kind || item.kind === 'material' ? 'materials' : 'manufactured-items'}/${item.id}/archive`,
+        {method: 'POST'},
+      )));
+      const failed = selectedRows.filter((_, index) => results[index].status === 'rejected');
+      setSelectedIds(failed.map(catalogRowId));
+      await queryClient.invalidateQueries();
+      const firstError = results.find((result) => result.status === 'rejected');
+      if (firstError?.status === 'rejected') {
+        throw new Error(`Не удалось удалить ${failed.length} позиций: ${getErrorMessage(firstError.reason)}`);
+      }
+    },
+    onSuccess: () => setDeleteOpen(false),
+  });
 
   const updateUrl = (
     updates: Record<string, string | number | boolean | undefined>,
   ) => {
+    setSelectedIds([]);
+    deleteMutation.reset();
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === "" || value === false)
@@ -115,6 +142,7 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
           </Text>
         </div>
         <div className={styles.actions}>
+          {admin && selectedRows.length > 0 && <Button view="outlined-danger" disabled={deleteMutation.isPending} onClick={() => {deleteMutation.reset(); setDeleteOpen(true);}}>Удалить ({selectedRows.length})</Button>}
           {kind === 'product' && <ReleaseProductsButton />}
           {kind === 'all' && <ExportExcelButton
             dataset="materials"
@@ -215,8 +243,12 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
       ) : (
         <div className={styles.content}>
           <MaterialsTable
+            key={kind}
             items={query.data.items}
             onSelect={setSelected}
+            selectedIds={selectedIds}
+            onSelectionChange={admin ? setSelectedIds : undefined}
+            selectionDisabled={deleteMutation.isPending}
           />
           <div className={styles.pagination}>
             <Text color="secondary">Всего: {query.data.total}</Text>
@@ -234,6 +266,18 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
         </div>
       )}
       {selected && (selected.kind && selected.kind !== 'material' ? <ManufacturedDetails row={selected} onClose={() => setSelected(undefined)} /> : <MaterialDetails id={selected.id} onClose={() => setSelected(undefined)} renderActions={renderActions} />)}
+      <Dialog open={deleteOpen} onClose={() => !deleteMutation.isPending && setDeleteOpen(false)}>
+        <Dialog.Header caption={`Удалить выбранные позиции (${selectedRows.length})?`} />
+        <Dialog.Body>
+          <p>Позиции будут перенесены в корзину. Их можно восстановить в настройках. История движений сохранится.</p>
+          <ul>{selectedRows.map((item) => <li key={catalogRowId(item)}>{item.name}</li>)}</ul>
+          {deleteMutation.isError && <Alert theme="danger" message={deleteMutation.error.message} />}
+        </Dialog.Body>
+        <Dialog.Footer preset="danger" textButtonApply="Удалить" textButtonCancel="Отмена"
+          onClickButtonApply={() => deleteMutation.mutate()} onClickButtonCancel={() => setDeleteOpen(false)}
+          loading={deleteMutation.isPending} propsButtonApply={{disabled: selectedRows.length === 0}}
+          propsButtonCancel={{disabled: deleteMutation.isPending}} />
+      </Dialog>
     </Card>
   );
 }

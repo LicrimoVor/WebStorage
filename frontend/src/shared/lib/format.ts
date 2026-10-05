@@ -1,10 +1,11 @@
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
 
-export function formatDecimal(value: string): string {
-  if (!DECIMAL_PATTERN.test(value)) {
-    return value;
+export function formatDecimal(value: string | number): string {
+  const source = String(value).trim().replace(',', '.');
+  if (!DECIMAL_PATTERN.test(source)) {
+    return String(value);
   }
-  const [integer = '0', fraction = ''] = value.split('.');
+  const [integer = '0', fraction = ''] = source.split('.');
   const trimmedFraction = fraction.replace(/0+$/, '');
   const groupedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return trimmedFraction ? `${groupedInteger},${trimmedFraction}` : groupedInteger;

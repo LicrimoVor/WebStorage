@@ -1,5 +1,6 @@
-import {Select, TextInput} from '@/shared/ui/FormControls';
-import {Alert, Button, Card, Dialog, Label, Tab, TabList, Text} from '@gravity-ui/uikit';
+import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
+import {CanvasNodeImage} from './CanvasNodeImage';
+import {Alert, Button, Card, Dialog, Label, RadioGroup, Tab, TabList, Text} from '@gravity-ui/uikit';
 import { useMutation } from "@tanstack/react-query";
 import {
   forwardRef,
@@ -24,7 +25,7 @@ import {
   type ProcessVersion,
 } from "@/entities/TechnologicalProcess";
 import { getErrorMessage } from "@/shared/api";
-import { formatFixedDecimal, isDecimal, normalizeDecimal } from "@/shared/lib";
+import { formatDecimal, formatFixedDecimal, isDecimal, normalizeDecimal } from "@/shared/lib";
 
 import {
   excalidrawToGraph,
@@ -36,7 +37,7 @@ import { calculateDroppedNodePosition } from "../model/geometry";
 import styles from "./ProcessCanvas.module.scss";
 
 const NODE_WIDTH = 220;
-const NODE_HEIGHT = 116;
+const NODE_HEIGHT = 144;
 
 const nodeTypeView: Record<
   ProcessNode["type"],
@@ -46,12 +47,14 @@ const nodeTypeView: Record<
   manufactured_item: { title: "Полуфабрикат", theme: "info" },
   operation: { title: "Операция", theme: "utility" },
   output: { title: "Результат", theme: "success" },
+  comment: { title: "Комментарий", theme: "success" },
 };
 
 const nodeTypeOptions = [
   { value: "material", content: "Материал" },
   { value: "manufactured_item", content: "Полуфабрикат" },
   { value: "operation", content: "Операция" },
+  { value: "comment", content: "Комментарий" },
 ];
 
 interface GraphHistory {
@@ -163,6 +166,7 @@ export const ProcessCanvas = forwardRef<
   const [pan, setPan] = useState<PanState>();
   const [connectionDrag, setConnectionDrag] = useState<ConnectionDrag>();
   const [nodeDialog, setNodeDialog] = useState<NodeDialogState>();
+  const [nodeDialogError, setNodeDialogError] = useState<string>();
   const [nodeDialogTab, setNodeDialogTab] = useState("settings");
   const [edgeDialog, setEdgeDialog] = useState<EdgeDialogState>();
   const [edgeDialogError, setEdgeDialogError] = useState<string>();
@@ -173,20 +177,22 @@ export const ProcessCanvas = forwardRef<
     page_size: 100,
     sort_by: "name",
     sort_order: "asc",
-  });
+  }, true);
   const itemsQuery = useManufacturedItemsQuery({
     page: 1,
     page_size: 100,
     sort_by: "name",
     sort_order: "asc",
     kind: "semi_finished",
-  });
+  }, true);
   const operationsQuery = useOperationsQuery({
     page: 1,
     page_size: 100,
     sort_by: "name",
     sort_order: "asc",
   });
+  const nodeCatalogQuery = nodeDialog?.type === 'material' ? materialsQuery
+    : nodeDialog?.type === 'operation' ? operationsQuery : itemsQuery;
 
   const saveMutation = useMutation({
     mutationFn: (payload: { graph: CanvasGraph; expectedRevision: number }) =>
@@ -280,22 +286,23 @@ export const ProcessCanvas = forwardRef<
     if (nodeDialog.type === "manufactured_item") {
       return (
         itemsQuery.data?.items
-          .filter((item) => item.id !== graph.outputItemId)
+          .filter((item) => item.id !== graph.outputItemId && !graph.nodes.some((node) => node.id !== nodeDialog.nodeId && node.type === 'manufactured_item' && node.referenceId === item.id))
           .map((item) => ({
             value: item.id,
             content: `${item.name} · ${item.unit}`,
           })) ?? []
       );
     }
-    if (nodeDialog.type === "output") return [];
+    if (nodeDialog.type === "output" || nodeDialog.type === "comment") return [];
     return (
-      operationsQuery.data?.items.map((operation) => ({
+      operationsQuery.data?.items.filter((operation) => !graph.nodes.some((node) => node.id !== nodeDialog.nodeId && node.type === 'operation' && node.referenceId === operation.id)).map((operation) => ({
         value: operation.id,
         content: operation.name,
       })) ?? []
     );
   }, [
     graph.outputItemId,
+    graph.nodes,
     itemsQuery.data,
     materialsQuery.data,
     nodeDialog,
@@ -303,6 +310,7 @@ export const ProcessCanvas = forwardRef<
   ]);
 
   const openNodeDialog = (node: ProcessNode) => {
+    setNodeDialogError(undefined);
     if (
       !editable &&
       (!node.referenceId ||
@@ -333,6 +341,15 @@ export const ProcessCanvas = forwardRef<
 
   const commitNodeDialog = () => {
     if (!nodeDialog) return;
+    if (nodeDialog.type !== 'material' && nodeDialog.type !== 'comment' && nodeDialog.referenceId && graph.nodes.some((node) =>
+      node.id !== nodeDialog.nodeId && node.type === nodeDialog.type && node.referenceId === nodeDialog.referenceId)) {
+      setNodeDialogError('Эта сущность уже добавлена в техпроцесс. Повторять можно материалы.');
+      return;
+    }
+    if (nodeDialog.type === 'comment' && !nodeDialog.label.trim()) {
+      setNodeDialogError('Введите текст комментария.');
+      return;
+    }
     const selected = referenceOptions.find(
       (option) => option.value === nodeDialog.referenceId,
     );
@@ -341,12 +358,15 @@ export const ProcessCanvas = forwardRef<
     if (nodeDialog.mode === "edit" && nodeDialog.nodeId) {
       history.commit({
         ...graph,
+        edges: nodeDialog.type === 'comment'
+          ? graph.edges.filter((edge) => edge.source !== nodeDialog.nodeId && edge.target !== nodeDialog.nodeId)
+          : graph.edges,
         nodes: graph.nodes.map((node) =>
           node.id === nodeDialog.nodeId
             ? {
                 ...node,
                 type: nodeDialog.type,
-                referenceId: nodeDialog.referenceId || null,
+                referenceId: nodeDialog.type === 'comment' ? null : nodeDialog.referenceId || null,
                 label,
               }
             : node,
@@ -363,7 +383,7 @@ export const ProcessCanvas = forwardRef<
           {
             id: crypto.randomUUID(),
             type: nodeDialog.type,
-            referenceId: nodeDialog.referenceId || null,
+            referenceId: nodeDialog.type === 'comment' ? null : nodeDialog.referenceId || null,
             label,
             position: { x, y },
           },
@@ -371,6 +391,7 @@ export const ProcessCanvas = forwardRef<
       });
     }
     setNodeDialog(undefined);
+    setNodeDialogError(undefined);
   };
 
   const commitEdgeDialog = () => {
@@ -413,6 +434,12 @@ export const ProcessCanvas = forwardRef<
       ),
     });
     if (connectionDrag?.source === nodeId) setConnectionDrag(undefined);
+  };
+
+  const copyMaterial = (node: ProcessNode) => {
+    history.commit({...graph, nodes: [...graph.nodes, {...node, id: crypto.randomUUID(),
+      position: {x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40},
+    }]});
   };
 
   const connectionPoint = (clientX: number, clientY: number) => {
@@ -462,7 +489,7 @@ export const ProcessCanvas = forwardRef<
     const duplicate = graph.edges.some(
       (edge) => edge.source === connectionDrag.source && edge.target === target,
     );
-    if (target && target !== connectionDrag.source && !duplicate) {
+    if (target && nodeById.get(target)?.type !== 'comment' && target !== connectionDrag.source && !duplicate) {
       history.commit({
         ...graph,
         edges: [
@@ -640,6 +667,7 @@ export const ProcessCanvas = forwardRef<
             <Button
               view="action"
               onClick={() => {
+                setNodeDialogError(undefined);
                 setNodeDialogTab("settings");
                 setNodeDialog({
                   mode: "add",
@@ -818,7 +846,7 @@ export const ProcessCanvas = forwardRef<
                     >
                       {edge.quantity === null || edge.quantity === undefined
                         ? "?"
-                        : formatFixedDecimal(edge.quantity)}
+                        : formatDecimal(edge.quantity)}
                     </text>
                   </g>
                 );
@@ -875,9 +903,15 @@ export const ProcessCanvas = forwardRef<
                       {node.id.slice(0, 8)}
                     </Text>
                   </div>
+                  {node.type === 'comment' && <svg className={styles.commentShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 219,1 200,143 1,143" /></svg>}
+                  <div className={styles.nodeContent} title={node.label ?? view.title}>
+                  {(node.type === 'material' || node.type === 'manufactured_item') && <CanvasNodeImage
+                    type={node.type} referenceId={node.referenceId} name={node.label ?? view.title}
+                    image={(node.type === 'material' ? materialsQuery.data?.items : itemsQuery.data?.items)?.find((item) => item.id === node.referenceId)?.image} />}
                   <Text className={styles.nodeLabel} variant="subheader-2">
                     {node.label ?? "Не сопоставлено"}
                   </Text>
+                  </div>
                   <div className={styles.nodeActions}>
                     {editable && node.type !== "output" ? (
                       <Button
@@ -888,7 +922,8 @@ export const ProcessCanvas = forwardRef<
                         Изменить
                       </Button>
                     ) : null}
-                    {editable ? (
+                    {editable && node.type === 'material' ? <Button view="flat" size="s" aria-label={`Создать копию материала ${node.label ?? node.id}`} onClick={() => copyMaterial(node)}>Копия</Button> : null}
+                    {editable && node.type !== 'comment' ? (
                       <button
                         className={styles.connector}
                         type="button"
@@ -943,7 +978,7 @@ export const ProcessCanvas = forwardRef<
                   <Text className={styles.edgeQuantity} variant="subheader-2">
                     {edge.quantity === null || edge.quantity === undefined
                       ? "?"
-                      : formatFixedDecimal(edge.quantity)}
+                      : formatDecimal(edge.quantity)}
                   </Text>
                   {editable ? (
                     <>
@@ -1010,24 +1045,28 @@ export const ProcessCanvas = forwardRef<
                 </Text>
               ) : (
                 <>
-                  <Select
-                    label="Тип"
+                  <div>
+                  <Text as="div">Тип</Text>
+                  <RadioGroup
+                    direction="horizontal"
                     options={nodeTypeOptions}
-                    value={[nodeDialog.type]}
-                    onUpdate={(values) =>
+                    value={nodeDialog.type}
+                    onUpdate={(value) => {
+                      setNodeDialogError(undefined);
                       setNodeDialog({
                         ...nodeDialog,
-                        type: (values[0] ??
-                          "material") as NodeDialogState["type"],
+                        type: value as NodeDialogState["type"],
                         referenceId: "",
                       })
-                    }
-                    width="max"
+                    }}
                     aria-label="Тип узла"
                   />
-                  <Select
+                  </div>
+                  {nodeDialog.type !== 'comment' && <Select
                     label="Сущность"
+                    disablePortal
                     options={referenceOptions}
+                    loading={nodeCatalogQuery.isPending}
                     value={
                       nodeDialog.referenceId ? [nodeDialog.referenceId] : []
                     }
@@ -1041,11 +1080,16 @@ export const ProcessCanvas = forwardRef<
                     filterable
                     width="max"
                     aria-label="Сущность узла"
-                  />
+                  />}
+                  {nodeDialog.type !== 'comment' && nodeCatalogQuery.isError && <Alert theme="danger"
+                    title="Не удалось загрузить справочник" message={getErrorMessage(nodeCatalogQuery.error)}
+                    actions={<Button onClick={() => nodeCatalogQuery.refetch()}>Повторить</Button>} />}
                 </>
               )}
               {editable && nodeDialogTab !== "production" ? (
-              <TextInput
+              nodeDialog.type === 'comment' ? <TextArea label="Комментарий" value={nodeDialog.label}
+                onUpdate={(label) => {setNodeDialogError(undefined); setNodeDialog({...nodeDialog, label});}}
+                controlProps={{'aria-label': 'Текст комментария', maxLength: 200}} /> : <TextInput
                 label="Подпись"
                 disabled={!editable || nodeDialogTab === "production"}
                 value={nodeDialog.label}
@@ -1053,6 +1097,9 @@ export const ProcessCanvas = forwardRef<
                 controlProps={{ "aria-label": "Подпись узла" }}
               />
               ) : null}
+              {nodeDialogError && <Alert theme="danger" message={nodeDialogError} />}
+              {nodeDialog.type === 'comment' && graph.edges.some((edge) => edge.source === nodeDialog.nodeId || edge.target === nodeDialog.nodeId) &&
+                <Alert theme="warning" message="При превращении узла в комментарий его производственные связи будут удалены." />}
             </div>
           ) : null}
         </Dialog.Body>

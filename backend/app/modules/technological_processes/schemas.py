@@ -19,6 +19,7 @@ class ProcessNodeType(StrEnum):
     MANUFACTURED_ITEM = "manufactured_item"
     OPERATION = "operation"
     OUTPUT = "output"
+    COMMENT = "comment"
 
 
 class ProcessSortField(StrEnum):
@@ -66,6 +67,11 @@ class ProcessGraphDocument(BaseModel):
         edge_ids = [edge.id for edge in self.edges]
         if len(edge_ids) != len(set(edge_ids)):
             raise ValueError("edge ids must be unique")
+        comments = {node.id for node in self.nodes if node.type == ProcessNodeType.COMMENT}
+        if any(node.reference_id is not None for node in self.nodes if node.id in comments):
+            raise ValueError("comments must not reference catalog entities")
+        if any(edge.source in comments or edge.target in comments for edge in self.edges):
+            raise ValueError("comments must not have production connections")
         return self
 
 

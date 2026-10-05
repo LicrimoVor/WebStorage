@@ -13,7 +13,7 @@ import {
   type WorkInputMode,
 } from '@/entities/WorkPayroll';
 import {getErrorMessage} from '@/shared/api';
-import {formatFixedDecimal, isDecimal, normalizeDecimal} from '@/shared/lib';
+import {formatDecimal, formatFixedDecimal, isDecimal, normalizeDecimal} from '@/shared/lib';
 import {routes} from '@/shared/routes';
 
 import styles from './RecordWorkButton.module.scss';
@@ -234,7 +234,7 @@ export function RecordWorkButton({operation}: RecordWorkButtonProps) {
                   <Text as="div" variant="subheader-2">
                     {estimate.equivalent === null
                       ? '—'
-                      : formatFixedDecimal(estimate.equivalent, 2)}
+                      : formatDecimal(formatFixedDecimal(estimate.equivalent, 2))}
                   </Text>
                 </Card>
                 <Card view="outlined" type="container">

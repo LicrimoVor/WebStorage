@@ -102,7 +102,7 @@ class TechnologicalProcessNode(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "technological_process_nodes"
     __table_args__ = (
         CheckConstraint(
-            "node_type IN ('material', 'manufactured_item', 'operation', 'output')",
+            "node_type IN ('material', 'manufactured_item', 'operation', 'output', 'comment')",
             name="node_type_valid",
         ),
         UniqueConstraint("version_id", "external_id", name="uq_process_nodes_external_id"),

@@ -9,6 +9,7 @@ import { apiRequest, getErrorMessage } from "@/shared/api";
 import { TextInput, TextArea } from "@/shared/ui/FormControls";
 import { formatDateTime, formatMoney, normalizeDecimal } from "@/shared/lib";
 import styles from "./FinancePage.module.scss";
+import {DeleteEntityButton} from '@/features/DeleteEntity/DeleteEntityButton';
 
 interface Details {
   entry: FinanceEntry;
@@ -135,6 +136,7 @@ function EditorForm({ data, onClose }: { data: Details; onClose: () => void }) {
         <Alert theme="danger" message={getErrorMessage(mutation.error)} />
       )}
       <div className={styles.headerActions}>
+        <DeleteEntityButton kind="finance_entry" id={entry.id} name={entry.description} onDeleted={onClose} />
         <Button
           view="action"
           loading={mutation.isPending}

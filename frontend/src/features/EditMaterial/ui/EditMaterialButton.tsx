@@ -22,6 +22,7 @@ interface EditMaterialButtonProps {
 
 export function EditMaterialButton({material}: EditMaterialButtonProps) {
   const [open, setOpen] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const [form, setForm] = useState<MaterialFormValue>(() => materialToForm(material));
   const [validationError, setValidationError] = useState<string>();
   const queryClient = useQueryClient();
@@ -43,6 +44,7 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
   };
   const close = () => !mutation.isPending && setOpen(false);
   const submit = () => {
+    if (imageBusy || mutation.isPending) return;
     const error = validateMaterialForm(form, false);
     if (error) {
       setValidationError(error);
@@ -73,7 +75,7 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
       >
         <Dialog.Header caption={`Редактировать: ${material.name}`} id={titleId} />
         <Dialog.Body>
-          <MaterialForm
+          <MaterialForm onImageBusyChange={setImageBusy}
             value={form}
             onChange={setForm}
             error={validationError ?? (mutation.error ? getErrorMessage(mutation.error) : undefined)}
@@ -85,6 +87,7 @@ export function EditMaterialButton({material}: EditMaterialButtonProps) {
           onClickButtonApply={submit}
           onClickButtonCancel={close}
           loading={mutation.isPending}
+          propsButtonApply={{disabled: imageBusy}}
         />
       </Dialog>
     </>

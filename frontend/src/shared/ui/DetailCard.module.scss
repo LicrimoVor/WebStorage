@@ -24,6 +24,15 @@
   background: var(--g-color-base-generic);
 }
 
+.imagePlaceholder {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  color: var(--g-color-text-hint);
+  background: var(--g-color-base-generic);
+  border-radius: 12px;
+}
+
 .metadata {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

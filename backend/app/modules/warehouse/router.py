@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.errors import ProblemDetail
-from app.core.security import Actor, get_current_actor
+from app.core.security import Actor, Role, get_current_actor, require_any_role
+from app.modules.trash.service import move_to_trash
 from app.modules.warehouse import service
 from app.modules.warehouse.catalog import CatalogList, catalog
 from app.modules.warehouse.schemas import (
@@ -76,8 +77,12 @@ async def update_inventory_group(
     operation_id="deleteInventoryGroup",
     responses={404: {"model": ProblemDetail}},
 )
-async def delete_inventory_group(group_id: uuid.UUID, session: Session) -> Response:
-    await service.delete_group(session, group_id)
+async def delete_inventory_group(
+    group_id: uuid.UUID, session: Session, actor: ActorDependency
+) -> Response:
+    require_any_role(actor, Role.ADMIN)
+    await move_to_trash(session, "inventory_group", group_id, actor.subject)
+    await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

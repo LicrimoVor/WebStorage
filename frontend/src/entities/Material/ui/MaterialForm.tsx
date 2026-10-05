@@ -15,6 +15,7 @@ interface MaterialFormProps {
   value: MaterialFormValue;
   onChange: (value: MaterialFormValue) => void;
   includeInitialQuantity?: boolean;
+  onImageBusyChange?: (busy: boolean) => void;
   fixedSource?: boolean;
   error?: string | undefined;
 }
@@ -23,6 +24,7 @@ export function MaterialForm({
   value,
   onChange,
   includeInitialQuantity = false,
+  onImageBusyChange,
   fixedSource = false,
   error,
 }: MaterialFormProps) {
@@ -155,7 +157,7 @@ export function MaterialForm({
             size="l"
           />
           {!value.isDefect && (
-            <ImageUploadField
+            <ImageUploadField onBusyChange={onImageBusyChange}
               value={value.image}
               onUpdate={(next) => update("image", next)}
               alt="Предпросмотр материала"
