@@ -16,7 +16,7 @@ jobs:
       - name: Validate production Compose
         env:
           BACKEND_IMAGE: webstorage-backend:check
-        run: docker compose --env-file deploy/production.env.example -f deploy/compose.yml config --quiet
+        run: docker compose --env-file infra/production.env.example -f deploy/compose.yml config --quiet
       - run: docker build --tag webstorage-backend:check backend
       - name: Check containers and migrations
         run: |
@@ -27,7 +27,7 @@ jobs:
           export POSTGRES_PASSWORD='cd-check@%:password'
           compose() {
               docker compose --project-name webstorage-cd-check \
-                  --env-file "$root/deploy/production.env.example" \
+                  --env-file "$root/infra/production.env.example" \
                   --file "$root/deploy/compose.yml" --file - "$@" <<'OVERRIDE'
           services:
             backend:
