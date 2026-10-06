@@ -71,10 +71,10 @@ jobs:
       - name: Start Docker Compose
         run: |
           ssh production 'sudo -n bash -se' <<'REMOTE'
-          cd /opt/webstorage/repository/deploy
+          cd /opt/webstorage/repository/infra
           docker compose build
           docker compose up -d
-          docker compose run --rm --no-deps backend alembic upgrade head
+          docker compose run --rm --no-deps webstorage-backend alembic upgrade head
           REMOTE
 
       - name: Update Nginx config
