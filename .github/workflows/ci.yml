@@ -16,7 +16,7 @@ jobs:
       - name: Validate production Compose
         env:
           BACKEND_IMAGE: webstorage-backend:check
-        run: docker compose --env-file infra/production.env.example -f deploy/compose.yml config --quiet
+        run: docker compose --env-file infra/production.env.example -f infra/compose.yml config --quiet
       - run: docker build --tag webstorage-backend:check backend
       - name: Check containers and migrations
         run: |
@@ -28,7 +28,7 @@ jobs:
           compose() {
               docker compose --project-name webstorage-cd-check \
                   --env-file "$root/infra/production.env.example" \
-                  --file "$root/deploy/compose.yml" --file - "$@" <<'OVERRIDE'
+                  --file "$root/infra/compose.yml" --file - "$@" <<'OVERRIDE'
           services:
             backend:
               ports: !reset []

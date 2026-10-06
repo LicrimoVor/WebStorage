@@ -82,9 +82,9 @@ jobs:
           ssh production 'sudo -n bash -se' <<'REMOTE'
           set -o pipefail
           cd /opt/webstorage/repository
-          domain=$(docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml config --format json | python3 -c 'import json,re,sys; origin=json.load(sys.stdin)["services"]["backend"]["environment"]["PUBLIC_APP_URL"]; match=re.fullmatch(r"https://([a-zA-Z0-9.-]+)", origin); sys.exit("Invalid PUBLIC_APP_URL") if not match else print(match[1])')
+          domain=$(docker compose --env-file /opt/webstorage/.env -f infra/compose.yml config --format json | python3 -c 'import json,re,sys; origin=json.load(sys.stdin)["services"]["backend"]["environment"]["PUBLIC_APP_URL"]; match=re.fullmatch(r"https://([a-zA-Z0-9.-]+)", origin); sys.exit("Invalid PUBLIC_APP_URL") if not match else print(match[1])')
           install -d /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/html
-          sed "s/s278424.hostiman.com/$domain/g" deploy/nginx.conf > /etc/nginx/sites-available/webstorage
+          sed "s/s278424.hostiman.com/$domain/g" infra/nginx.conf > /etc/nginx/sites-available/webstorage
           chmod 644 /etc/nginx/sites-available/webstorage
           ln -sfn /etc/nginx/sites-available/webstorage /etc/nginx/sites-enabled/webstorage
           nginx -t
