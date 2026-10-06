@@ -253,6 +253,7 @@ export function ProcessEditorPage() {
           key={version.id}
           ref={canvasRef}
           processId={processId}
+          defaultGroupId={process.default_group_id}
           version={version}
           editable={editable}
           onVersionUpdate={onVersionUpdate}

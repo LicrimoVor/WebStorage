@@ -1,3 +1,4 @@
+import {ImportStockJson} from "@/features/ImportStockJson";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { FundingSplit } from "@/entities/Funding/FundingSplit";
 import { useFundingSplit } from "@/entities/Funding/split";
@@ -147,6 +148,13 @@ export function ReceiptPage() {
   return (
     <main className={styles.page}>
       <h1>Приход материалов</h1>
+      <ImportStockJson mode="receipt" catalog={rows.data ?? []} disabled={!rows.data || rows.isError || mutation.isPending}
+        onImport={(document) => {
+          setValues((current) => ({...current, ...Object.fromEntries(document.entries.map((entry) => [entry.id, {quantity: entry.quantity}]))}));
+          if (document.comment !== undefined) setComment(document.comment);
+          if (document.total_amount !== undefined) setAmount(document.total_amount);
+          mutation.reset();
+        }} />
       <section className={styles.form}>
         <FundingSelect value={source} onChange={setSource} />
         <FundingSplit split={fundingSplit} primary={source} />

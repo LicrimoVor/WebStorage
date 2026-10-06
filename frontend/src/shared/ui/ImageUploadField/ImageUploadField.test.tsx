@@ -15,6 +15,12 @@ vi.mock('@/shared/api', async (importOriginal) => {
 
 describe('ImageUploadField', () => {
   afterEach(() => vi.unstubAllGlobals());
+  it('hides cropping in creation forms while keeping the full image preview', () => {
+    renderWithProviders(<ImageUploadField value="/media/rectangle.png" onUpdate={vi.fn()} alt="Материал" allowCrop={false} />);
+    expect(screen.queryByRole('button', {name: 'Обрезать'})).not.toBeInTheDocument();
+    expect(screen.getByRole('img', {name: 'Материал'})).toHaveAttribute('src', '/media/rectangle.png');
+    expect(screen.getByRole('button', {name: 'Заменить'})).toBeEnabled();
+  });
   it('uploads an image and returns its media URL', async () => {
     vi.mocked(uploadImage).mockResolvedValue({
       url: 'http://test/media/image.png',

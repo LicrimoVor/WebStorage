@@ -93,7 +93,7 @@ export function ManufacturedItemForm({
           size="l"
         />
       ) : null}
-      <ImageUploadField onBusyChange={onImageBusyChange}
+      <ImageUploadField allowCrop={!includeInitialQuantity} onBusyChange={onImageBusyChange}
         value={value.image}
         onUpdate={(next) => update('image', next)}
         alt="Предпросмотр производимой позиции"

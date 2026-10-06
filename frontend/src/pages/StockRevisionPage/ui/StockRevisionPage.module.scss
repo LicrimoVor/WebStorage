@@ -55,7 +55,7 @@
 
 .image {
   display: block;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .imagePlaceholder {
@@ -102,4 +102,17 @@
   table {
     width: 100%;
   }
+}
+
+.headerActions,
+.addRow {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--g-spacing-3);
+}
+
+.addRow > :first-child {
+  flex: 1;
+  min-width: min(240px, 100%);
 }

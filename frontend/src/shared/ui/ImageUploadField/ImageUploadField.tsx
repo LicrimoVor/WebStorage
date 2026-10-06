@@ -11,6 +11,7 @@ import {ImageCropDialog} from './ImageCropDialog';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 interface ImageUploadFieldProps {
+  allowCrop?: boolean;
   value: string;
   onUpdate: (value: string) => void;
   alt: string;
@@ -27,7 +28,7 @@ function bytesToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export function ImageUploadField({value, onUpdate, alt, onBusyChange}: ImageUploadFieldProps) {
+export function ImageUploadField({value, onUpdate, alt, onBusyChange, allowCrop = true}: ImageUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -158,7 +159,7 @@ export function ImageUploadField({value, onUpdate, alt, onBusyChange}: ImageUplo
           >
             {value ? 'Заменить' : 'Загрузить'}
           </Button>
-          {value ? (
+          {value && allowCrop ? (
             <Button view="outlined" disabled={mutation.isPending} onClick={() => {mutation.reset(); setCropOpen(true);}}>
               Обрезать
             </Button>

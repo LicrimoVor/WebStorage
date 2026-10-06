@@ -27,6 +27,7 @@ class TrashEntry(UUIDPrimaryKeyMixin, Base):
     state: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     deleted_by: Mapped[str] = mapped_column(String(200))
     deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     restored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     restored_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
 

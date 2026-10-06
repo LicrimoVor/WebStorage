@@ -1,7 +1,10 @@
+import {MobileProvider} from '@gravity-ui/uikit';
 import {fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
+import {useInventoryGroupsQuery} from '@/entities/InventoryGroup';
+import type * as GroupExports from '@/entities/InventoryGroup';
 import {useManufacturedItemsQuery} from '@/entities/ManufacturedItem';
 import type * as ManufacturedItemExports from '@/entities/ManufacturedItem';
 import {useMaterialsQuery} from '@/entities/Material';
@@ -18,6 +21,10 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 import {calculateDroppedNodePosition} from '../model/geometry';
 import {ProcessCanvas} from './ProcessCanvas';
 
+vi.mock('@/entities/InventoryGroup', async (importOriginal) => {
+  const actual = await importOriginal<typeof GroupExports>();
+  return {...actual, useInventoryGroupsQuery: vi.fn()};
+});
 vi.mock('@/entities/Material', async (importOriginal) => {
   const actual = await importOriginal<typeof MaterialExports>();
   return {...actual, useMaterialsQuery: vi.fn()};
@@ -90,6 +97,46 @@ describe('ProcessCanvas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCatalogs();
+    vi.mocked(useInventoryGroupsQuery).mockReturnValue({data: []} as unknown as ReturnType<typeof useInventoryGroupsQuery>);
+  });
+
+  it('keeps a save error visible and stops autosaving an unchanged rejected graph', async () => {
+    const draft: ProcessVersion = {...version, graph: {...version.graph, nodes: [
+      ...(version.graph.nodes ?? []), {id: 'steel', type: 'material', referenceId: null, label: 'Сталь'},
+    ]}};
+    let finish: ((saved: ProcessVersion) => void) | undefined;
+    vi.mocked(saveTechnologicalProcessDraft).mockRejectedValueOnce(new Error('Ошибка рецепта'))
+      .mockImplementationOnce((_processId, _versionId, payload) => new Promise((resolve) => {
+        finish = () => resolve({...draft, revision: 1, graph: payload.graph as ProcessVersion['graph']});
+      }));
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Создать копию материала Сталь'}));
+    expect(await screen.findByText('Черновик не сохранён', {}, {timeout: 3000})).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(saveTechnologicalProcessDraft).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', {name: 'Сохранить сейчас'}));
+    await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Черновик не сохранён')).toBeInTheDocument();
+    finish?.(draft);
+    await waitFor(() => expect(screen.queryByText('Черновик не сохранён')).not.toBeInTheDocument());
+  });
+
+  it('initializes the node group filter from the process and includes subgroups', async () => {
+    vi.mocked(useInventoryGroupsQuery).mockReturnValue({data: [
+      {id: 'main', name: 'Металл', parent_id: null}, {id: 'child', name: 'Сталь', parent_id: 'main'},
+    ]} as unknown as ReturnType<typeof useInventoryGroupsQuery>);
+    vi.mocked(useMaterialsQuery).mockReturnValue({data: {items: [
+      {id: 'inside', name: 'Лист', unit: 'шт', groups: [{id: 'child'}]},
+      {id: 'outside', name: 'Пластик', unit: 'шт', groups: []},
+    ]}} as unknown as ReturnType<typeof useMaterialsQuery>);
+    renderWithProviders(<MobileProvider mobile><ProcessCanvas processId={version.process_id} defaultGroupId="main" version={version} editable onVersionUpdate={vi.fn()} /></MobileProvider>);
+    await userEvent.click(screen.getByRole('button', {name: 'Добавить узел'}));
+    expect(screen.getByRole('combobox', {name: 'Группа узла'})).toHaveTextContent('Металл');
+    await userEvent.click(screen.getByRole('combobox', {name: 'Сущность узла'}));
+    expect(await screen.findByRole('option', {name: 'Лист · шт'})).toBeInTheDocument();
+    expect(document.querySelector('.g-select-popup')).toBeInTheDocument();
+    expect(document.querySelector('.g-sheet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', {name: 'Пластик · шт'})).not.toBeInTheDocument();
   });
 
   it('copies materials as independent nodes with the same catalog reference', async () => {
@@ -124,6 +171,7 @@ describe('ProcessCanvas', () => {
         expect.objectContaining({type: 'comment', referenceId: null, label: 'Проверить размер\nперед сборкой'}),
       ])})})), {timeout: 3000});
     expect(screen.queryByRole('button', {name: 'Потянуть связь из Проверить размер\nперед сборкой'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Потянуть связь из Редуктор'})).not.toBeInTheDocument();
     expect(screen.getByText('Проверить размер перед сборкой')).toBeInTheDocument();
   });
 

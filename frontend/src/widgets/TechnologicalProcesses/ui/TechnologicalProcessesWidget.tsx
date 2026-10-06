@@ -1,6 +1,9 @@
+import {useInventoryGroupsQuery} from '@/entities/InventoryGroup';
+import {JsonImportButton, JsonImportDialog} from '@/shared/ui/JsonImportDialog';
+import {PROCESS_LLM_PROMPT} from '@/shared/lib/processLlmPrompt';
 import {useAuthSessionQuery} from '@/entities/Auth';
 import {isAdmin} from '@/shared/lib/access';
-import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
+import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
 import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Switch, Table, Text, type TableColumnConfig} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -54,6 +57,8 @@ function CreateProcessButton() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [outputItemId, setOutputItemId] = useState("");
+  const [defaultGroupId, setDefaultGroupId] = useState("");
+  const groupsQuery = useInventoryGroupsQuery();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const itemsQuery = useManufacturedItemsQuery({
@@ -67,6 +72,7 @@ function CreateProcessButton() {
       createTechnologicalProcess({
         name: name.trim(),
         output_item_id: outputItemId,
+        default_group_id: defaultGroupId || null,
       }),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({
@@ -75,6 +81,7 @@ function CreateProcessButton() {
       setOpen(false);
       setName("");
       setOutputItemId("");
+      setDefaultGroupId("");
       navigate(routes.processEditor(result.process.id));
     },
   });
@@ -117,6 +124,14 @@ function CreateProcessButton() {
               width="max"
               aria-label="Результат техпроцесса"
             />
+            <Select label="Группа по умолчанию" aria-label="Группа по умолчанию"
+              placeholder="Все группы" hasClear filterable width="max" size="l"
+              value={defaultGroupId ? [defaultGroupId] : []}
+              loading={groupsQuery.isPending}
+              options={(groupsQuery.data ?? []).map((group) => ({value: group.id,
+                content: group.parent_id ? `${groupsQuery.data?.find((parent) => parent.id === group.parent_id)?.name} / ${group.name}` : group.name}))}
+              onUpdate={(ids) => setDefaultGroupId(ids[0] ?? "")} />
+            {groupsQuery.isError && <Alert theme="danger" message={getErrorMessage(groupsQuery.error)} />}
             {mutation.error ? (
               <Alert theme="danger" message={getErrorMessage(mutation.error)} />
             ) : null}
@@ -155,58 +170,34 @@ function ImportProcessButton() {
   });
   const submit = () => {
     try {
-      const parsed = JSON.parse(source) as ProcessGraphInput;
+      const parsed = JSON.parse(source.replace(/^\uFEFF/, '')) as ProcessGraphInput;
       setParseError(undefined);
       mutation.mutate(parsed);
     } catch {
       setParseError("JSON содержит синтаксическую ошибку");
     }
   };
-  return (
-    <>
-      <Button view="outlined" size="l" onClick={() => setOpen(true)}>
-        Импорт JSON
-      </Button>
-      <Dialog
-        open={open}
-        onClose={() => !mutation.isPending && setOpen(false)}
-        maxWidth="l"
-        fullWidth
-      >
-        <Dialog.Header caption="Импорт черновика из JSON" />
-        <Dialog.Body>
-          <TextArea
-            value={source}
-            onUpdate={setSource}
-            rows={16}
-            placeholder='{"schemaVersion":1,"name":"...","nodes":[],"edges":[]}'
-            controlProps={{ "aria-label": "JSON технологического процесса" }}
-            {...(parseError
-              ? {
-                  validationState: "invalid" as const,
-                  errorMessage: parseError,
-                }
-              : {})}
-          />
-          {mutation.error ? (
-            <Alert
-              className={styles.dialogAlert}
-              theme="danger"
-              message={getErrorMessage(mutation.error)}
-            />
-          ) : null}
-        </Dialog.Body>
-        <Dialog.Footer
-          textButtonApply="Импортировать"
-          textButtonCancel="Отмена"
-          onClickButtonApply={submit}
-          onClickButtonCancel={() => setOpen(false)}
-          loading={mutation.isPending}
-          propsButtonApply={{ disabled: !source.trim() }}
-        />
-      </Dialog>
-    </>
-  );
+  const example = JSON.stringify({schemaVersion: 1,
+    name: "Название техпроцесса", outputItemId: null, defaultGroupId: null,
+    nodes: [{id: "material-1", type: "material", referenceId: null, label: "Материал", position: {x: 0, y: 0}},
+      {id: "output", type: "output", referenceId: null, label: "Результат", position: {x: 300, y: 0}}],
+    edges: [{id: "edge-1", source: "material-1", target: "output", quantity: "2.5"}]}, null, 2);
+  return <>
+    <JsonImportButton onClick={() => {setParseError(undefined); mutation.reset(); setOpen(true);}} />
+    <JsonImportDialog open={open} onClose={() => setOpen(false)} title="Импорт черновика из JSON"
+      source={source} onUpdate={(value) => {setSource(value); setParseError(undefined); mutation.reset();}}
+      onSubmit={submit} busy={mutation.isPending} example={example} prompt={PROCESS_LLM_PROMPT}
+      inputLabel="JSON технологического процесса" maxBytes={5 * 1024 * 1024}
+      description={<p>Загрузите файл или вставьте JSON. Будет создан новый черновик технологического процесса.</p>}
+      formatDescription={<p>schemaVersion — строго 1; name — название; outputItemId и defaultGroupId — UUID результата и группы либо null.
+        {' '}nodes — до 1000 узлов; edges — до 5000 связей. referenceId — UUID сущности либо null.
+        {' '}Комментарии не имеют связей. Количество зависимости — положительная десятичная строка либо null.</p>}
+      error={<>
+        {parseError && <Alert theme="danger" message={parseError} />}
+        {mutation.error && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
+      </>} />
+  </>;
+
 }
 
 function DeleteProcessButton({ process }: { process: TechnologicalProcess }) {
@@ -354,13 +345,6 @@ export function TechnologicalProcessesWidget() {
         </div>
         <div className={styles.headingActions}>
           <ImportProcessButton />
-          <Button
-            view="outlined"
-            size="l"
-            onClick={() => navigate(routes.processPrompt)}
-          >
-            Промпт
-          </Button>
           <CreateProcessButton />
         </div>
       </div>

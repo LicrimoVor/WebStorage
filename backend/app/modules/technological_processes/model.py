@@ -52,6 +52,15 @@ class TechnologicalProcess(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         nullable=True,
     )
+    default_group_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "inventory_groups.id",
+            name="fk_technological_processes_default_group",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
     archived: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false"), default=False
     )

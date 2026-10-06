@@ -130,11 +130,49 @@
 }
 
 .operation {
-  border-color: var(--g-color-line-utility);
+  padding-inline: 24px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+
+  > :not(.operationShape) {
+    position: relative;
+    z-index: 1;
+  }
+
+  .nodeActions {
+    position: static;
+  }
+}
+
+.operationShape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  fill: color-mix(in srgb, var(--g-color-line-utility) 12%, var(--g-color-base-background));
+  stroke: var(--g-color-line-utility);
+  stroke-width: 2;
 }
 
 .output {
-  border-color: var(--g-color-line-positive);
+  grid-template-rows: 20px 1fr;
+  padding: 20px 24px;
+  background: color-mix(in srgb, #087f8c 14%, var(--g-color-base-background));
+  border: 3px solid #087f8c;
+  border-radius: 48px;
+  box-shadow: 0 8px 24px rgb(8 127 140 / 18%);
+
+  .nodeLabel {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .nodeActions {
+    display: none;
+  }
 }
 
 .connecting {
@@ -343,5 +381,14 @@
 
   .toolbarGroup > button {
     flex: 1 1 auto;
+  }
+}
+
+.nodeSelectPopup {
+  max-height: min(240px, 35dvh);
+
+  :global(.g-select-list) {
+    max-height: min(180px, 25dvh);
+    overflow-y: auto;
   }
 }

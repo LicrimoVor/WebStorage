@@ -22,7 +22,7 @@ const nodeColors: Record<ProcessNode['type'], string> = {
   material: '#ffbe5c',
   manufactured_item: '#a8c7fa',
   operation: '#c5a3ff',
-  output: '#78d7a7',
+  output: '#a9dce1',
   comment: '#78d7a7',
 };
 
@@ -58,6 +58,7 @@ export function normalizeGraph(graph: ProcessGraphInput): CanvasGraph {
     schemaVersion: 1,
     name: graph.name,
     outputItemId: graph.outputItemId ?? null,
+    defaultGroupId: graph.defaultGroupId ?? null,
     nodes: (graph.nodes ?? []).map((node) => ({
       ...node,
       referenceId: node.referenceId ?? null,
@@ -76,6 +77,12 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
   const rectangles = graph.nodes.map((node) => {
     const x = node.position?.x ?? 0;
     const y = node.position?.y ?? 0;
+    if (node.type === 'operation') return {
+      ...baseElement(node.id, x, y), type: 'line', width: 220, height: 144,
+      points: [[20, 0], [200, 0], [220, 72], [200, 144], [20, 144], [0, 72], [20, 0]],
+      strokeColor: '#8960bc', backgroundColor: nodeColors.operation,
+      customData: {webStorage: {kind: 'node', node}},
+    };
     if (node.type === 'comment') return {
       ...baseElement(node.id, x, y), type: 'line', width: 220, height: 144,
       points: [[20, 0], [220, 0], [200, 144], [0, 144], [20, 0]],
@@ -88,7 +95,8 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
       width: 220,
       height: 144,
       backgroundColor: nodeColors[node.type],
-      roundness: {type: 3},
+      roundness: node.type === 'output' ? {type: 2} : {type: 3},
+      ...(node.type === 'output' ? {strokeColor: '#087f8c', strokeWidth: 3} : {}),
       customData: {webStorage: {kind: 'node', node}},
     };
   });
@@ -103,7 +111,7 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     fontFamily: 1,
     textAlign: 'left',
     verticalAlign: 'middle',
-    containerId: node.type === 'comment' ? null : node.id,
+    containerId: node.type === 'comment' || node.type === 'operation' ? null : node.id,
     originalText: node.label ?? node.type,
     autoResize: true,
     lineHeight: 1.25,
@@ -218,7 +226,7 @@ function edgeFromCustomData(
 
 export function excalidrawToGraph(
   payload: unknown,
-  base: Pick<CanvasGraph, 'name' | 'outputItemId'>,
+  base: Pick<CanvasGraph, 'name' | 'outputItemId' | 'defaultGroupId'>,
 ): CanvasGraph {
   const document = record(payload);
   if (!Array.isArray(document?.elements)) {

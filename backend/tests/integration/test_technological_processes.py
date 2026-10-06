@@ -171,7 +171,7 @@ async def test_create_list_and_partial_json_round_trip(client: AsyncClient) -> N
         f"{imported_body['version']['id']}/export"
     )
     assert export.status_code == 200
-    assert export.json() == partial_document
+    assert export.json() == {**partial_document, "defaultGroupId": None}
 
 
 @pytest.mark.asyncio
@@ -348,3 +348,59 @@ async def test_draft_autosave_uses_optimistic_revision(client: AsyncClient) -> N
     )
     assert stale.status_code == 409
     assert "another session" in stale.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_process_default_group_survives_reload_and_rejects_unknown_group(
+    client: AsyncClient,
+) -> None:
+    output = await create_item(client, name="Default group output")
+    group = (await client.post("/api/v1/inventory-groups", json={"name": "Default group"})).json()
+    response = await client.post("/api/v1/technological-processes", json={
+        "name": "Grouped process", "output_item_id": output["id"], "default_group_id": group["id"],
+    })
+    assert response.status_code == 201, response.text
+    process = response.json()["process"]
+    assert process["default_group_id"] == group["id"]
+    loaded = (await client.get(f"/api/v1/technological-processes/{process['id']}")).json()
+    assert loaded["default_group_id"] == group["id"]
+    assert (await client.delete(f"/api/v1/inventory-groups/{group['id']}")).status_code == 204
+    loaded = (await client.get(f"/api/v1/technological-processes/{process['id']}")).json()
+    assert loaded["default_group_id"] is None
+    trash_entry = (await client.get("/api/v1/trash")).json()["items"][0]
+    assert (await client.post(f"/api/v1/trash/{trash_entry['id']}/restore")).status_code == 204
+    loaded = (await client.get(f"/api/v1/technological-processes/{process['id']}")).json()
+    assert loaded["default_group_id"] == group["id"]
+    other = await create_item(client, name="Invalid group output")
+    response = await client.post("/api/v1/technological-processes", json={
+        "name": "Invalid group process", "output_item_id": other["id"],
+        "default_group_id": str(uuid.uuid4()),
+    })
+    assert response.status_code == 404, response.text
+
+
+@pytest.mark.asyncio
+async def test_json_export_import_preserves_default_group(client: AsyncClient) -> None:
+    output = await create_item(client, name="JSON group output")
+    group = (await client.post("/api/v1/inventory-groups", json={"name": "JSON group"})).json()
+    response = await client.post("/api/v1/technological-processes", json={
+        "name": "JSON group process", "output_item_id": output["id"],
+        "default_group_id": group["id"],
+    })
+    assert response.status_code == 201, response.text
+    created = response.json()
+    process_id, version_id = created["process"]["id"], created["version"]["id"]
+    exported = (await client.get(
+        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/export"
+    )).json()
+    assert exported["defaultGroupId"] == group["id"]
+    assert (await client.delete(f"/api/v1/technological-processes/{process_id}")).status_code == 204
+    response = await client.post("/api/v1/technological-processes/import", json=exported)
+    assert response.status_code == 201, response.text
+    assert response.json()["process"]["default_group_id"] == group["id"]
+    assert response.json()["version"]["graph"]["defaultGroupId"] == group["id"]
+    exported["name"] = "Missing JSON group"
+    exported["outputItemId"] = None
+    exported["defaultGroupId"] = str(uuid.uuid4())
+    response = await client.post("/api/v1/technological-processes/import", json=exported)
+    assert response.status_code == 404, response.text

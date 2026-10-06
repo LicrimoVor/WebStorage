@@ -138,6 +138,7 @@ def _process_read(bundle: repository.ProcessBundle) -> ProcessRead:
         name=process.name,
         output_item_id=process.output_item_id,
         output_item_name=output_name,
+        default_group_id=process.default_group_id,
         archived=process.archived,
         active_version=_version_summary(active) if active is not None else None,
         latest_version=_version_summary(latest),
@@ -156,6 +157,7 @@ def _graph_document(
         schemaVersion=1,
         name=process.name,
         outputItemId=process.output_item_id,
+        defaultGroupId=process.default_group_id,
         nodes=[
             GraphNode(
                 id=node.external_id,
@@ -264,7 +266,14 @@ async def create(
 ) -> ProcessImportResult:
     output = await _get_output_item(session, payload.output_item_id)
     await validate_recipes(session, ProcessGraphDocument(name=payload.name, outputItemId=output.id))
-    process = TechnologicalProcess(name=_clean_name(payload.name), output_item_id=output.id)
+    from app.modules.warehouse.repository import validate_group_ids
+
+    if payload.default_group_id is not None:
+        await validate_group_ids(session, [payload.default_group_id])
+    process = TechnologicalProcess(
+        name=_clean_name(payload.name), output_item_id=output.id,
+        default_group_id=payload.default_group_id,
+    )
     try:
         await repository.create_process(session, process)
         version = TechnologicalProcessVersion(
@@ -312,8 +321,13 @@ async def import_document(
     await validate_recipes(session, document)
     if document.output_item_id is not None:
         await _get_output_item(session, document.output_item_id)
+    from app.modules.warehouse.repository import validate_group_ids
+
+    if document.default_group_id is not None:
+        await validate_group_ids(session, [document.default_group_id])
     process = TechnologicalProcess(
-        name=_clean_name(document.name), output_item_id=document.output_item_id
+        name=_clean_name(document.name), output_item_id=document.output_item_id,
+        default_group_id=document.default_group_id,
     )
     try:
         await repository.create_process(session, process)

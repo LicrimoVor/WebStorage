@@ -1549,6 +1549,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trash/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Purge Entry */
+        delete: operations["purge_entry_api_v1_trash__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -3365,6 +3382,8 @@ export interface components {
              * Format: uuid
              */
             output_item_id: string;
+            /** Default Group Id */
+            default_group_id?: string | null;
         };
         /** ProcessDraftSave */
         ProcessDraftSave: {
@@ -3384,6 +3403,8 @@ export interface components {
             name: string;
             /** Outputitemid */
             outputItemId?: string | null;
+            /** Defaultgroupid */
+            defaultGroupId?: string | null;
             /** Nodes */
             nodes?: components["schemas"]["GraphNode"][];
             /** Edges */
@@ -3401,6 +3422,8 @@ export interface components {
             name: string;
             /** Outputitemid */
             outputItemId?: string | null;
+            /** Defaultgroupid */
+            defaultGroupId?: string | null;
             /** Nodes */
             nodes?: components["schemas"]["GraphNode"][];
             /** Edges */
@@ -3431,6 +3454,8 @@ export interface components {
         ProcessNodeType: "material" | "manufactured_item" | "operation" | "output" | "comment";
         /** ProcessRead */
         ProcessRead: {
+            /** Default Group Id */
+            default_group_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -9430,6 +9455,35 @@ export interface operations {
         };
     };
     restore_entry_api_v1_trash__entry_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    purge_entry_api_v1_trash__entry_id__delete: {
         parameters: {
             query?: never;
             header?: never;

@@ -7815,6 +7815,42 @@
         }
       }
     },
+    "/api/v1/trash/{entry_id}": {
+      "delete": {
+        "tags": [
+          "trash"
+        ],
+        "summary": "Purge Entry",
+        "operationId": "purge_entry_api_v1_trash__entry_id__delete",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -12797,6 +12833,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Output Item Id"
+          },
+          "default_group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Group Id"
           }
         },
         "type": "object",
@@ -12850,6 +12898,18 @@
             ],
             "title": "Outputitemid"
           },
+          "defaultGroupId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultgroupid"
+          },
           "nodes": {
             "items": {
               "$ref": "#/components/schemas/GraphNode"
@@ -12898,6 +12958,18 @@
               }
             ],
             "title": "Outputitemid"
+          },
+          "defaultGroupId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultgroupid"
           },
           "nodes": {
             "items": {
@@ -12987,6 +13059,18 @@
       },
       "ProcessRead": {
         "properties": {
+          "default_group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Group Id"
+          },
           "id": {
             "type": "string",
             "format": "uuid",

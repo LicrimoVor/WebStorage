@@ -1,9 +1,8 @@
-import {TextArea} from '@/shared/ui/FormControls';
-import {ArrowUpFromLine} from '@gravity-ui/icons';
-import {Alert, Button, Dialog, Icon} from '@gravity-ui/uikit';
+import {Alert, Dialog} from '@gravity-ui/uikit';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
 import {ApiError, apiRequest, getErrorMessage} from '@/shared/api';
+import {JsonImportButton, JsonImportDialog} from '@/shared/ui/JsonImportDialog';
 import styles from './ImportCatalogButton.module.scss';
 
 type Kind = 'warehouse' | 'operations';
@@ -21,7 +20,6 @@ function ImportForm({kind, onClose, onSuccess}: {kind: Kind; onClose: () => void
   const client = useQueryClient();
   const [source, setSource] = useState('');
   const [error, setError] = useState('');
-  const [reading, setReading] = useState(false);
   const [confirmation, setConfirmation] = useState<{payload: unknown; groups: string[][]}>();
   const mutation = useMutation({
     mutationFn: (payload: unknown) => apiRequest<{created: number}>(`/${kind}/import`, {method: 'POST', body: JSON.stringify(payload)}),
@@ -35,7 +33,7 @@ function ImportForm({kind, onClose, onSuccess}: {kind: Kind; onClose: () => void
       else mutation.mutate(payload);
     },
   });
-  const busy = reading || mutation.isPending || preview.isPending;
+  const busy = mutation.isPending || preview.isPending;
   const requestError = preview.error ?? mutation.error;
   const submit = () => {
     setError(''); mutation.reset(); preview.reset();
@@ -60,11 +58,19 @@ function ImportForm({kind, onClose, onSuccess}: {kind: Kind; onClose: () => void
       onClickButtonApply={() => mutation.mutate(confirmation.payload)}
       propsButtonApply={{loading: busy, disabled: busy}} propsButtonCancel={{disabled: busy}} />
   </Dialog>;
-  return <Dialog open onClose={() => { if (!busy) onClose(); }} size="l">
-    <Dialog.Header caption={kind === 'warehouse' ? 'Импорт склада из JSON' : 'Импорт операций из JSON'} />
-    <Dialog.Body><div className={styles.body}>
-      <p>Загрузите файл или вставьте JSON. Создаются только новые записи, существующие не изменяются. При любой ошибке ничего не сохраняется. Не более 500 записей и 1 МБ за один импорт.</p>
-      <details className={styles.format}><summary>Формат JSON и пример</summary>
+  const example = JSON.stringify(examples[kind], null, 2);
+  const prompt = `Преобразуй исходные данные в JSON ${kind === 'warehouse' ? 'каталога склада' : 'каталога операций'} WebStorage. Верни только JSON без Markdown по примеру:
+${example}
+version — строго 1. Неизвестные поля запрещены. До 500 записей и 1 МБ. Создаются только новые записи.
+${kind === 'warehouse'
+    ? 'У материалов, продуктов и полуфабрикатов обязательны name (до 200 символов) и unit (до 32). initial_quantity — неотрицательный начальный остаток, до 6 знаков после точки. У материала price — необязательная неотрицательная цена, до 2 знаков после точки. group у материалов и полуфабрикатов — массив из названия группы и необязательной подгруппы. У полуфабриката product — название активного продукта или продукта из массива products этого JSON. Не оформляй закупку или выпуск.'
+    : 'У операции обязательно name (до 200 символов). group — название корневой группы или массив [группа, подгруппа]. time_norm — положительная норма времени в минутах, до 6 знаков после точки. price_per_operation — неотрицательная ставка в рублях, до 2 знаков после точки. Неизвестные значения пропусти или укажи null.'}
+Названия и единицы не могут быть пустыми. Числа передавай строками с точкой. Не придумывай количества, цены и нормы. Новые группы будут показаны пользователю перед созданием.`;
+  return <JsonImportDialog open title={kind === 'warehouse' ? 'Импорт склада из JSON' : 'Импорт операций из JSON'}
+    source={source} onUpdate={(value) => {setSource(value); setError(''); mutation.reset(); preview.reset();}}
+    onClose={onClose} onSubmit={submit} busy={busy} example={example} prompt={prompt}
+    description={<p>Загрузите файл или вставьте JSON. Создаются только новые записи, существующие не изменяются. При любой ошибке ничего не сохраняется. Не более 500 записей и 1 МБ за один импорт.</p>}
+    formatDescription={<>
         <p><code>version</code> — обязательно число <code>1</code>. Неизвестные поля запрещены. Названия сравниваются без учёта регистра, включая архивные записи.</p>
         {kind === 'warehouse' ? <>
           <p>Название материала уникально внутри его группы или подгруппы, включая архив. В разных группах одинаковые названия разрешены. Для материалов без группы название уникально внутри раздела «Без группы». Названия продуктов и полуфабрикатов остаются уникальными на всём складе.</p>
@@ -79,32 +85,21 @@ function ImportForm({kind, onClose, onSuccess}: {kind: Kind; onClose: () => void
           <p><code>time_norm</code> — норма времени в минутах на единицу &gt; 0, до 6 знаков после точки; <code>price_per_operation</code> — ставка в рублях на единицу ≥ 0, до 2 знаков после точки. Оба поля необязательны: пропустите или укажите null, если значение не задано.</p>
         </>}
         <p>Числа можно передавать числом или строкой с точкой, например "12.50". Названия и единицы не могут быть пустыми.</p>
-        <pre>{JSON.stringify(examples[kind], null, 2)}</pre>
-        <Button disabled={busy} onClick={() => { setSource(JSON.stringify(examples[kind], null, 2)); setError(''); mutation.reset(); }}>Вставить пример в поле</Button>
-      </details>
-      <label>Файл JSON<input type="file" accept=".json,application/json" disabled={busy} onChange={async (event) => {
-        const file = event.target.files?.[0]; if (!file) return;
-        event.target.value = ''; setError(''); mutation.reset();
-        if (file.size > 1024 * 1024) { setError('Размер файла не должен превышать 1 МБ.'); return; }
-        setReading(true);
-        try { setSource(await file.text()); } catch { setError('Не удалось прочитать файл.'); } finally { setReading(false); }
-      }} /></label>
-      <TextArea controlProps={{'aria-label': 'JSON для импорта'}} placeholder="Вставьте JSON или загрузите файл" value={source} onUpdate={setSource} minRows={12} disabled={busy} />
+    </>}
+    error={<>
       {error && <Alert theme="danger" message={error} />}
       {requestError && <Alert theme="danger" title="Импорт отменён" message={<>
         <p>{requestError instanceof ApiError && requestError.status === 422 ? 'Проверьте поля по описанию формата.' : getErrorMessage(requestError)}</p>
         {requestError instanceof ApiError && requestError.fields?.map((field, index) => <p key={index}><code>{Array.isArray(field.location) ? field.location.filter((part) => part !== 'body').join('.') : ''}</code>: {String(field.message ?? '')}</p>)}
       </>} />}
-    </div></Dialog.Body>
-    <Dialog.Footer textButtonCancel="Отмена" textButtonApply="Импортировать" onClickButtonCancel={() => { if (!busy) onClose(); }} onClickButtonApply={submit} propsButtonApply={{loading: busy, disabled: !source.trim() || busy}} propsButtonCancel={{disabled: busy}} />
-  </Dialog>;
+    </>} />;
 }
 
 export function ImportCatalogButton({kind}: {kind: Kind}) {
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState<number>();
   return <>
-    <Button onClick={() => { setCount(undefined); setOpen(true); }}><Icon data={ArrowUpFromLine} />Импорт JSON</Button>
+    <JsonImportButton onClick={() => { setCount(undefined); setOpen(true); }} />
     {count !== undefined && <span role="status">Импортировано записей: {count}</span>}
     {open && <ImportForm kind={kind} onClose={() => setOpen(false)} onSuccess={(created) => { setCount(created); setOpen(false); }} />}
   </>;

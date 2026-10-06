@@ -56,6 +56,7 @@ class ProcessGraphDocument(BaseModel):
     schema_version: Literal[1] = Field(default=1, alias="schemaVersion")
     name: str = Field(min_length=1, max_length=200)
     output_item_id: uuid.UUID | None = Field(default=None, alias="outputItemId")
+    default_group_id: uuid.UUID | None = Field(default=None, alias="defaultGroupId")
     nodes: list[GraphNode] = Field(default_factory=list, max_length=1000)
     edges: list[GraphEdge] = Field(default_factory=list, max_length=5000)
 
@@ -78,6 +79,7 @@ class ProcessGraphDocument(BaseModel):
 class ProcessCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     output_item_id: uuid.UUID
+    default_group_id: uuid.UUID | None = None
 
 
 class ProcessUpdate(BaseModel):
@@ -107,6 +109,7 @@ class ProcessVersionSummary(BaseModel):
 
 
 class ProcessRead(BaseModel):
+    default_group_id: uuid.UUID | None = None
     id: uuid.UUID
     name: str
     output_item_id: uuid.UUID | None

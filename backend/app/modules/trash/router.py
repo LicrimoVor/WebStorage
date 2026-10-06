@@ -40,7 +40,9 @@ async def list_trash(
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> TrashList:
     require_any_role(actor, Role.ADMIN)
-    statement = select(TrashEntry).where(TrashEntry.restored_at.is_(None))
+    statement = select(TrashEntry).where(
+        TrashEntry.restored_at.is_(None), TrashEntry.purged_at.is_(None)
+    )
     total = await session.scalar(select(func.count()).select_from(statement.subquery()))
     entries = await session.scalars(
         statement.order_by(
@@ -67,4 +69,11 @@ async def delete_entity(
 async def restore_entry(entry_id: uuid.UUID, session: Session, actor: CurrentActor) -> Response:
     require_any_role(actor, Role.ADMIN)
     await service.restore(session, entry_id, actor.subject)
+    return Response(status_code=204)
+
+
+@router.delete("/{entry_id}", status_code=204)
+async def purge_entry(entry_id: uuid.UUID, session: Session, actor: CurrentActor) -> Response:
+    require_any_role(actor, Role.ADMIN)
+    await service.purge(session, entry_id)
     return Response(status_code=204)

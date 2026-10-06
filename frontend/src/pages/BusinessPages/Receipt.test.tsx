@@ -7,9 +7,9 @@ import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 import {ReceiptPage} from './index';
 
 vi.mock('@/entities/StockRevision', () => ({useStockRevisionRowsQuery: () => ({data: [
-  {id: 'first', name: 'Сталь', current_quantity: '24.000000', unit: 'кг', groups: []},
-  {id: 'second', name: 'Медь', current_quantity: '0', unit: 'кг', groups: []},
-  {id: 'third', name: 'Алюминий', current_quantity: '0', unit: 'кг', groups: []},
+  {id: 'first', type: 'material', name: 'Сталь', current_quantity: '24.000000', unit: 'кг', groups: []},
+  {id: 'second', type: 'material', name: 'Медь', current_quantity: '0', unit: 'кг', groups: []},
+  {id: 'third', type: 'material', name: 'Алюминий', current_quantity: '0', unit: 'кг', groups: []},
 ]})}));
 vi.mock('@/entities/InventoryGroup', () => ({useInventoryGroupsQuery: () => ({data: []})}));
 vi.mock('@/entities/Funding', () => ({
@@ -58,4 +58,19 @@ it('removes a material from the receipt and makes it available again', async () 
   expect(screen.queryByRole('textbox', {name: 'Приход: Сталь'})).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('combobox', {name: 'Материал для прихода'}));
   expect(screen.getByRole('option', {name: 'Сталь · Без группы (кг)'})).toBeInTheDocument();
+});
+
+
+it('imports receipt JSON into the form and displays the AI prompt and format', async () => {
+  vi.mocked(apiRequest).mockClear();
+  renderWithProviders(<ReceiptPage />);
+  await userEvent.click(screen.getByRole('button', {name: 'Импорт JSON'}));
+  fireEvent.click(screen.getByText('Формат JSON и пример'));
+  expect(screen.getByLabelText('Формат JSON')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', {name: 'Промпт для ИИ', hidden: true})).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', {name: 'JSON складского документа'}), {target: {value: JSON.stringify({total_amount: '123.45', entries: [{material_id: 'first', quantity: '3'}]})}});
+  await userEvent.click(screen.getByRole('button', {name: 'Добавить в форму'}));
+  expect(screen.getByRole('textbox', {name: 'Приход: Сталь'})).toHaveValue('3');
+  expect(screen.getByRole('textbox', {name: 'Сумма за приход'})).toHaveValue('123.45');
+  expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path === '/warehouse/receipts')).toBe(false);
 });

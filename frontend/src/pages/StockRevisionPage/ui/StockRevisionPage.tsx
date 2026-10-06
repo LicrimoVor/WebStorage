@@ -19,6 +19,7 @@ import {
   type StockRevisionEntityType,
   type StockRevisionRow,
 } from "@/entities/StockRevision";
+import {ImportStockJson} from "@/features/ImportStockJson";
 import { ManageInventoryGroupsButton } from "@/features/ManageInventoryGroups";
 import { getErrorMessage } from "@/shared/api";
 import { formatDecimal, isDecimal, normalizeDecimal } from "@/shared/lib";
@@ -69,6 +70,7 @@ function RevisionImage({ row }: { row: StockRevisionRow }) {
 export function StockRevisionPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const [comment, setComment] = useState("");
   const [draftReady, setDraftReady] = useState(false);
@@ -80,12 +82,7 @@ export function StockRevisionPage() {
     (searchParams.get("type") as StockRevisionEntityType | null) ?? "";
   const productId = searchParams.get("product_id") ?? "";
   const groupId = searchParams.get("group_id") ?? "";
-  const rowsQuery = useStockRevisionRowsQuery({
-    search: search || null,
-    type: type || null,
-    product_id: productId || null,
-    group_id: groupId || null,
-  });
+  const rowsQuery = useStockRevisionRowsQuery({});
   const productsQuery = useProductOptionsQuery();
   const groupsQuery = useInventoryGroupsQuery();
 
@@ -233,10 +230,20 @@ export function StockRevisionPage() {
         );
       },
     },
+    {id: 'actions', name: '', template: (row) => <Button view="flat-danger" disabled={mutation.isPending}
+      aria-label={`Убрать из ревизии: ${row.name}`} onClick={() => {
+        setValues((current) => {const next = {...current}; delete next[rowKey(row)]; return next;});
+        mutation.reset();
+      }}>Убрать</Button>},
   ];
 
+  const availableRows = (rowsQuery.data ?? []).filter((row) =>
+    !(rowKey(row) in values) && (!search || row.name.toLocaleLowerCase('ru').includes(search.toLocaleLowerCase('ru'))) &&
+    (!type || row.type === type) && (!productId || row.products?.some((product) => product.id === productId)) &&
+    (!groupId || row.groups?.some((group) => group.id === groupId || groupsQuery.data?.find((candidate) => candidate.id === group.id)?.parent_id === groupId)));
   const groupedRows = new Map<string, StockRevisionRow[]>();
   for (const row of rowsQuery.data ?? []) {
+    if (!(rowKey(row) in values)) continue;
     const group = groupsQuery.data?.find((g) => g.id === row.groups?.[0]?.id);
     const parent = groupsQuery.data?.find((g) => g.id === group?.parent_id);
     const title = parent ? `${parent.name} / ${group?.name}` : group?.name ?? "Без группы";
@@ -253,7 +260,15 @@ export function StockRevisionPage() {
             Ревизия
           </Text>
         </div>
-        <ManageInventoryGroupsButton />
+        <div className={styles.headerActions}>
+          <ImportStockJson mode="revision" catalog={rowsQuery.data ?? []} disabled={!draftReady || !rowsQuery.data || rowsQuery.isError || mutation.isPending}
+            onImport={(document) => {
+              setValues((current) => ({...current, ...Object.fromEntries(document.entries.map((entry) => [`${entry.type}:${entry.id}`, entry.quantity]))}));
+              if (document.comment !== undefined) setComment(document.comment);
+              mutation.reset();
+            }} />
+          <ManageInventoryGroupsButton />
+        </div>
       </header>
 
       <Card view="outlined" className={styles.card}>
@@ -303,6 +318,15 @@ export function StockRevisionPage() {
           />
         </div>
 
+        <div className={styles.addRow}>
+          <Select label="Позиция" aria-label="Позиция для ревизии" filterable width="max"
+            placeholder="Выберите материал или полуфабрикат" loading={rowsQuery.isPending}
+            value={selectedId ? [selectedId] : []} disabled={mutation.isPending}
+            options={availableRows.map((row) => ({value: rowKey(row), content: `${row.name} · ${typeLabels[row.type]} (${row.unit})`}))}
+            onUpdate={(ids) => setSelectedId(ids[0] ?? "")} />
+          <Button disabled={!draftReady || !availableRows.some((row) => rowKey(row) === selectedId) || mutation.isPending}
+            onClick={() => {setValues((current) => ({...current, [selectedId]: ""})); setSelectedId(""); mutation.reset();}}>Добавить позицию</Button>
+        </div>
         {draftError ? (
           <Alert
             theme="warning"
@@ -321,8 +345,8 @@ export function StockRevisionPage() {
             title="Не удалось загрузить позиции"
             message={getErrorMessage(rowsQuery.error)}
           />
-        ) : rowsQuery.data.length === 0 ? (
-          <Alert theme="info" message="По выбранным фильтрам позиций нет." />
+        ) : groupedRows.size === 0 ? (
+          <Alert theme="info" message="Выберите позиции и добавьте их в ревизию." />
         ) : (
           <div className={styles.tableWrap}>
             {[...groupedRows].sort(([a], [b]) => a.localeCompare(b)).map(([title, rows]) => <section key={title}><h3>{title}</h3><Table
@@ -350,7 +374,7 @@ export function StockRevisionPage() {
               view="action"
               size="l"
               loading={mutation.isPending}
-              disabled={completedEntries.length === 0 || Boolean(invalidEntry)}
+              disabled={!draftReady || completedEntries.length === 0 || Boolean(invalidEntry)}
               onClick={submit}
             >
               Провести ревизию

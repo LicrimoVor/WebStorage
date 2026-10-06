@@ -1,4 +1,8 @@
 .root {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   display: grid;
   gap: 16px;
   padding: 24px;
@@ -6,4 +10,9 @@
 
 .table {
   overflow-x: auto;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
 }

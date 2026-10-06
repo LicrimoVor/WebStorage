@@ -137,6 +137,14 @@ async def move_to_trash(
                 )
             ],
         }
+        state["processes"] = [
+            str(v)
+            for v in await session.scalars(
+                select(TechnologicalProcess.id).where(
+                    TechnologicalProcess.default_group_id == entity_id
+                )
+            )
+        ]
         # Use the existing validation, but commit only together with the trash record.
         from app.modules.warehouse.service import delete_group
 
@@ -194,7 +202,7 @@ async def restore(session: AsyncSession, entry_id: uuid.UUID, actor: str) -> Non
 
     await lock_material_catalog(session)
     entry = await session.get(TrashEntry, entry_id, with_for_update=True)
-    if entry is None or entry.restored_at is not None:
+    if entry is None or entry.restored_at is not None or entry.purged_at is not None:
         raise NotFoundError("Запись в корзине не найдена")
     kind = entry.entity_type
     try:
@@ -253,6 +261,12 @@ async def restore(session: AsyncSession, entry_id: uuid.UUID, actor: str) -> Non
                     for v in state.get("items", [])
                 ]
             )
+            for process_id in state.get("processes", []):
+                process = await session.get(
+                    TechnologicalProcess, uuid.UUID(process_id), with_for_update=True
+                )
+                if process is not None and process.default_group_id is None:
+                    process.default_group_id = entry.entity_id
         elif kind != "finance_entry":
             target = await session.get(CATALOG_MODELS[kind], entry.entity_id, with_for_update=True)
             if target is None:
@@ -318,3 +332,14 @@ async def restore(session: AsyncSession, entry_id: uuid.UUID, actor: str) -> Non
         raise ConflictError(
             "Восстановление невозможно: имя уже используется или связь занята"
         ) from error
+
+
+async def purge(session: AsyncSession, entry_id: uuid.UUID) -> None:
+    # Keep the tombstone: financial totals exclude records through this entry.
+    await session.execute(text("SELECT pg_advisory_xact_lock(70261005)"))
+    entry = await session.get(TrashEntry, entry_id, with_for_update=True)
+    if entry is None or entry.restored_at is not None or entry.purged_at is not None:
+        raise NotFoundError("Запись в корзине не найдена")
+    entry.purged_at = datetime.now(UTC)
+    entry.state = {}
+    await session.commit()

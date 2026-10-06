@@ -1,4 +1,4 @@
-import {screen} from '@testing-library/react';
+import {fireEvent, screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 
 import {useManufacturedItemsQuery} from '@/entities/ManufacturedItem';
@@ -28,7 +28,7 @@ function mockItemsQuery() {
 }
 
 describe('TechnologicalProcessesWidget', () => {
-  it('renders empty state with creation and import actions', () => {
+  it('renders empty state and puts the prompt and format inside JSON import', async () => {
     mockItemsQuery();
     vi.mocked(useTechnologicalProcessesQuery).mockReturnValue({
       isPending: false,
@@ -36,9 +36,13 @@ describe('TechnologicalProcessesWidget', () => {
       data: {items: [], page: 1, page_size: 20, total: 0, pages: 0},
     } as unknown as ReturnType<typeof useTechnologicalProcessesQuery>);
     renderWithProviders(<TechnologicalProcessesWidget />, '/processes');
-    expect(screen.getByRole('button', {name: 'Промпт'})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Промпт'})).not.toBeInTheDocument();
     expect(screen.getByText('Техпроцессов пока нет')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Импорт JSON'})).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Импорт JSON'}));
+    const help = await screen.findByText('Формат JSON и пример');
+    fireEvent.click(help);
+    expect(screen.getByLabelText('Формат JSON')).toHaveTextContent('schemaVersion');
+    expect((screen.getByRole('textbox', {name: 'Промпт для ИИ', hidden: true}) as HTMLTextAreaElement).value).toContain('инженер-технолог');
   });
 
   it('shows version, status, output and author', () => {

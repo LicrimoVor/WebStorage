@@ -157,7 +157,7 @@ export function MaterialForm({
             size="l"
           />
           {!value.isDefect && (
-            <ImageUploadField onBusyChange={onImageBusyChange}
+            <ImageUploadField allowCrop={!includeInitialQuantity} onBusyChange={onImageBusyChange}
               value={value.image}
               onUpdate={(next) => update("image", next)}
               alt="Предпросмотр материала"

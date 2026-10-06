@@ -160,3 +160,26 @@ async def test_process_and_plan_restore_the_active_recipe_and_material_demand(
     await restore_kind(client, "production_plan")
     required = (await client.get(f"/api/v1/materials/{material['id']}")).json()["required_quantity"]
     assert Decimal(required) == 6
+
+
+@pytest.mark.asyncio
+async def test_purged_financial_entry_stays_deleted_and_cannot_be_restored(
+    client: AsyncClient,
+) -> None:
+    response = await client.post(
+        "/api/v1/finance/transactions",
+        json={"transaction_type": "income", "amount": "100.00", "category": "Permanent income",
+              "funding_source_id": await funding_source(client),
+              "occurred_at": "2026-10-05T09:00:00Z"},
+    )
+    assert response.status_code == 201, response.text
+    deleted = await client.delete(f"/api/v1/trash/finance_entry/{response.json()['id']}")
+    assert deleted.status_code == 204
+    removed_summary = (await client.get("/api/v1/finance/summary")).json()
+    entry = (await client.get("/api/v1/trash")).json()["items"][0]
+    assert (await client.delete(f"/api/v1/trash/{entry['id']}")).status_code == 204
+    assert (await client.get("/api/v1/trash")).json()["total"] == 0
+    assert (await client.get("/api/v1/finance/entries")).json()["total"] == 0
+    assert (await client.get("/api/v1/finance/summary")).json() == removed_summary
+    assert (await client.post(f"/api/v1/trash/{entry['id']}/restore")).status_code == 404
+    assert (await client.delete(f"/api/v1/trash/{entry['id']}")).status_code == 404

@@ -1,6 +1,6 @@
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
 import {CanvasNodeImage} from './CanvasNodeImage';
-import {Alert, Button, Card, Dialog, Label, RadioGroup, Tab, TabList, Text} from '@gravity-ui/uikit';
+import {Alert, Button, Card, Dialog, Label, MobileProvider, RadioGroup, Tab, TabList, Text} from '@gravity-ui/uikit';
 import { useMutation } from "@tanstack/react-query";
 import {
   forwardRef,
@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import { useManufacturedItemsQuery } from "@/entities/ManufacturedItem";
+import {useInventoryGroupsQuery} from "@/entities/InventoryGroup";
 import { useMaterialsQuery } from "@/entities/Material";
 import { useOperationsQuery } from "@/entities/Operation";
 import { ProduceManufacturedItemButton } from "@/features/ProduceManufacturedItem";
@@ -46,7 +47,7 @@ const nodeTypeView: Record<
   material: { title: "Материал", theme: "warning" },
   manufactured_item: { title: "Полуфабрикат", theme: "info" },
   operation: { title: "Операция", theme: "utility" },
-  output: { title: "Результат", theme: "success" },
+  output: { title: "Результат", theme: "info" },
   comment: { title: "Комментарий", theme: "success" },
 };
 
@@ -93,6 +94,7 @@ interface NodeDialogState {
   nodeId?: string;
   type: ProcessNode["type"];
   referenceId: string;
+  groupId: string;
   label: string;
 }
 
@@ -126,6 +128,7 @@ export interface ProcessCanvasHandle {
 }
 
 interface ProcessCanvasProps {
+  defaultGroupId?: string | null | undefined;
   processId: string;
   version: ProcessVersion;
   editable: boolean;
@@ -145,7 +148,7 @@ export const ProcessCanvas = forwardRef<
   ProcessCanvasHandle,
   ProcessCanvasProps
 >(function ProcessCanvas(
-  { processId, version, editable, onVersionUpdate },
+  { processId, version, editable, onVersionUpdate, defaultGroupId },
   ref,
 ) {
   const initialGraph = useMemo(
@@ -156,6 +159,9 @@ export const ProcessCanvas = forwardRef<
   const { graph } = history;
   const graphSignature = JSON.stringify(graph);
   const [savedSignature, setSavedSignature] = useState(graphSignature);
+  const [saveError, setSaveError] = useState<string>();
+  const failedSignatureRef = useRef<string | undefined>(undefined);
+  const groupsQuery = useInventoryGroupsQuery();
   const [revision, setRevision] = useState(version.revision);
   const revisionRef = useRef(version.revision);
   const savePromiseRef = useRef<Promise<ProcessVersion> | null>(null);
@@ -202,22 +208,29 @@ export const ProcessCanvas = forwardRef<
       }),
   });
 
+  const {mutateAsync: saveDraft} = saveMutation;
   const persist = useCallback(async (): Promise<ProcessVersion | undefined> => {
     if (!editable || graphSignature === savedSignature) return undefined;
     if (savePromiseRef.current) return savePromiseRef.current;
     const submittedGraph = graph;
     const submittedSignature = graphSignature;
-    const request = saveMutation
-      .mutateAsync({
+    const request = saveDraft({
         graph: submittedGraph,
         expectedRevision: revisionRef.current,
       })
       .then((savedVersion) => {
         revisionRef.current = savedVersion.revision;
         setRevision(savedVersion.revision);
+        failedSignatureRef.current = undefined;
+        setSaveError(undefined);
         setSavedSignature(submittedSignature);
         onVersionUpdate(savedVersion);
         return savedVersion;
+      })
+      .catch((error: unknown) => {
+        failedSignatureRef.current = submittedSignature;
+        setSaveError(getErrorMessage(error));
+        throw error;
       })
       .finally(() => {
         savePromiseRef.current = null;
@@ -229,7 +242,7 @@ export const ProcessCanvas = forwardRef<
     graph,
     graphSignature,
     onVersionUpdate,
-    saveMutation,
+    saveDraft,
     savedSignature,
   ]);
 
@@ -239,11 +252,12 @@ export const ProcessCanvas = forwardRef<
     if (
       !editable ||
       graphSignature === savedSignature ||
+      graphSignature === failedSignatureRef.current ||
       saveMutation.isPending
     ) {
       return undefined;
     }
-    const timer = window.setTimeout(() => void persist(), 700);
+    const timer = window.setTimeout(() => void persist().catch(() => undefined), 700);
     return () => window.clearTimeout(timer);
   }, [
     editable,
@@ -266,7 +280,7 @@ export const ProcessCanvas = forwardRef<
         history.redo();
       } else if (event.key.toLowerCase() === "s") {
         event.preventDefault();
-        void persist();
+        void persist().catch(() => undefined);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -275,9 +289,12 @@ export const ProcessCanvas = forwardRef<
 
   const referenceOptions = useMemo(() => {
     if (!nodeDialog) return [];
+    const matchesGroup = (item: {groups?: Array<{id: string}>}) => !nodeDialog.groupId ||
+      item.groups?.some((group) => group.id === nodeDialog.groupId ||
+        groupsQuery.data?.find((candidate) => candidate.id === group.id)?.parent_id === nodeDialog.groupId);
     if (nodeDialog.type === "material") {
       return (
-        materialsQuery.data?.items.map((item) => ({
+        materialsQuery.data?.items.filter(matchesGroup).map((item) => ({
           value: item.id,
           content: `${item.name} · ${item.unit}`,
         })) ?? []
@@ -286,6 +303,7 @@ export const ProcessCanvas = forwardRef<
     if (nodeDialog.type === "manufactured_item") {
       return (
         itemsQuery.data?.items
+          .filter(matchesGroup)
           .filter((item) => item.id !== graph.outputItemId && !graph.nodes.some((node) => node.id !== nodeDialog.nodeId && node.type === 'manufactured_item' && node.referenceId === item.id))
           .map((item) => ({
             value: item.id,
@@ -301,6 +319,7 @@ export const ProcessCanvas = forwardRef<
       })) ?? []
     );
   }, [
+    groupsQuery.data,
     graph.outputItemId,
     graph.nodes,
     itemsQuery.data,
@@ -321,6 +340,7 @@ export const ProcessCanvas = forwardRef<
     setNodeDialogTab(editable ? "settings" : "production");
     setNodeDialog({
       mode: "edit",
+      groupId: "",
       nodeId: node.id,
       type: node.type,
       referenceId: node.referenceId ?? "",
@@ -615,6 +635,7 @@ export const ProcessCanvas = forwardRef<
       const imported = excalidrawToGraph(JSON.parse(await file.text()), {
         name: graph.name,
         outputItemId: graph.outputItemId ?? null,
+        defaultGroupId: graph.defaultGroupId ?? null,
       });
       const outputNodes = graph.nodes.filter((node) => node.type === "output");
       if (!imported.nodes.some((node) => node.type === "output")) {
@@ -644,7 +665,7 @@ export const ProcessCanvas = forwardRef<
     ? { text: "Активная версия", theme: "info" as const }
     : saveMutation.isPending
     ? { text: "Сохранение…", theme: "info" as const }
-    : saveMutation.isError
+    : saveError
       ? { text: "Ошибка сохранения", theme: "danger" as const }
       : graphSignature === savedSignature
         ? { text: "Сохранено", theme: "success" as const }
@@ -671,6 +692,7 @@ export const ProcessCanvas = forwardRef<
                 setNodeDialogTab("settings");
                 setNodeDialog({
                   mode: "add",
+                  groupId: defaultGroupId ?? "",
                   type: "material",
                   referenceId: "",
                   label: "",
@@ -751,7 +773,7 @@ export const ProcessCanvas = forwardRef<
           {editable ? (
             <Button
               view="outlined"
-              onClick={() => void persist()}
+              onClick={() => void persist().catch(() => undefined)}
               loading={saveMutation.isPending}
               disabled={graphSignature === savedSignature}
             >
@@ -761,11 +783,11 @@ export const ProcessCanvas = forwardRef<
         </div>
       </div>
 
-      {saveMutation.error ? (
+      {saveError ? (
         <Alert
           theme="danger"
           title="Черновик не сохранён"
-          message={getErrorMessage(saveMutation.error)}
+          message={saveError}
         />
       ) : null}
       {importError ? <Alert theme="danger" message={importError} /> : null}
@@ -903,6 +925,7 @@ export const ProcessCanvas = forwardRef<
                       {node.id.slice(0, 8)}
                     </Text>
                   </div>
+                  {node.type === 'operation' && <svg className={styles.operationShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 200,1 219,72 200,143 20,143 1,72" /></svg>}
                   {node.type === 'comment' && <svg className={styles.commentShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 219,1 200,143 1,143" /></svg>}
                   <div className={styles.nodeContent} title={node.label ?? view.title}>
                   {(node.type === 'material' || node.type === 'manufactured_item') && <CanvasNodeImage
@@ -923,7 +946,7 @@ export const ProcessCanvas = forwardRef<
                       </Button>
                     ) : null}
                     {editable && node.type === 'material' ? <Button view="flat" size="s" aria-label={`Создать копию материала ${node.label ?? node.id}`} onClick={() => copyMaterial(node)}>Копия</Button> : null}
-                    {editable && node.type !== 'comment' ? (
+                    {editable && node.type !== 'comment' && node.type !== 'output' ? (
                       <button
                         className={styles.connector}
                         type="button"
@@ -1062,9 +1085,20 @@ export const ProcessCanvas = forwardRef<
                     aria-label="Тип узла"
                   />
                   </div>
-                  {nodeDialog.type !== 'comment' && <Select
+                  {["material", "manufactured_item"].includes(nodeDialog.type) && <MobileProvider mobile={false}><Select
+                    label="Группа / подгруппа" aria-label="Группа узла" disablePortal popupPlacement={["bottom-start", "bottom-end"]} popupWidth="fit"
+                    popupClassName={styles.nodeSelectPopup} filterable hasClear width="max"
+                    value={nodeDialog.groupId ? [nodeDialog.groupId] : []}
+                    placeholder="Все группы" loading={groupsQuery.isPending}
+                    options={(groupsQuery.data ?? []).map((group) => ({value: group.id,
+                      content: group.parent_id ? `${groupsQuery.data?.find((parent) => parent.id === group.parent_id)?.name} / ${group.name}` : group.name}))}
+                    onUpdate={(ids) => setNodeDialog({...nodeDialog, groupId: ids[0] ?? "", referenceId: ""})} /></MobileProvider>}
+                  {nodeDialog.type !== 'comment' && <MobileProvider mobile={false}><Select
                     label="Сущность"
                     disablePortal
+                    popupPlacement={["bottom-start", "bottom-end"]}
+                    popupWidth="fit"
+                    popupClassName={styles.nodeSelectPopup}
                     options={referenceOptions}
                     loading={nodeCatalogQuery.isPending}
                     value={
@@ -1080,7 +1114,7 @@ export const ProcessCanvas = forwardRef<
                     filterable
                     width="max"
                     aria-label="Сущность узла"
-                  />}
+                  /></MobileProvider>}
                   {nodeDialog.type !== 'comment' && nodeCatalogQuery.isError && <Alert theme="danger"
                     title="Не удалось загрузить справочник" message={getErrorMessage(nodeCatalogQuery.error)}
                     actions={<Button onClick={() => nodeCatalogQuery.refetch()}>Повторить</Button>} />}

@@ -11,6 +11,7 @@ describe('Excalidraw process adapter', () => {
     const graph = normalizeGraph({
       schemaVersion: 1,
       name: 'Корпус',
+      defaultGroupId: '4f9b4c95-ced3-4ce6-93fb-aed4fbad3b6a',
       outputItemId: '2ecf3319-78bf-4af7-aad9-44b61778ef40',
       nodes: [
         {
@@ -20,6 +21,8 @@ describe('Excalidraw process adapter', () => {
           label: 'Лист стали',
           position: {x: 40, y: 80},
         },
+        {id: 'operation', type: 'operation', label: 'Резка',
+          referenceId: 'eed98a9a-f33f-4005-9631-5c5f47fdbe7b', position: {x: 280, y: 80}},
         {
           id: 'output',
           type: 'output',
@@ -39,6 +42,7 @@ describe('Excalidraw process adapter', () => {
     });
     const restored = excalidrawToGraph(graphToExcalidraw(graph), {
       name: graph.name,
+      defaultGroupId: graph.defaultGroupId ?? null,
       outputItemId: graph.outputItemId ?? null,
     });
     expect(restored).toEqual(graph);
