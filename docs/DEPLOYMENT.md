@@ -12,10 +12,11 @@ shell-скриптов. GitHub Actions выполняет деплои посл�
    прошедший CI. Если `main` уже обновилась, старый деплой отменяется. Локальные
    изменения отслеживаемых файлов запрещены; принудительного `reset`/`clean` нет.
    При первом запуске клонирует репозиторий в `/opt/webstorage/repository`.
-3. Из репозитория собирает backend через `deploy/compose.yml`.
+3. Проверяет production-конфигурацию и собирает backend через `infra/compose.yml`,
+   явно указывая `.env` из `/opt/webstorage/.env` и проект `webstorage-production`.
 4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
-   `alembic upgrade head`. Запускает backend и ожидает healthcheck.
-5. Устанавливает `deploy/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
+   `alembic upgrade head`. Пересоздаёт backend из нового образа и ожидает healthcheck.
+5. Устанавливает `infra/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
    `nginx -t` и перезагружает Nginx.
 6. Передаёт архив frontend по SSH, распаковывает во временную папку, обновляет
    статику в `/var/www/html/` и атомарно заменяет `index.html`.
@@ -47,7 +48,7 @@ sudoedit /opt/webstorage/.env
 sudo chmod 600 /opt/webstorage/.env
 ```
 
-В `.env` скопируйте `deploy/production.env.example`, задайте домен без
+В `.env` скопируйте `infra/production.env.example`, задайте домен без
 завершающего слеша и параметры PostgreSQL. Docker установите перед первым
 запуском CD. Node.js и npm на сервере не нужны: frontend приходит готовым архивом.
 Не меняйте пароль существующей БД только через `.env`: PostgreSQL применяет
@@ -120,15 +121,38 @@ Variable `DEPLOY_PORT` необязательна, по умолчанию `22`.
 
 ```bash
 cd /opt/webstorage/repository
-docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml ps
-docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml logs --tail=100 backend
-docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml run --rm --no-deps backend python -m app.cli create-user admin
-docker compose --env-file /opt/webstorage/.env -f deploy/compose.yml run --rm --no-deps backend python -m app.cli reset-password admin
+docker compose --env-file /opt/webstorage/.env -f infra/compose.yml ps
+docker compose --env-file /opt/webstorage/.env -f infra/compose.yml logs --tail=100 backend
+docker compose --env-file /opt/webstorage/.env -f infra/compose.yml run --rm --no-deps backend python -m app.cli create-user admin
+docker compose --env-file /opt/webstorage/.env -f infra/compose.yml run --rm --no-deps backend python -m app.cli reset-password admin
 ```
 
 Пароли вводятся интерактивно. `reset-password` снимает временную блокировку
 и отзывает сессии, но не активирует отключённого пользователя. Для просмотра
 логинов используйте `list-users`.
+
+### Имена сервисов и выбор Compose-файла
+
+Команды `run`, `stop`, `logs` и `up` принимают имена из `services`:
+`backend` и `database`. `webstorage-backend:local` — образ backend,
+`webstorage-production-backend-1` — имя его контейнера.
+Команда `docker compose run webstorage-backend ...` завершится с
+`no such service: webstorage-backend`.
+
+На сервере всегда указывайте production-файл и `.env` явно. Корневой
+`docker-compose.yml` предназначен для разработки и запускает отдельный
+проект `webstorage` с сервисом `postgres` и опубликованным портом 5432.
+Поэтому контейнер `webstorage-postgres-1` не относится к production-БД.
+Для диагностики используйте:
+
+```bash
+cd /opt/webstorage/repository
+docker compose --project-name webstorage-production --env-file /opt/webstorage/.env -f infra/compose.yml config --services
+docker compose --project-name webstorage-production --env-file /opt/webstorage/.env -f infra/compose.yml ps
+```
+
+CD обновляет только `webstorage-production`. Отдельный проект `webstorage`
+и его данные он автоматически не удаляет.
 
 ## Восстановление и переход со старого CD
 
