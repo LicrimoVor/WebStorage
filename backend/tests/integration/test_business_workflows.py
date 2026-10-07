@@ -127,12 +127,23 @@ async def test_hierarchy_ownership_and_recipe_conflicts(client: AsyncClient) -> 
     assert duplicate.status_code == 201, duplicate.text
     assert duplicate.json()["version"]["status"] == "error"
     graph["nodes"].append({"id": "s2", "type": "manufactured_item", "referenceId": semi["id"]})
-    invalid = await client.put(
-        f"/api/v1/technological-processes/{imported['process']['id']}/versions/{imported['version']['id']}/graph",
-        json=graph,
+    path = (
+        f"/api/v1/technological-processes/{imported['process']['id']}"
+        f"/versions/{imported['version']['id']}/graph"
     )
+    disconnected = await client.put(path, json=graph)
+    assert disconnected.status_code == 200, disconnected.text
+    assert disconnected.json()["status"] == "draft"
+    assert disconnected.json()["validation_errors"] == []
+    assert {node["id"] for node in disconnected.json()["graph"]["nodes"]} == {"m", "s", "s2", "o"}
+
+    graph["edges"].append({"id": "c", "source": "s2", "target": "o", "quantity": "1"})
+    invalid = await client.put(path, json=graph)
     assert invalid.status_code == 200, invalid.text
     assert invalid.json()["status"] == "error"
+    assert any(
+        "Повторять можно материалы" in error for error in invalid.json()["validation_errors"]
+    )
 
 
 async def test_serialized_release_sale_and_atomic_failures(client: AsyncClient) -> None:
