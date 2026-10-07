@@ -1,6 +1,7 @@
 import {MobileProvider} from '@gravity-ui/uikit';
 import {fireEvent, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {useState} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {useInventoryGroupsQuery} from '@/entities/InventoryGroup';
@@ -13,6 +14,7 @@ import {useOperationsQuery} from '@/entities/Operation';
 import type * as OperationExports from '@/entities/Operation';
 import {
   saveTechnologicalProcessDraft,
+  useItemProcessRecipeQuery,
   type ProcessVersion,
 } from '@/entities/TechnologicalProcess';
 import type * as ProcessExports from '@/entities/TechnologicalProcess';
@@ -39,7 +41,7 @@ vi.mock('@/entities/Operation', async (importOriginal) => {
 });
 vi.mock('@/entities/TechnologicalProcess', async (importOriginal) => {
   const actual = await importOriginal<typeof ProcessExports>();
-  return {...actual, saveTechnologicalProcessDraft: vi.fn()};
+  return {...actual, saveTechnologicalProcessDraft: vi.fn(), useItemProcessRecipeQuery: vi.fn()};
 });
 
 const version: ProcessVersion = {
@@ -95,7 +97,10 @@ function mockDraftSave(draft: ProcessVersion) {
 
 describe('ProcessCanvas', () => {
   beforeEach(() => {
+    vi.mocked(useItemProcessRecipeQuery).mockReturnValue({data: null, isPending: false, isError: false} as unknown as ReturnType<typeof useItemProcessRecipeQuery>);
     vi.clearAllMocks();
+    vi.stubGlobal('PointerEvent', MouseEvent);
+    Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {configurable: true, value: vi.fn()});
     mockCatalogs();
     vi.mocked(useInventoryGroupsQuery).mockReturnValue({data: []} as unknown as ReturnType<typeof useInventoryGroupsQuery>);
   });
@@ -119,6 +124,174 @@ describe('ProcessCanvas', () => {
     expect(screen.getByText('Черновик не сохранён')).toBeInTheDocument();
     finish?.(draft);
     await waitFor(() => expect(screen.queryByText('Черновик не сохранён')).not.toBeInTheDocument());
+  });
+
+  it('moves nodes in world coordinates at a different zoom and snaps with Ctrl', async () => {
+    mockDraftSave(version);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={version} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: '+'}));
+    const node = document.querySelector<HTMLElement>('[data-process-node-id="output"]')!;
+    fireEvent.pointerDown(node, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerMove(node, {clientX: 144, clientY: 122});
+    fireEvent.pointerUp(node);
+    expect(node.style.transform).toBe('translate(540px, 220px)');
+    fireEvent.pointerDown(node, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerMove(node, {clientX: 112, clientY: 112, ctrlKey: true});
+    fireEvent.pointerUp(node);
+    expect(node.style.transform).toBe('translate(552px, 240px)');
+  });
+
+  it('duplicates a material with Alt drag while keeping the original in place', async () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'steel', type: 'material' as const, referenceId: null, label: 'Сталь', position: {x: 0, y: 0}}]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const node = document.querySelector<HTMLElement>('[data-process-node-id="steel"]')!;
+    fireEvent.pointerDown(node, {clientX: 100, clientY: 100, button: 0, altKey: true});
+    fireEvent.pointerMove(node, {clientX: 160, clientY: 140, altKey: true});
+    fireEvent.pointerUp(node);
+    expect(node.style.transform).toBe('translate(0px, 0px)');
+    expect(document.querySelectorAll('[data-process-node]')).toHaveLength(3);
+    await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledWith(version.process_id, version.id,
+      expect.objectContaining({graph: expect.objectContaining({nodes: expect.arrayContaining([
+        expect.objectContaining({type: 'material', position: {x: 60, y: 40}}),
+      ])})})), {timeout: 3000});
+  });
+
+  it('selects an area with Shift and moves all selected nodes together', () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'steel', type: 'material' as const, referenceId: null, label: 'Сталь', position: {x: 0, y: 0}}]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const canvas = screen.getByLabelText('Полотно технологического процесса');
+    fireEvent.pointerDown(canvas, {clientX: 70, clientY: 60, button: 0, shiftKey: true});
+    fireEvent.pointerMove(canvas, {clientX: 900, clientY: 500, shiftKey: true});
+    fireEvent.pointerUp(canvas);
+    expect([...document.querySelectorAll('[data-process-node]')].filter((node) => node.className.includes('selected'))).toHaveLength(2);
+    expect(screen.queryByText(/Выбрано:/)).not.toBeInTheDocument();
+    const node = document.querySelector<HTMLElement>('[data-process-node-id="steel"]')!;
+    fireEvent.pointerDown(node, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerMove(node, {clientX: 140, clientY: 120});
+    fireEvent.pointerUp(node);
+    expect(node.style.transform).toBe('translate(40px, 20px)');
+    expect(document.querySelector<HTMLElement>('[data-process-node-id="output"]')!.style.transform).toBe('translate(540px, 220px)');
+  });
+
+  it('blocks incoming connections to a semi-finished item with an existing recipe', () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'steel', type: 'material' as const, referenceId: null, label: 'Сталь', position: {x: 0, y: 0}},
+      {id: 'semi', type: 'manufactured_item' as const, referenceId: 'semi-id', label: 'Узел', position: {x: 300, y: 0}}]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable lockedInputIds={['semi-id']} onVersionUpdate={vi.fn()} />);
+    const target = document.querySelector<HTMLElement>('[data-process-node-id="semi"]')!;
+    Object.defineProperty(document, 'elementFromPoint', {configurable: true, value: vi.fn().mockReturnValue(target)});
+    const connector = screen.getByRole('button', {name: 'Потянуть связь из Сталь'});
+    fireEvent.pointerDown(connector, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerUp(connector, {clientX: 300, clientY: 100});
+    expect(screen.getByText(/Входящие связи запрещены/)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-process-edge]')).toHaveLength(0);
+    expect(screen.getByRole('button', {name: 'Потянуть связь из Узел'})).toBeInTheDocument();
+  });
+
+  it.each(['material', 'operation'] as const)('blocks incoming connections to %s nodes', (type) => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'source', type: 'material' as const, referenceId: null, label: 'Источник', position: {x: 0, y: 0}},
+      {id: 'leaf', type, referenceId: null, label: 'Лист', position: {x: 300, y: 0}}]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const target = document.querySelector('[data-process-node-id="leaf"]')!;
+    Object.defineProperty(document, 'elementFromPoint', {configurable: true, value: vi.fn().mockReturnValue(target)});
+    const connector = screen.getByRole('button', {name: 'Потянуть связь из Источник'});
+    fireEvent.pointerDown(connector, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerUp(connector, {clientX: 300, clientY: 100});
+    expect(screen.getByText('Материалы и операции не могут иметь входящие связи.')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-process-edge]')).toHaveLength(0);
+  });
+
+  it('toggles the grid icon and applies undo and redo hotkeys outside inputs', async () => {
+    mockDraftSave(version);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={version} editable onVersionUpdate={vi.fn()} />);
+    const grid = screen.getByRole('button', {name: 'Привязка к сетке'});
+    expect(grid).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(grid);
+    expect(grid).toHaveAttribute('aria-pressed', 'true');
+    const node = document.querySelector<HTMLElement>('[data-process-node-id="output"]')!;
+    fireEvent.pointerDown(node, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerMove(node, {clientX: 150, clientY: 150});
+    fireEvent.pointerUp(node);
+    const moved = node.style.transform;
+    fireEvent.keyDown(document.body, {key: 'z', ctrlKey: true});
+    expect(node.style.transform).toBe('translate(500px, 200px)');
+    fireEvent.keyDown(document.body, {key: 'y', ctrlKey: true});
+    expect(node.style.transform).toBe(moved);
+    expect(screen.getByRole('button', {name: 'Отменить (Ctrl+Z)'})).toHaveAttribute('title', 'Отменить (Ctrl+Z)');
+    expect(screen.getByRole('button', {name: 'Импорт Excalidraw'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Экспорт Excalidraw'})).toBeInTheDocument();
+  });
+
+  it('shows the local recipe and selects all its ancestors excluding other branches', async () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'steel', type: 'material' as const, referenceId: null, label: 'Сталь', position: {x: 0, y: 0}},
+      {id: 'semi', type: 'manufactured_item' as const, referenceId: 'semi-id', label: 'Узел', position: {x: 300, y: 0}},
+      {id: 'other', type: 'operation' as const, referenceId: null, label: 'Другая ветка', position: {x: 300, y: 300}}],
+      edges: [{id: 'steel-semi', source: 'steel', target: 'semi', quantity: '2.5'},
+        {id: 'semi-output', source: 'semi', target: 'output', quantity: '3'}]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    fireEvent.doubleClick(document.querySelector('[data-process-node-id="semi"]')!);
+    await userEvent.click(screen.getByRole('tab', {name: 'Состав'}));
+    expect(screen.getByRole('cell', {name: 'Сталь'})).toBeInTheDocument();
+    expect(screen.getByRole('cell', {name: '2,5'})).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Выделить'}));
+    expect(document.querySelector('[data-process-node-id="steel"]')!.className).toContain('selected');
+    expect(document.querySelector('[data-process-node-id="semi"]')!.className).toContain('selected');
+    expect(document.querySelector('[data-process-node-id="output"]')!.className).not.toContain('selected');
+    expect(document.querySelector('[data-process-node-id="other"]')!.className).not.toContain('selected');
+  });
+
+  it('shows an external recipe with a link to its exact version', async () => {
+    const externalVersion = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material' as const, label: 'Внешний материал', position: {x: 0, y: 0}}],
+      edges: [{id: 'external-edge', source: 'material', target: 'output', quantity: '4'}]}};
+    vi.mocked(useItemProcessRecipeQuery).mockReturnValue({data: {process_id: 'external-process', process_name: 'Другая карта',
+      target_node_id: 'output', version: externalVersion}, isPending: false, isError: false} as unknown as ReturnType<typeof useItemProcessRecipeQuery>);
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'semi', type: 'manufactured_item' as const, referenceId: 'semi-id', label: 'Внешний узел', position: {x: 0, y: 0}}]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable={false} onVersionUpdate={vi.fn()} />);
+    fireEvent.doubleClick(document.querySelector('[data-process-node-id="semi"]')!);
+    await userEvent.click(screen.getByRole('tab', {name: 'Состав'}));
+    expect(screen.getByRole('cell', {name: 'Внешний материал'})).toBeInTheDocument();
+    expect(screen.getByRole('cell', {name: '4'})).toBeInTheDocument();
+    expect(screen.getByRole('link', {name: 'Перейти в другой техпроцесс'})).toHaveAttribute('href', `/processes/external-process?version=${externalVersion.id}`);
+    expect(screen.queryByRole('button', {name: 'Выделить'})).not.toBeInTheDocument();
+    expect(useItemProcessRecipeQuery).toHaveBeenCalledWith('semi-id', version.process_id, true);
+  });
+
+  it('dims saved disconnected nodes and restores participation after connecting them', async () => {
+    const disconnected = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'island', type: 'material' as const, referenceId: null, label: 'Отдельный узел', position: {x: 0, y: 0}}]}};
+    const props = {processId: version.process_id, version: disconnected, editable: true, onVersionUpdate: vi.fn()};
+    function Harness() {
+      const [saved, setSaved] = useState(disconnected);
+      return <>
+        <button onClick={() => setSaved({...disconnected, graph: {...disconnected.graph, edges: [
+          {id: 'connected', source: 'island', target: 'output', quantity: '1'},
+        ]}})}>Подключить сохранённый узел</button>
+        <ProcessCanvas {...props} version={saved} />
+      </>;
+    }
+    renderWithProviders(<Harness />);
+    const node = document.querySelector<HTMLElement>('[data-process-node-id="island"]')!;
+    expect(node).toHaveAttribute('data-process-participating', 'false');
+    expect(node.className).toMatch(/inactive/);
+    await userEvent.click(screen.getByRole('button', {name: 'Подключить сохранённый узел'}));
+    expect(node).toHaveAttribute('data-process-participating', 'true');
+    expect(node.className).not.toMatch(/inactive/);
+  });
+
+  it('allows manually resaving an unchanged version with errors', async () => {
+    const draft = {...version, status: 'error' as const, validation_errors: ['Ошибка схемы']};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', {name: 'Сохранить сейчас'}));
+    await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledOnce());
   });
 
   it('initializes the node group filter from the process and includes subgroups', async () => {
@@ -362,7 +535,7 @@ describe('ProcessCanvas', () => {
       '[data-process-node-id="output"]',
     );
     expect(node).not.toBeNull();
-    expect(node).toHaveAttribute('draggable', 'true');
+    expect(node).not.toHaveAttribute('draggable');
     if (!node) return;
 
     fireEvent.doubleClick(node);
@@ -370,12 +543,10 @@ describe('ProcessCanvas', () => {
     expect(screen.getByRole('link', {name: 'Открыть выпуск продукции'})).toBeInTheDocument();
     expect(screen.getByText('Активная версия')).toBeInTheDocument();
 
-    fireEvent.dragStart(node, {
-      clientX: 520,
-      clientY: 220,
-      dataTransfer: {effectAllowed: 'none'},
-    });
-    fireEvent.dragEnd(node, {clientX: 260, clientY: 160});
+    fireEvent.pointerDown(node, {clientX: 520, clientY: 220, button: 0});
+    fireEvent.pointerMove(node, {clientX: 260, clientY: 160});
+    fireEvent.pointerUp(node, {clientX: 260, clientY: 160});
+    expect(node.style.transform).toBe('translate(240px, 140px)');
     await new Promise((resolve) => window.setTimeout(resolve, 800));
     expect(saveTechnologicalProcessDraft).not.toHaveBeenCalled();
   });

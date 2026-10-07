@@ -4,6 +4,7 @@ import {apiRequest} from '@/shared/api';
 
 import type {
   ProcessGraphInput,
+  ProcessRecipe,
   ProcessGraphOutput,
   ProcessDraftSave,
   ProcessVersion,
@@ -196,4 +197,13 @@ export async function exportTechnologicalProcessVersion(
   return apiRequest<ProcessGraphOutput>(
     `/technological-processes/${processId}/versions/${versionId}/export`,
   );
+}
+
+export function useItemProcessRecipeQuery(itemId: string, excludeProcessId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...technologicalProcessKeys.all, 'item-recipe', itemId, excludeProcessId],
+    queryFn: ({signal}) => apiRequest<ProcessRecipe | null>(
+      `/technological-processes/recipes/${itemId}?exclude_process_id=${excludeProcessId}`, {signal}),
+    enabled: enabled && Boolean(itemId),
+  });
 }

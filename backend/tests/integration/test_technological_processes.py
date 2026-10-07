@@ -90,9 +90,9 @@ def graph(
         if preceding_id is not None:
             edges.append(
                 {
-                    "id": f"{preceding_id}-operation",
+                    "id": f"{preceding_id}-output",
                     "source": preceding_id,
-                    "target": "operation",
+                    "target": "output",
                     "quantity": "2.500000",
                 }
             )
@@ -325,7 +325,28 @@ async def test_activation_rejects_local_and_interprocess_cycles(
         "/api/v1/technological-processes",
         json={"name": "Процесс B", "output_item_id": item_b["id"]},
     )
-    assert rejected.status_code == 409
+    assert rejected.status_code == 201, rejected.text
+    b = rejected.json()
+    b_graph = graph(
+        name="Процесс B",
+        output_item_id=item_b["id"],
+        output_name="Узел B",
+        manufactured_item_id=item_a["id"],
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{b['process']['id']}/versions/{b['version']['id']}/graph",
+        json=b_graph,
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["status"] == "error"
+    assert (
+        "manufactured item processes contain a dependency cycle"
+        in saved.json()["validation_errors"]
+    )
+    activation = await client.post(
+        f"/api/v1/technological-processes/{b['process']['id']}/versions/{b['version']['id']}/activate"
+    )
+    assert activation.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -356,9 +377,14 @@ async def test_process_default_group_survives_reload_and_rejects_unknown_group(
 ) -> None:
     output = await create_item(client, name="Default group output")
     group = (await client.post("/api/v1/inventory-groups", json={"name": "Default group"})).json()
-    response = await client.post("/api/v1/technological-processes", json={
-        "name": "Grouped process", "output_item_id": output["id"], "default_group_id": group["id"],
-    })
+    response = await client.post(
+        "/api/v1/technological-processes",
+        json={
+            "name": "Grouped process",
+            "output_item_id": output["id"],
+            "default_group_id": group["id"],
+        },
+    )
     assert response.status_code == 201, response.text
     process = response.json()["process"]
     assert process["default_group_id"] == group["id"]
@@ -372,10 +398,14 @@ async def test_process_default_group_survives_reload_and_rejects_unknown_group(
     loaded = (await client.get(f"/api/v1/technological-processes/{process['id']}")).json()
     assert loaded["default_group_id"] == group["id"]
     other = await create_item(client, name="Invalid group output")
-    response = await client.post("/api/v1/technological-processes", json={
-        "name": "Invalid group process", "output_item_id": other["id"],
-        "default_group_id": str(uuid.uuid4()),
-    })
+    response = await client.post(
+        "/api/v1/technological-processes",
+        json={
+            "name": "Invalid group process",
+            "output_item_id": other["id"],
+            "default_group_id": str(uuid.uuid4()),
+        },
+    )
     assert response.status_code == 404, response.text
 
 
@@ -383,16 +413,22 @@ async def test_process_default_group_survives_reload_and_rejects_unknown_group(
 async def test_json_export_import_preserves_default_group(client: AsyncClient) -> None:
     output = await create_item(client, name="JSON group output")
     group = (await client.post("/api/v1/inventory-groups", json={"name": "JSON group"})).json()
-    response = await client.post("/api/v1/technological-processes", json={
-        "name": "JSON group process", "output_item_id": output["id"],
-        "default_group_id": group["id"],
-    })
+    response = await client.post(
+        "/api/v1/technological-processes",
+        json={
+            "name": "JSON group process",
+            "output_item_id": output["id"],
+            "default_group_id": group["id"],
+        },
+    )
     assert response.status_code == 201, response.text
     created = response.json()
     process_id, version_id = created["process"]["id"], created["version"]["id"]
-    exported = (await client.get(
-        f"/api/v1/technological-processes/{process_id}/versions/{version_id}/export"
-    )).json()
+    exported = (
+        await client.get(
+            f"/api/v1/technological-processes/{process_id}/versions/{version_id}/export"
+        )
+    ).json()
     assert exported["defaultGroupId"] == group["id"]
     assert (await client.delete(f"/api/v1/technological-processes/{process_id}")).status_code == 204
     response = await client.post("/api/v1/technological-processes/import", json=exported)
@@ -404,3 +440,265 @@ async def test_json_export_import_preserves_default_group(client: AsyncClient) -
     exported["defaultGroupId"] = str(uuid.uuid4())
     response = await client.post("/api/v1/technological-processes/import", json=exported)
     assert response.status_code == 404, response.text
+
+
+@pytest.mark.asyncio
+async def test_error_draft_is_persisted_and_can_be_fixed(client: AsyncClient) -> None:
+    output = await create_item(client, name="Fixable output")
+    created = await create_process(client, name="Fixable process", output_item_id=output["id"])
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = created["version"]["graph"]
+    document["nodes"].append({"id": "unmapped", "type": "material", "referenceId": None})
+    document["edges"].append(
+        {"id": "unmapped-output", "source": "unmapped", "target": "output", "quantity": "1"}
+    )
+    response = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "error"
+    assert response.json()["validation_errors"]
+    reloaded = (await client.get(f"/api/v1/technological-processes/{pid}/versions/{vid}")).json()
+    assert reloaded["graph"]["nodes"] == response.json()["graph"]["nodes"]
+    assert reloaded["status"] == "error"
+    assert (
+        await client.post(f"/api/v1/technological-processes/{pid}/versions/{vid}/activate")
+    ).status_code == 422
+    repeated = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 1, "graph": document},
+    )
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["status"] == "error"
+    assert repeated.json()["revision"] == 2
+    document["nodes"] = document["nodes"][:1]
+    document["edges"] = []
+    fixed = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 2, "graph": document},
+    )
+    assert fixed.status_code == 200, fixed.text
+    assert fixed.json()["status"] == "draft"
+    assert fixed.json()["validation_errors"] == []
+
+
+@pytest.mark.asyncio
+async def test_existing_semi_recipe_is_allowed_as_leaf_but_not_as_target(
+    client: AsyncClient,
+) -> None:
+    owner = (await create_item(client, name="Consumer of another product component"))["id"]
+    semi = await create_item(client, name="Reusable component", is_product=False)
+    recipe = await create_process(client, name="Component recipe", output_item_id=semi["id"])
+    created = await create_process(client, name="Consuming process", output_item_id=owner)
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = graph(
+        name="Consuming process",
+        output_item_id=owner,
+        output_name="Owner",
+        manufactured_item_id=semi["id"],
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/graph", json=document
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["status"] == "draft"
+    owners = (
+        await client.get(
+            "/api/v1/technological-processes/recipe-owners", params={"exclude_process_id": pid}
+        )
+    ).json()
+    assert owners[semi["id"]] == recipe["process"]["name"]
+    material = await create_material(client, name="Forbidden second recipe")
+    document["nodes"].append({"id": "material", "type": "material", "referenceId": material["id"]})
+    document["edges"].append(
+        {"id": "incoming", "source": "material", "target": "semi-finished", "quantity": "1"}
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/graph", json=document
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["status"] == "error"
+    assert saved.json()["validation_errors"]
+    original_pid, original_vid = recipe["process"]["id"], recipe["version"]["id"]
+    original = await client.put(
+        f"/api/v1/technological-processes/{original_pid}/versions/{original_vid}/graph",
+        json=recipe["version"]["graph"],
+    )
+    assert original.status_code == 200, original.text
+    assert original.json()["status"] == "draft"
+
+
+@pytest.mark.asyncio
+async def test_settings_deactivate_and_version_trash_preserve_history(client: AsyncClient) -> None:
+    output = await create_item(client, name="Version history output")
+    created = await create_process(client, name="Version history", output_item_id=output["id"])
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    root = f"/api/v1/technological-processes/{pid}"
+    group = (await client.post("/api/v1/inventory-groups", json={"name": "Updated group"})).json()
+    updated = await client.patch(
+        root, json={"name": "Renamed process", "default_group_id": group["id"]}
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["default_group_id"] == group["id"]
+    assert (await client.post(f"{root}/versions/{vid}/activate")).status_code == 200
+    newer = (await client.post(f"{root}/versions", json={})).json()
+    assert (await client.delete(f"/api/v1/trash/process_version/{vid}")).status_code == 409
+    deactivated = await client.post(f"{root}/deactivate")
+    assert deactivated.status_code == 200, deactivated.text
+    assert deactivated.json()["active_version"] is None
+    item = (await client.get(f"/api/v1/manufactured-items/{output['id']}")).json()
+    assert item["active_process_id"] is None
+    assert (await client.get(f"{root}/versions/{vid}")).json()["status"] == "archived"
+    assert (await client.delete(f"/api/v1/trash/process_version/{newer['id']}")).status_code == 204
+    assert (await client.get(f"{root}/versions/{newer['id']}")).status_code == 404
+    assert len((await client.get(f"{root}/versions")).json()["items"]) == 1
+    assert (await client.delete(f"/api/v1/trash/process_version/{vid}")).status_code == 409
+    next_version = (await client.post(f"{root}/versions", json={})).json()
+    assert next_version["version_number"] == 3
+    trash = (await client.get("/api/v1/trash")).json()
+    entry = next(item for item in trash["items"] if item["entity_type"] == "process_version")
+    assert (await client.post(f"/api/v1/trash/{entry['id']}/restore")).status_code == 204
+    versions = (await client.get(f"{root}/versions")).json()["items"]
+    assert [item["version_number"] for item in versions] == [3, 2, 1]
+
+
+@pytest.mark.asyncio
+async def test_disconnected_subgraph_is_saved_but_not_used_in_recipe(client: AsyncClient) -> None:
+    output = await create_item(client, name="Island output")
+    material = await create_material(client, name="Connected material")
+    created = await create_process(client, name="Island process", output_item_id=output["id"])
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = graph(
+        name="Island process",
+        output_item_id=output["id"],
+        output_name=output["name"],
+        material_id=material["id"],
+    )
+    document["nodes"].extend(
+        [
+            {"id": "island-a", "type": "material", "referenceId": None},
+            {"id": "island-b", "type": "operation", "referenceId": None},
+        ]
+    )
+    document["edges"].extend(
+        [
+            {"id": "island-1", "source": "island-a", "target": "island-b", "quantity": None},
+            {"id": "island-2", "source": "island-b", "target": "island-a", "quantity": None},
+        ]
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["status"] == "draft"
+    assert saved.json()["validation_errors"] == []
+    assert len(saved.json()["graph"]["nodes"]) == 4
+    assert len(saved.json()["graph"]["edges"]) == 3
+    activated = await client.post(f"/api/v1/technological-processes/{pid}/versions/{vid}/activate")
+    assert activated.status_code == 200, activated.text
+    exported = (
+        await client.get(f"/api/v1/technological-processes/{pid}/versions/{vid}/export")
+    ).json()
+    assert len(exported["nodes"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_recipe_lookup_returns_embedded_recipe_and_prefers_active_version(
+    client: AsyncClient,
+) -> None:
+    output = await create_item(client, name="Recipe lookup output")
+    semi_response = await client.post(
+        "/api/v1/manufactured-items",
+        json={
+            "name": "Recipe lookup semi",
+            "is_product": False,
+            "product_id": output["id"],
+            "unit": "шт",
+        },
+    )
+    assert semi_response.status_code == 201, semi_response.text
+    semi = semi_response.json()
+    material = await create_material(client, name="Recipe lookup material")
+    created = await create_process(client, name="Recipe lookup", output_item_id=output["id"])
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = graph(
+        name="Recipe lookup",
+        output_item_id=output["id"],
+        output_name=output["name"],
+        manufactured_item_id=semi["id"],
+    )
+    document["nodes"].append(
+        {"id": "material", "type": "material", "referenceId": material["id"], "label": "Сталь"}
+    )
+    document["edges"].append(
+        {"id": "material-semi", "source": "material", "target": "semi-finished", "quantity": "2.5"}
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert saved.status_code == 200, saved.text
+    recipe = await client.get(f"/api/v1/technological-processes/recipes/{semi['id']}")
+    assert recipe.status_code == 200, recipe.text
+    assert recipe.json()["process_id"] == pid
+    assert recipe.json()["target_node_id"] == "semi-finished"
+    assert recipe.json()["version"]["graph"]["nodes"] == saved.json()["graph"]["nodes"]
+    assert Decimal(recipe.json()["version"]["graph"]["edges"][0]["quantity"]) == Decimal("2.5")
+    assert (
+        await client.get(
+            f"/api/v1/technological-processes/recipes/{semi['id']}?exclude_process_id={pid}"
+        )
+    ).json() is None
+    assert (
+        await client.post(f"/api/v1/technological-processes/{pid}/versions/{vid}/activate")
+    ).status_code == 200
+    next_version = await client.post(f"/api/v1/technological-processes/{pid}/versions", json={})
+    assert next_version.status_code == 201
+    recipe = (await client.get(f"/api/v1/technological-processes/recipes/{output['id']}")).json()
+    assert recipe["version"]["id"] == vid
+    assert recipe["target_node_id"] == "output"
+    assert (await client.post(f"/api/v1/technological-processes/{pid}/archive")).status_code == 200
+    assert (
+        await client.get(f"/api/v1/technological-processes/recipes/{semi['id']}")
+    ).json() is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target_type", ["material", "operation"])
+async def test_incoming_leaf_connections_are_saved_as_error(
+    client: AsyncClient, target_type: str
+) -> None:
+    output = await create_item(client, name=f"Leaf output {target_type}")
+    material = await create_material(client, name=f"Leaf material {target_type}")
+    operation = await create_operation(client, name=f"Leaf operation {target_type}")
+    created = await create_process(
+        client, name=f"Leaf process {target_type}", output_item_id=output["id"]
+    )
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = graph(
+        name=f"Leaf process {target_type}",
+        output_item_id=output["id"],
+        output_name=output["name"],
+        material_id=material["id"],
+        operation_id=operation["id"],
+    )
+    document["edges"].append(
+        {
+            "id": "illegal",
+            "source": "operation" if target_type == "material" else "material",
+            "target": target_type,
+            "quantity": "1",
+        }
+    )
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["status"] == "error"
+    assert "Материалы и операции не могут иметь входящие связи" in saved.json()["validation_errors"]
+    assert (
+        await client.post(f"/api/v1/technological-processes/{pid}/versions/{vid}/activate")
+    ).status_code == 422

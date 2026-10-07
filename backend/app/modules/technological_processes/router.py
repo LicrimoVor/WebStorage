@@ -16,6 +16,7 @@ from app.modules.technological_processes.schemas import (
     ProcessImportResult,
     ProcessList,
     ProcessRead,
+    ProcessRecipeRead,
     ProcessSortField,
     ProcessUpdate,
     ProcessVersionCreate,
@@ -78,6 +79,35 @@ async def list_technological_processes(
         sort_by=sort_by,
         sort_order=sort_order,
     )
+
+
+@router.get(
+    "/recipe-owners", response_model=dict[uuid.UUID, str], operation_id="listProcessRecipeOwners"
+)
+async def list_recipe_owners(
+    session: Session, exclude_process_id: uuid.UUID | None = None
+) -> dict[uuid.UUID, str]:
+    return await service.recipe_owners(session, exclude_process_id)
+
+
+@router.get(
+    "/recipes/{item_id}",
+    response_model=ProcessRecipeRead | None,
+    operation_id="getItemProcessRecipe",
+)
+async def get_item_recipe(
+    item_id: uuid.UUID, session: Session, exclude_process_id: uuid.UUID | None = None
+) -> ProcessRecipeRead | None:
+    return await service.item_recipe(session, item_id, exclude_process_id)
+
+
+@router.post(
+    "/{process_id}/deactivate",
+    response_model=ProcessRead,
+    operation_id="deactivateTechnologicalProcess",
+)
+async def deactivate_process(process_id: uuid.UUID, session: Session) -> ProcessRead:
+    return await service.deactivate(session, process_id)
 
 
 @router.get(

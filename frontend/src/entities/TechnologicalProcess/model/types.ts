@@ -19,3 +19,5 @@ export type ProcessSortField = components['schemas']['ProcessSortField'];
 export type TechnologicalProcessListParams = NonNullable<
   operations['listTechnologicalProcesses']['parameters']['query']
 >;
+
+export type ProcessRecipe = components['schemas']['ProcessRecipeRead'];

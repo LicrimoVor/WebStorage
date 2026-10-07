@@ -28,6 +28,7 @@ from app.modules.production.schemas import (
 from app.modules.production_plans import repository as plan_repository
 from app.modules.production_plans.service import recalculate_active_snapshots
 from app.modules.technological_processes import repository as process_repository
+from app.modules.technological_processes.graph import participating_graph
 from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessEdge,
@@ -86,6 +87,7 @@ async def _direct_components(
     if process is None:
         raise DomainValidationError("The process version does not produce this item")
     nodes, edges = await process_repository.get_graph(session, version.id)
+    nodes, edges = participating_graph(nodes, edges)
     node_map = {node.external_id: node for node in nodes}
     outputs = [
         node
@@ -413,9 +415,7 @@ async def register(
         if existing is None:
             raise ConflictError("Production registration conflicted") from error
         if not _same_request(existing, plan_id=plan_id, payload=payload):
-            raise ConflictError(
-                "Idempotency key was already used for another request"
-            ) from error
+            raise ConflictError("Idempotency key was already used for another request") from error
         return await _read(session, existing)
 
 

@@ -22,9 +22,11 @@ import {
 import { LoginPage } from "@/pages/LoginPage";
 import { ApiError, getErrorMessage } from "@/shared/api";
 import { usePageMetadata } from "@/shared/lib";
-import { ErrorBoundary } from "@/shared/ui";
+import { ErrorBoundary } from "@/shared/ui/ErrorBoundary/ErrorBoundary";
 
-import {SettingsPage, ReceiptPage, RepairsPage} from "@/pages/BusinessPages";
+const SettingsPage = lazy(() => import("@/pages/BusinessPages").then((m) => ({default: m.SettingsPage})));
+const ReceiptPage = lazy(() => import("@/pages/BusinessPages").then((m) => ({default: m.ReceiptPage})));
+const RepairsPage = lazy(() => import("@/pages/BusinessPages").then((m) => ({default: m.RepairsPage})));
 import {AppHeader} from "./AppHeader";
 import {PageHelp} from '@/shared/ui/PageHelp';
 import {canOpenPath, firstAvailablePath} from "@/shared/lib/access";

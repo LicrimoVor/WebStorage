@@ -8,6 +8,7 @@ export {
   replaceTechnologicalProcessGraph,
   saveTechnologicalProcessDraft,
   technologicalProcessKeys,
+  useItemProcessRecipeQuery,
   useTechnologicalProcessQuery,
   useTechnologicalProcessesQuery,
   useTechnologicalProcessVersionQuery,

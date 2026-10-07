@@ -16,7 +16,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -72,7 +72,7 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("version_number > 0", name="version_number_positive"),
         CheckConstraint("schema_version > 0", name="schema_version_positive"),
         CheckConstraint("revision >= 0", name="revision_non_negative"),
-        CheckConstraint("status IN ('draft', 'active', 'archived')", name="status_valid"),
+        CheckConstraint("status IN ('draft', 'error', 'active', 'archived')", name="status_valid"),
         UniqueConstraint("process_id", "version_number", name="uq_process_versions_number"),
         Index(
             "ux_process_versions_one_active",
@@ -83,6 +83,10 @@ class TechnologicalProcessVersion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_process_versions_process_created", "process_id", "created_at"),
     )
 
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    validation_errors: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     id: Mapped[uuid.UUID]
     process_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

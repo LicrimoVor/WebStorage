@@ -1,3 +1,4 @@
+import {InstallAppButton} from './InstallAppButton';
 import {
   ArrowRightFromSquare,
   Gear,
@@ -75,6 +76,7 @@ export function AppHeader({
   );
   const userActions = (
     <div className={styles.user}>
+      <InstallAppButton />
       {canOpenPath(access, "/settings") && (
         <Button
           view="flat"

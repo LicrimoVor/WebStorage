@@ -10,6 +10,7 @@ from app.core.types import Quantity
 
 class ProcessStatus(StrEnum):
     DRAFT = "draft"
+    ERROR = "error"
     ACTIVE = "active"
     ARCHIVED = "archived"
 
@@ -83,6 +84,7 @@ class ProcessCreate(BaseModel):
 
 
 class ProcessUpdate(BaseModel):
+    default_group_id: uuid.UUID | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     output_item_id: uuid.UUID | None = None
 
@@ -97,6 +99,7 @@ class ProcessDraftSave(BaseModel):
 
 
 class ProcessVersionSummary(BaseModel):
+    validation_errors: list[str] = Field(default_factory=list)
     id: uuid.UUID
     version_number: int
     status: ProcessStatus
@@ -140,4 +143,11 @@ class ProcessVersionList(BaseModel):
 
 class ProcessImportResult(BaseModel):
     process: ProcessRead
+    version: ProcessVersionRead
+
+
+class ProcessRecipeRead(BaseModel):
+    process_id: uuid.UUID
+    process_name: str
+    target_node_id: str
     version: ProcessVersionRead

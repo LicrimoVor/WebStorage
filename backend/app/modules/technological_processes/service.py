@@ -11,6 +11,7 @@ from app.core.errors import ConflictError, DomainValidationError, NotFoundError
 from app.core.query import SortOrder
 from app.modules.manufactured_items.model import ManufacturedItem
 from app.modules.technological_processes import repository
+from app.modules.technological_processes.graph import participating_graph
 from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessEdge,
@@ -28,6 +29,7 @@ from app.modules.technological_processes.schemas import (
     ProcessList,
     ProcessNodeType,
     ProcessRead,
+    ProcessRecipeRead,
     ProcessSortField,
     ProcessStatus,
     ProcessUpdate,
@@ -64,6 +66,14 @@ async def validate_recipes(
     ]
     if document.output_item_id and document.output_item_id not in ids:
         ids.append(document.output_item_id)
+    incoming_targets = {edge.target for edge in document.edges}
+    claimed = {
+        node.reference_id
+        for node in document.nodes
+        if node.type == ProcessNodeType.OUTPUT or node.id in incoming_targets
+    }
+    if document.output_item_id:
+        claimed.add(document.output_item_id)
     items = list(
         (await session.scalars(select(ManufacturedItem).where(ManufacturedItem.id.in_(ids)))).all()
     )
@@ -73,7 +83,7 @@ async def validate_recipes(
             raise ConflictError(
                 f"Полуфабрикат '{item.name}' повторяется: допустим только один рецепт"
             )
-        if item.id in semi_ids and document.output_item_id:
+        if item.id in semi_ids and item.id in claimed and document.output_item_id:
             output = await session.get(ManufacturedItem, document.output_item_id)
             owner = (
                 output.id if output and output.is_product else output.product_id if output else None
@@ -82,8 +92,84 @@ async def validate_recipes(
                 raise ConflictError(f"Полуфабрикат '{item.name}' принадлежит другому продукту")
     if not semi_ids:
         return
+    owners = await recipe_owners(session, process_id)
+    for item_id in semi_ids & claimed:
+        if item_id in owners:
+            raise ConflictError(
+                f"Полуфабрикат уже имеет рецепт в техпроцессе '{owners[item_id]}'. "
+                "Допустимо использование как компонента, но нельзя добавлять входящие связи."
+            )
+
+
+async def recipe_owners(
+    session: AsyncSession, exclude_process_id: uuid.UUID | None = None
+) -> dict[uuid.UUID, str]:
+    participating = repository.participating_node_keys()
+    incoming = (
+        select(TechnologicalProcessEdge.id)
+        .where(
+            TechnologicalProcessEdge.version_id == TechnologicalProcessNode.version_id,
+            TechnologicalProcessEdge.target_node_id == TechnologicalProcessNode.external_id,
+        )
+        .exists()
+    )
     query = (
-        select(TechnologicalProcess.name)
+        select(TechnologicalProcessNode.reference_id, TechnologicalProcess.name)
+        .join(
+            TechnologicalProcessVersion,
+            TechnologicalProcessVersion.id == TechnologicalProcessNode.version_id,
+        )
+        .join(
+            TechnologicalProcess, TechnologicalProcess.id == TechnologicalProcessVersion.process_id
+        )
+        .where(
+            TechnologicalProcess.archived.is_(False),
+            TechnologicalProcess.deleted_at.is_(None),
+            TechnologicalProcessVersion.deleted_at.is_(None),
+            TechnologicalProcessVersion.status.in_(["draft", "active"]),
+            TechnologicalProcessNode.node_type.in_(["manufactured_item", "output"]),
+            TechnologicalProcessNode.reference_id.is_not(None),
+            select(participating.c.node_id)
+            .where(
+                participating.c.version_id == TechnologicalProcessNode.version_id,
+                participating.c.node_id == TechnologicalProcessNode.external_id,
+            )
+            .exists(),
+            (TechnologicalProcessNode.node_type == "output") | incoming,
+        )
+    )
+    outputs = select(TechnologicalProcess.output_item_id, TechnologicalProcess.name).where(
+        TechnologicalProcess.output_item_id.is_not(None),
+        TechnologicalProcess.archived.is_(False),
+        TechnologicalProcess.deleted_at.is_(None),
+    )
+    if exclude_process_id:
+        query = query.where(TechnologicalProcess.id != exclude_process_id)
+        outputs = outputs.where(TechnologicalProcess.id != exclude_process_id)
+    return {
+        item_id: name
+        for item_id, name in [
+            *(await session.execute(query)).all(),
+            *(await session.execute(outputs)).all(),
+        ]
+        if item_id is not None
+    }
+
+
+async def item_recipe(
+    session: AsyncSession, item_id: uuid.UUID, exclude_process_id: uuid.UUID | None = None
+) -> ProcessRecipeRead | None:
+    participating = repository.participating_node_keys()
+    incoming = (
+        select(TechnologicalProcessEdge.id)
+        .where(
+            TechnologicalProcessEdge.version_id == TechnologicalProcessNode.version_id,
+            TechnologicalProcessEdge.target_node_id == TechnologicalProcessNode.external_id,
+        )
+        .exists()
+    )
+    query = (
+        select(TechnologicalProcess, TechnologicalProcessVersion, TechnologicalProcessNode)
         .join(
             TechnologicalProcessVersion,
             TechnologicalProcessVersion.process_id == TechnologicalProcess.id,
@@ -93,21 +179,39 @@ async def validate_recipes(
             TechnologicalProcessNode.version_id == TechnologicalProcessVersion.id,
         )
         .where(
-            TechnologicalProcessNode.reference_id.in_(semi_ids),
-            TechnologicalProcessNode.node_type.in_(["manufactured_item", "output"]),
-            TechnologicalProcessVersion.status.in_(["draft", "active"]),
             TechnologicalProcess.archived.is_(False),
+            TechnologicalProcess.deleted_at.is_(None),
+            TechnologicalProcessVersion.deleted_at.is_(None),
+            TechnologicalProcessVersion.status.in_(["active", "draft"]),
+            TechnologicalProcessNode.reference_id == item_id,
+            TechnologicalProcessNode.node_type.in_(["output", "manufactured_item"]),
+            (TechnologicalProcessNode.node_type == "output") | incoming,
+            select(participating.c.node_id)
+            .where(
+                participating.c.version_id == TechnologicalProcessNode.version_id,
+                participating.c.node_id == TechnologicalProcessNode.external_id,
+            )
+            .exists(),
         )
+        .order_by(
+            (TechnologicalProcessVersion.status == "active").desc(),
+            TechnologicalProcessVersion.version_number.desc(),
+            TechnologicalProcess.id,
+        )
+        .limit(1)
     )
-    outputs = select(TechnologicalProcess.name).where(
-        TechnologicalProcess.output_item_id.in_(semi_ids), TechnologicalProcess.archived.is_(False)
+    if exclude_process_id is not None:
+        query = query.where(TechnologicalProcess.id != exclude_process_id)
+    row = (await session.execute(query)).first()
+    if row is None:
+        return None
+    process, version, node = row
+    return ProcessRecipeRead(
+        process_id=process.id,
+        process_name=process.name,
+        target_node_id=node.external_id,
+        version=await _version_read(session, process, version),
     )
-    if process_id:
-        query = query.where(TechnologicalProcess.id != process_id)
-        outputs = outputs.where(TechnologicalProcess.id != process_id)
-    conflict = await session.scalar(query.limit(1)) or await session.scalar(outputs.limit(1))
-    if conflict:
-        raise ConflictError(f"Полуфабрикат уже используется в техпроцессе '{conflict}'")
 
 
 def _clean_name(name: str) -> str:
@@ -119,6 +223,7 @@ def _clean_name(name: str) -> str:
 
 def _version_summary(version: TechnologicalProcessVersion) -> ProcessVersionSummary:
     return ProcessVersionSummary(
+        validation_errors=version.validation_errors,
         id=version.id,
         version_number=version.version_number,
         status=ProcessStatus(version.status),
@@ -271,7 +376,8 @@ async def create(
     if payload.default_group_id is not None:
         await validate_group_ids(session, [payload.default_group_id])
     process = TechnologicalProcess(
-        name=_clean_name(payload.name), output_item_id=output.id,
+        name=_clean_name(payload.name),
+        output_item_id=output.id,
         default_group_id=payload.default_group_id,
     )
     try:
@@ -300,6 +406,7 @@ async def create(
             ),
         )
         await repository.add_graph(session, nodes=nodes, edges=edges)
+        await _set_draft_status(session, process, version, nodes, edges)
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
@@ -318,7 +425,6 @@ async def create(
 async def import_document(
     session: AsyncSession, document: ProcessGraphDocument, *, created_by: str
 ) -> ProcessImportResult:
-    await validate_recipes(session, document)
     if document.output_item_id is not None:
         await _get_output_item(session, document.output_item_id)
     from app.modules.warehouse.repository import validate_group_ids
@@ -326,7 +432,8 @@ async def import_document(
     if document.default_group_id is not None:
         await validate_group_ids(session, [document.default_group_id])
     process = TechnologicalProcess(
-        name=_clean_name(document.name), output_item_id=document.output_item_id,
+        name=_clean_name(document.name),
+        output_item_id=document.output_item_id,
         default_group_id=document.default_group_id,
     )
     try:
@@ -341,6 +448,7 @@ async def import_document(
         await repository.create_version(session, version)
         nodes, edges = _graph_entities(version.id, document)
         await repository.add_graph(session, nodes=nodes, edges=edges)
+        await _set_draft_status(session, process, version, nodes, edges)
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
@@ -398,6 +506,12 @@ async def update_process(
     if process.archived:
         raise ConflictError("Archived technological process cannot be changed")
     changes = payload.model_dump(exclude_unset=True)
+    if "default_group_id" in changes:
+        from app.modules.warehouse.repository import validate_group_ids
+
+        if changes["default_group_id"] is not None:
+            await validate_group_ids(session, [changes["default_group_id"]])
+        process.default_group_id = changes["default_group_id"]
     if "name" in changes:
         process.name = _clean_name(changes["name"])
     if "output_item_id" in changes:
@@ -462,7 +576,7 @@ async def create_version(
         raise NotFoundError("Source technological process version was not found")
     version = TechnologicalProcessVersion(
         process_id=process.id,
-        version_number=versions[0].version_number + 1,
+        version_number=await repository.next_version_number(session, process.id),
         status=ProcessStatus.DRAFT.value,
         schema_version=source.schema_version,
         created_by=created_by,
@@ -471,9 +585,9 @@ async def create_version(
         await repository.create_version(session, version)
         source_nodes, source_edges = await repository.get_graph(session, source.id)
         document = _graph_document(process, source, source_nodes, source_edges)
-        await validate_recipes(session, document, process.id)
         nodes, edges = _graph_entities(version.id, document)
         await repository.add_graph(session, nodes=nodes, edges=edges)
+        await _set_draft_status(session, process, version, nodes, edges)
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
@@ -521,17 +635,23 @@ async def _replace_draft_graph(
 ) -> ProcessVersionRead:
     process = await _get_process(session, process_id, for_update=True)
     version = await _get_version(session, process_id, version_id, for_update=True)
-    if process.archived or version.status != ProcessStatus.DRAFT.value:
-        raise ConflictError("Only a draft version can be changed")
+    if process.archived or version.status not in {
+        ProcessStatus.DRAFT.value,
+        ProcessStatus.ERROR.value,
+    }:
+        raise ConflictError(
+            "Редактирование разрешено для черновиков и ошибочных версий. "
+            "Для активной или архивной версии создайте новую версию."
+        )
     if _clean_name(document.name) != process.name:
         raise DomainValidationError("Document name must match the process name")
     if document.output_item_id != process.output_item_id:
         raise DomainValidationError("Document outputItemId must match the process output")
     if expected_revision is not None and version.revision != expected_revision:
         raise ConflictError("Draft was changed in another session; reload it before saving")
-    await validate_recipes(session, document, process.id)
     nodes, edges = _graph_entities(version.id, document)
     await repository.replace_graph(session, version_id=version.id, nodes=nodes, edges=edges)
+    await _set_draft_status(session, process, version, nodes, edges)
     version.revision += 1
     await session.commit()
     await session.refresh(version)
@@ -588,21 +708,36 @@ async def _activation_errors(
     nodes: list[TechnologicalProcessNode],
     edges: list[TechnologicalProcessEdge],
 ) -> list[str]:
-    await validate_recipes(
-        session,
-        ProcessGraphDocument(
-            name=process.name,
-            outputItemId=process.output_item_id,
-            nodes=[
-                GraphNode(
-                    id=n.external_id, type=ProcessNodeType(n.node_type), referenceId=n.reference_id
-                )
-                for n in nodes
-            ],
-        ),
-        process.id,
-    )
+    nodes, edges = participating_graph(nodes, edges)
     errors: list[str] = []
+    try:
+        await validate_recipes(
+            session,
+            ProcessGraphDocument(
+                name=process.name,
+                outputItemId=process.output_item_id,
+                nodes=[
+                    GraphNode(
+                        id=n.external_id,
+                        type=ProcessNodeType(n.node_type),
+                        referenceId=n.reference_id,
+                    )
+                    for n in nodes
+                ],
+                edges=[
+                    GraphEdge(
+                        id=e.external_id,
+                        source=e.source_node_id,
+                        target=e.target_node_id,
+                        quantity=e.quantity,
+                    )
+                    for e in edges
+                ],
+            ),
+            process.id,
+        )
+    except (ConflictError, DomainValidationError) as error:
+        errors.append(str(error))
     nodes = [node for node in nodes if node.node_type != ProcessNodeType.COMMENT.value]
     if process.output_item_id is None:
         errors.append("final output is not mapped")
@@ -664,6 +799,11 @@ async def _activation_errors(
             continue
         if edge.quantity is None or edge.quantity <= 0:
             errors.append(f"edge '{edge.external_id}' has no positive quantity")
+        if node_map[edge.target_node_id].node_type in {
+            ProcessNodeType.MATERIAL.value,
+            ProcessNodeType.OPERATION.value,
+        }:
+            errors.append("Материалы и операции не могут иметь входящие связи")
         adjacency[edge.source_node_id].add(edge.target_node_id)
         reverse[edge.target_node_id].add(edge.source_node_id)
     if _has_cycle(adjacency, set(node_map)):
@@ -673,16 +813,6 @@ async def _activation_errors(
         final_id = output_nodes[0].external_id
         if adjacency.get(final_id):
             errors.append("final output node must not have outgoing dependencies")
-        connected: set[str] = set()
-        queue = deque([final_id])
-        while queue:
-            target = queue.popleft()
-            if target in connected:
-                continue
-            connected.add(target)
-            queue.extend(reverse.get(target, set()))
-        for node_id in set(node_map) - connected:
-            errors.append(f"node '{node_id}' has no chain to the final output")
 
     if process.output_item_id is not None:
         manufactured_dependencies = [
@@ -706,12 +836,13 @@ async def activate(
     version = await _get_version(session, process_id, version_id, for_update=True)
     if process.archived:
         raise ConflictError("Archived technological process cannot be activated")
-    if version.status != ProcessStatus.DRAFT.value:
+    if version.status not in {ProcessStatus.DRAFT.value, ProcessStatus.ERROR.value}:
         raise ConflictError("Only a draft version can be activated")
     nodes, edges = await repository.get_graph(session, version.id)
     errors = await _activation_errors(session, process, nodes, edges)
     if errors:
         raise DomainValidationError("; ".join(errors))
+    version.validation_errors = []
     version.activated_at = datetime.now(UTC)
     try:
         await repository.activate_version(session, process=process, version=version)
@@ -736,3 +867,30 @@ async def delete_process(session: AsyncSession, process_id: uuid.UUID) -> None:
     await repository.archive_process(session, process)
     process.deleted_at = datetime.now(UTC)
     await session.commit()
+
+
+async def _set_draft_status(
+    session: AsyncSession,
+    process: TechnologicalProcess,
+    version: TechnologicalProcessVersion,
+    nodes: list[TechnologicalProcessNode],
+    edges: list[TechnologicalProcessEdge],
+) -> None:
+    version.validation_errors = await _activation_errors(session, process, nodes, edges)
+    version.status = (
+        ProcessStatus.ERROR.value if version.validation_errors else ProcessStatus.DRAFT.value
+    )
+
+
+async def deactivate(session: AsyncSession, process_id: uuid.UUID) -> ProcessRead:
+    process = await _get_process(session, process_id, for_update=True)
+    await session.execute(text("SELECT pg_advisory_xact_lock(781654221)"))
+    for version in await repository.list_versions(session, process.id):
+        if version.status == ProcessStatus.ACTIVE.value:
+            version.status = ProcessStatus.ARCHIVED.value
+            if process.output_item_id:
+                item = await session.get(ManufacturedItem, process.output_item_id)
+                if item and item.active_process_id == version.id:
+                    item.active_process_id = None
+    await session.commit()
+    return await get(session, process.id)

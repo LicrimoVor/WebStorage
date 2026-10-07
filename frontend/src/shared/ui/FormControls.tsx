@@ -1,15 +1,8 @@
-import {Select as BaseSelect, TextInput as BaseInput, TextArea as BaseArea, type SelectProps, type TextInputProps, type TextAreaProps} from '@gravity-ui/uikit';
+import {Select as BaseSelect, TextArea as BaseArea, type SelectProps, type TextAreaProps} from '@gravity-ui/uikit';
 import {useId} from 'react';
 import styles from './FormControls.module.scss';
 
-export function TextInput({label, className, ...props}: TextInputProps) {
-  const generatedId = useId();
-  const id = props.id ?? generatedId;
-  return <div className={`${styles.field} ${className ?? ''}`}>
-    {label && <label className={styles.label} htmlFor={id}>{label}</label>}
-    <BaseInput size="l" {...props} id={id} />
-  </div>;
-}
+export {TextInput} from './TextInput';
 
 export function TextArea({label, className, ...props}: TextAreaProps & {label?: string}) {
   const generatedId = useId();

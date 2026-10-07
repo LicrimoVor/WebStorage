@@ -1,9 +1,9 @@
 // Cache only public static resources. API responses, media and pages stay on the network.
-const CACHE = 'webstorage-static-v1';
+const CACHE = 'webstorage-static-v2';
 const OFFLINE = '/offline.html';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.add(OFFLINE)));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll([OFFLINE, "/icons/icon-192.png", "/icons/icon-512.png"])));
 });
 
 self.addEventListener('activate', (event) => {

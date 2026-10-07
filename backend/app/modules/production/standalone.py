@@ -38,6 +38,7 @@ from app.modules.production.schemas import (
 from app.modules.production.service import _quantity, _read, _topological_order
 from app.modules.production_plans.service import recalculate_active_snapshots
 from app.modules.technological_processes import repository as process_repository
+from app.modules.technological_processes.graph import participating_graph
 from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessEdge,
@@ -179,6 +180,7 @@ async def _output_recipe(
 async def _embedded_recipes(
     session: AsyncSession, item: ManufacturedItem
 ) -> list[Recipe]:
+    participating = process_repository.participating_node_keys()
     output_item = aliased(ManufacturedItem)
     rows = (
         await session.execute(
@@ -205,6 +207,12 @@ async def _embedded_recipes(
                 ),
             )
             .where(
+                select(participating.c.node_id)
+                .where(
+                    participating.c.version_id == TechnologicalProcessNode.version_id,
+                    participating.c.node_id == TechnologicalProcessNode.external_id,
+                )
+                .exists(),
                 TechnologicalProcessVersion.status == "active",
                 TechnologicalProcess.archived.is_(False),
                 output_item.is_product.is_(True),
@@ -258,6 +266,7 @@ async def _recipe_demand(
     session: AsyncSession, recipe: Recipe, quantity: Decimal
 ) -> RecipeDemand:
     nodes, edges = await process_repository.get_graph(session, recipe.version.id)
+    nodes, edges = participating_graph(nodes, edges, {recipe.target_node_id})
     node_map = {node.external_id: node for node in nodes}
     if recipe.target_node_id not in node_map:
         raise DomainValidationError("The production recipe target was not found")

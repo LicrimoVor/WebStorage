@@ -12,7 +12,7 @@ interface TrashEntry {
 }
 const labels: Record<string, string> = {
   material: 'Материал', manufactured_item: 'Полуфабрикат / продукт',
-  operation: 'Операция', employee: 'Сотрудник', process: 'Техпроцесс',
+  operation: 'Операция', employee: 'Сотрудник', process_version: 'Версия техпроцесса', process: 'Техпроцесс',
   finance_entry: 'Финансовая операция', inventory_group: 'Группа / подгруппа',
   funding_source: 'Источник финансирования', instruction_asset: 'Файл инструкции',
   production_plan: 'Производственный план',

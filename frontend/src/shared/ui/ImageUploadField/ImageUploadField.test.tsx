@@ -51,6 +51,48 @@ describe('ImageUploadField', () => {
     expect(onUpdate).toHaveBeenCalledWith('http://test/media/image.png');
   });
 
+  it('uploads an image pasted into the link field instead of pasting accompanying text', async () => {
+    vi.mocked(uploadImage).mockClear();
+    vi.mocked(uploadImage).mockResolvedValue({url: '/media/pasted.png', content_type: 'image/png', size: 4});
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'clipboard.png', {type: 'image/png'});
+    Object.defineProperty(file, 'arrayBuffer', {value: async () => new Uint8Array([137, 80, 78, 71]).buffer});
+    const onUpdate = vi.fn();
+    renderWithProviders(<ImageUploadField value="/media/old.png" onUpdate={onUpdate} alt="Материал" />);
+    const accepted = fireEvent.paste(screen.getByLabelText('Ссылка на изображение'), {clipboardData: {
+      items: [{kind: 'file', type: 'image/png', getAsFile: () => file}], files: [file],
+      getData: () => 'https://example.com/page',
+    }});
+    expect(accepted).toBe(false);
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('/media/pasted.png'));
+    expect(uploadImage).toHaveBeenCalledWith({filename: 'clipboard.png', content_type: 'image/png', content_base64: 'iVBORw=='});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('supports clipboard files when the items list is empty', async () => {
+    vi.mocked(uploadImage).mockClear();
+    vi.mocked(uploadImage).mockResolvedValue({url: '/media/pasted.webp', content_type: 'image/webp', size: 4});
+    const file = new File(['webp'], 'clipboard.webp', {type: 'image/webp'});
+    Object.defineProperty(file, 'arrayBuffer', {value: async () => new Uint8Array([1, 2, 3, 4]).buffer});
+    const onUpdate = vi.fn();
+    renderWithProviders(<ImageUploadField value="" onUpdate={onUpdate} alt="Полуфабрикат" />);
+    fireEvent.paste(screen.getByLabelText('Ссылка на изображение'), {clipboardData: {items: [], files: [file]}});
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('/media/pasted.webp'));
+  });
+
+  it('rejects oversized pasted images and keeps the stored image', () => {
+    vi.mocked(uploadImage).mockClear();
+    const onUpdate = vi.fn();
+    renderWithProviders(<ImageUploadField value="/media/old.png" onUpdate={onUpdate} alt="Материал" />);
+    const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', {type: 'image/png'});
+    fireEvent.paste(screen.getByLabelText('Ссылка на изображение'), {clipboardData: {items: [], files: [file]}});
+    expect(screen.getByText('Файл превышает допустимый размер 5 МБ')).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: 'Материал'})).toHaveAttribute('src', '/media/old.png');
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
   it('downloads links and uploads bytes instead of storing the external URL', async () => {
     const blob = new Blob([new Uint8Array([137, 80, 78, 71])], {type: 'image/png'});
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ok: true, headers: new Headers(), blob: async () => blob}));
@@ -62,7 +104,9 @@ describe('ImageUploadField', () => {
       <ImageUploadField value="" onUpdate={onUpdate} alt="Материал" />,
     );
 
-    fireEvent.change(screen.getByLabelText('Ссылка на изображение'), {target: {value: 'https://example.com/image.png'}});
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Ссылка на изображение'));
+    await user.paste('https://example.com/image.png');
     expect(onUpdate).not.toHaveBeenCalled();
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('/media/imported.png'));
     expect(uploadImage).toHaveBeenCalledWith({filename: 'image.png', content_type: 'image/png', content_base64: 'iVBORw=='});

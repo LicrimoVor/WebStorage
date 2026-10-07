@@ -873,6 +873,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/technological-processes/recipe-owners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Recipe Owners */
+        get: operations["listProcessRecipeOwners"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/technological-processes/recipes/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Item Recipe */
+        get: operations["getItemProcessRecipe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/technological-processes/{process_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Process */
+        post: operations["deactivateTechnologicalProcess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/technological-processes/{process_id}": {
         parameters: {
             query?: never;
@@ -3482,6 +3533,19 @@ export interface components {
              */
             updated_at: string;
         };
+        /** ProcessRecipeRead */
+        ProcessRecipeRead: {
+            /**
+             * Process Id
+             * Format: uuid
+             */
+            process_id: string;
+            /** Process Name */
+            process_name: string;
+            /** Target Node Id */
+            target_node_id: string;
+            version: components["schemas"]["ProcessVersionRead"];
+        };
         /**
          * ProcessSortField
          * @enum {string}
@@ -3491,9 +3555,11 @@ export interface components {
          * ProcessStatus
          * @enum {string}
          */
-        ProcessStatus: "draft" | "active" | "archived";
+        ProcessStatus: "draft" | "error" | "active" | "archived";
         /** ProcessUpdate */
         ProcessUpdate: {
+            /** Default Group Id */
+            default_group_id?: string | null;
             /** Name */
             name?: string | null;
             /** Output Item Id */
@@ -3511,6 +3577,8 @@ export interface components {
         };
         /** ProcessVersionRead */
         ProcessVersionRead: {
+            /** Validation Errors */
+            validation_errors?: string[];
             /**
              * Id
              * Format: uuid
@@ -3546,6 +3614,8 @@ export interface components {
         };
         /** ProcessVersionSummary */
         ProcessVersionSummary: {
+            /** Validation Errors */
+            validation_errors?: string[];
             /**
              * Id
              * Format: uuid
@@ -7250,6 +7320,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    listProcessRecipeOwners: {
+        parameters: {
+            query?: {
+                exclude_process_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getItemProcessRecipe: {
+        parameters: {
+            query?: {
+                exclude_process_id?: string | null;
+            };
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessRecipeRead"] | null;
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    deactivateTechnologicalProcess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                process_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProcessRead"];
                 };
             };
             /** @description Unprocessable Content */

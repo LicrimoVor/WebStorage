@@ -34,6 +34,7 @@ from app.modules.production_plans.schemas import (
     ProductionPlanSummary,
     ProductionPlanUpdate,
 )
+from app.modules.technological_processes.graph import participating_graph
 from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessEdge,
@@ -249,6 +250,7 @@ async def _expand_version(
         raise DomainValidationError("Manufactured item processes contain a dependency cycle")
 
     nodes, edges = await _graph(context.session, version.id)
+    nodes, edges = participating_graph(nodes, edges)
     node_map = {node.external_id: node for node in nodes}
     order = _topological_order(nodes, edges)
     output_nodes = [node for node in nodes if node.node_type == "output"]
@@ -678,9 +680,7 @@ async def recalculate(
     if plan.status == ProductionPlanStatus.ACTIVE.value:
         await _recalculate_active(session)
     else:
-        await _recalculate_one(
-            session, plan, preserve_pins=not payload.use_latest_process_version
-        )
+        await _recalculate_one(session, plan, preserve_pins=not payload.use_latest_process_version)
     await session.commit()
     await session.refresh(plan)
     return await _read(session, plan)

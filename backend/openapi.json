@@ -3827,6 +3827,174 @@
         }
       }
     },
+    "/api/v1/technological-processes/recipe-owners": {
+      "get": {
+        "tags": [
+          "technological processes"
+        ],
+        "summary": "List Recipe Owners",
+        "operationId": "listProcessRecipeOwners",
+        "parameters": [
+          {
+            "name": "exclude_process_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Process Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "propertyNames": {
+                    "format": "uuid"
+                  },
+                  "title": "Response Listprocessrecipeowners"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/technological-processes/recipes/{item_id}": {
+      "get": {
+        "tags": [
+          "technological processes"
+        ],
+        "summary": "Get Item Recipe",
+        "operationId": "getItemProcessRecipe",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "exclude_process_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Process Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ProcessRecipeRead"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Getitemprocessrecipe"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/api/v1/technological-processes/{process_id}/deactivate": {
+      "post": {
+        "tags": [
+          "technological processes"
+        ],
+        "summary": "Deactivate Process",
+        "operationId": "deactivateTechnologicalProcess",
+        "parameters": [
+          {
+            "name": "process_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Process Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
     "/api/v1/technological-processes/{process_id}": {
       "get": {
         "tags": [
@@ -13145,6 +13313,34 @@
         ],
         "title": "ProcessRead"
       },
+      "ProcessRecipeRead": {
+        "properties": {
+          "process_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Process Id"
+          },
+          "process_name": {
+            "type": "string",
+            "title": "Process Name"
+          },
+          "target_node_id": {
+            "type": "string",
+            "title": "Target Node Id"
+          },
+          "version": {
+            "$ref": "#/components/schemas/ProcessVersionRead"
+          }
+        },
+        "type": "object",
+        "required": [
+          "process_id",
+          "process_name",
+          "target_node_id",
+          "version"
+        ],
+        "title": "ProcessRecipeRead"
+      },
       "ProcessSortField": {
         "type": "string",
         "enum": [
@@ -13158,6 +13354,7 @@
         "type": "string",
         "enum": [
           "draft",
+          "error",
           "active",
           "archived"
         ],
@@ -13165,6 +13362,18 @@
       },
       "ProcessUpdate": {
         "properties": {
+          "default_group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Group Id"
+          },
           "name": {
             "anyOf": [
               {
@@ -13230,6 +13439,13 @@
       },
       "ProcessVersionRead": {
         "properties": {
+          "validation_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Errors"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -13303,6 +13519,13 @@
       },
       "ProcessVersionSummary": {
         "properties": {
+          "validation_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Errors"
+          },
           "id": {
             "type": "string",
             "format": "uuid",

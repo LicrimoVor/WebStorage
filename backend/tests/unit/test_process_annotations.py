@@ -11,26 +11,29 @@ from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessVersion,
 )
-from app.modules.technological_processes.schemas import ProcessGraphDocument
+from app.modules.technological_processes.schemas import GraphEdge, GraphNode, ProcessGraphDocument
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def document() -> ProcessGraphDocument:
     material_id, output_id = uuid.uuid4(), uuid.uuid4()
-    return ProcessGraphDocument.model_validate({
-        "name": "Assembly", "outputItemId": str(output_id),
-        "nodes": [
-            {"id": "first", "type": "material", "referenceId": str(material_id)},
-            {"id": "second", "type": "material", "referenceId": str(material_id)},
-            {"id": "result", "type": "output", "referenceId": str(output_id)},
-            {"id": "note", "type": "comment", "label": "Inspect before assembly"},
-        ],
-        "edges": [
-            {"id": "a", "source": "first", "target": "result", "quantity": "2"},
-            {"id": "b", "source": "second", "target": "result", "quantity": "3"},
-        ],
-    })
+    return ProcessGraphDocument.model_validate(
+        {
+            "name": "Assembly",
+            "outputItemId": str(output_id),
+            "nodes": [
+                {"id": "first", "type": "material", "referenceId": str(material_id)},
+                {"id": "second", "type": "material", "referenceId": str(material_id)},
+                {"id": "result", "type": "output", "referenceId": str(output_id)},
+                {"id": "note", "type": "comment", "label": "Inspect before assembly"},
+            ],
+            "edges": [
+                {"id": "a", "source": "first", "target": "result", "quantity": "2"},
+                {"id": "b", "source": "second", "target": "result", "quantity": "3"},
+            ],
+        }
+    )
 
 
 @pytest.mark.parametrize("invalid", ["reference", "connection"])
@@ -49,12 +52,22 @@ async def test_annotations_do_not_prevent_activation(monkeypatch: pytest.MonkeyP
     graph = document()
     nodes, edges = service._graph_entities(uuid.uuid4(), graph)
     monkeypatch.setattr(service, "validate_recipes", AsyncMock())
-    monkeypatch.setattr(repository, "get_reference_states", AsyncMock(return_value=(
-        {graph.nodes[0].reference_id: False}, {graph.output_item_id: False}, {},
-    )))
+    monkeypatch.setattr(
+        repository,
+        "get_reference_states",
+        AsyncMock(
+            return_value=(
+                {graph.nodes[0].reference_id: False},
+                {graph.output_item_id: False},
+                {},
+            )
+        ),
+    )
     monkeypatch.setattr(repository, "active_manufactured_dependencies", AsyncMock(return_value=[]))
     process = TechnologicalProcess(
-        id=uuid.uuid4(), name=graph.name, output_item_id=graph.output_item_id,
+        id=uuid.uuid4(),
+        name=graph.name,
+        output_item_id=graph.output_item_id,
     )
     errors = await service._activation_errors(AsyncMock(spec=AsyncSession), process, nodes, edges)
     assert errors == []
@@ -66,6 +79,15 @@ async def test_material_copies_add_up_in_both_production_paths(
 ) -> None:
     graph = document()
     version = TechnologicalProcessVersion(id=uuid.uuid4(), process_id=uuid.uuid4())
+    graph.nodes.extend(
+        [GraphNode(id="island-a", type="material"), GraphNode(id="island-b", type="operation")]
+    )
+    graph.edges.extend(
+        [
+            GraphEdge(id="island-1", source="island-a", target="island-b"),
+            GraphEdge(id="island-2", source="island-b", target="island-a"),
+        ]
+    )
     nodes, edges = service._graph_entities(version.id, graph)
     monkeypatch.setattr(repository, "get_graph", AsyncMock(return_value=(nodes, edges)))
     session = AsyncMock(spec=AsyncSession)
@@ -74,11 +96,16 @@ async def test_material_copies_add_up_in_both_production_paths(
     assert demand.materials == {graph.nodes[0].reference_id: Decimal("10.000000")}
     assert not demand.operations
     session.get.return_value = TechnologicalProcess(
-        id=version.process_id, name=graph.name, output_item_id=graph.output_item_id,
+        id=version.process_id,
+        name=graph.name,
+        output_item_id=graph.output_item_id,
     )
     assert graph.output_item_id is not None
     components = await production_service._direct_components(
-        session, item_id=graph.output_item_id, version=version, output_quantity=Decimal("2"),
+        session,
+        item_id=graph.output_item_id,
+        version=version,
+        output_quantity=Decimal("2"),
     )
     assert len(components) == 1
     assert components[0].entity_id == graph.nodes[0].reference_id
@@ -89,10 +116,15 @@ async def test_material_copies_add_up_in_both_production_paths(
 @pytest.mark.parametrize("kind", ["operation", "manufactured_item"])
 async def test_only_materials_can_repeat_catalog_references(kind: str) -> None:
     entity_id = uuid.uuid4()
-    graph = ProcessGraphDocument.model_validate({"name": "Duplicate", "nodes": [
-        {"id": "a", "type": kind, "referenceId": str(entity_id)},
-        {"id": "b", "type": kind, "referenceId": str(entity_id)},
-    ]})
+    graph = ProcessGraphDocument.model_validate(
+        {
+            "name": "Duplicate",
+            "nodes": [
+                {"id": "a", "type": kind, "referenceId": str(entity_id)},
+                {"id": "b", "type": kind, "referenceId": str(entity_id)},
+            ],
+        }
+    )
     session = AsyncMock(spec=AsyncSession)
     with pytest.raises(ConflictError):
         await service.validate_recipes(session, graph)

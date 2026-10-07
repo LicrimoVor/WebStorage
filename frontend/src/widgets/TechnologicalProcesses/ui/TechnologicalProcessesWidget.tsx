@@ -30,8 +30,9 @@ import styles from "./TechnologicalProcessesWidget.module.scss";
 
 const statusView: Record<
   ProcessStatus,
-  { text: string; theme: "info" | "success" | "normal" }
+  { text: string; theme: "info" | "success" | "normal" | "danger" }
 > = {
+  error: {text: "Ошибка", theme: "danger"},
   draft: { text: "Черновик", theme: "info" },
   active: { text: "Активен", theme: "success" },
   archived: { text: "Архив", theme: "normal" },

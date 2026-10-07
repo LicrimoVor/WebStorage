@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy import asc, delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.selectable import CTE
 
 from app.core.query import SortOrder
 from app.modules.manufactured_items.model import ManufacturedItem
@@ -14,6 +15,28 @@ from app.modules.technological_processes.model import (
     TechnologicalProcessVersion,
 )
 from app.modules.technological_processes.schemas import ProcessSortField
+
+
+def participating_node_keys() -> CTE:
+    connected = (
+        select(
+            TechnologicalProcessNode.version_id.label("version_id"),
+            TechnologicalProcessNode.external_id.label("node_id"),
+        )
+        .where(TechnologicalProcessNode.node_type == "output")
+        .cte("participating_nodes", recursive=True)
+    )
+    return connected.union(
+        select(
+            TechnologicalProcessEdge.version_id,
+            TechnologicalProcessEdge.source_node_id,
+        ).join(
+            connected,
+            (connected.c.version_id == TechnologicalProcessEdge.version_id)
+            & (connected.c.node_id == TechnologicalProcessEdge.target_node_id),
+        )
+    )
+
 
 ProcessBundle = tuple[
     TechnologicalProcess,
@@ -104,10 +127,14 @@ async def list_processes(
     sort_by: ProcessSortField,
     sort_order: SortOrder,
 ) -> tuple[list[ProcessBundle], int]:
-    statement = select(TechnologicalProcess, ManufacturedItem.name).outerjoin(
-        ManufacturedItem,
-        ManufacturedItem.id == TechnologicalProcess.output_item_id,
-    ).where(TechnologicalProcess.deleted_at.is_(None))
+    statement = (
+        select(TechnologicalProcess, ManufacturedItem.name)
+        .outerjoin(
+            ManufacturedItem,
+            ManufacturedItem.id == TechnologicalProcess.output_item_id,
+        )
+        .where(TechnologicalProcess.deleted_at.is_(None))
+    )
     if not include_archived:
         statement = statement.where(TechnologicalProcess.archived.is_(False))
     if search:
@@ -154,7 +181,10 @@ async def _versions_by_process(
         (
             await session.execute(
                 select(TechnologicalProcessVersion)
-                .where(TechnologicalProcessVersion.process_id.in_(process_ids))
+                .where(
+                    TechnologicalProcessVersion.process_id.in_(process_ids),
+                    TechnologicalProcessVersion.deleted_at.is_(None),
+                )
                 .order_by(desc(TechnologicalProcessVersion.version_number))
             )
         )
@@ -206,6 +236,7 @@ async def get_version(
     for_update: bool = False,
 ) -> TechnologicalProcessVersion | None:
     statement = select(TechnologicalProcessVersion).where(
+        TechnologicalProcessVersion.deleted_at.is_(None),
         TechnologicalProcessVersion.id == version_id,
         TechnologicalProcessVersion.process_id == process_id,
     )
@@ -221,7 +252,10 @@ async def list_versions(
         (
             await session.execute(
                 select(TechnologicalProcessVersion)
-                .where(TechnologicalProcessVersion.process_id == process_id)
+                .where(
+                    TechnologicalProcessVersion.process_id == process_id,
+                    TechnologicalProcessVersion.deleted_at.is_(None),
+                )
                 .order_by(desc(TechnologicalProcessVersion.version_number))
             )
         )
@@ -291,6 +325,7 @@ async def get_reference_states(
 async def active_manufactured_dependencies(
     session: AsyncSession, *, exclude_process_id: uuid.UUID
 ) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    participating = participating_node_keys()
     rows = (
         await session.execute(
             select(
@@ -306,6 +341,12 @@ async def active_manufactured_dependencies(
                 TechnologicalProcessNode.version_id == TechnologicalProcessVersion.id,
             )
             .where(
+                select(participating.c.node_id)
+                .where(
+                    participating.c.version_id == TechnologicalProcessNode.version_id,
+                    participating.c.node_id == TechnologicalProcessNode.external_id,
+                )
+                .exists(),
                 TechnologicalProcessVersion.status == "active",
                 TechnologicalProcess.id != exclude_process_id,
                 TechnologicalProcess.output_item_id.is_not(None),

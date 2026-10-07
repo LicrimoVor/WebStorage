@@ -82,6 +82,29 @@ async def move_to_trash(
         before = await snapshot(session, entity_id)
         name = str(before["description"])
         state = {"entry": before}
+    elif kind == "process_version":
+        version = await session.get(TechnologicalProcessVersion, entity_id)
+        if version is None or version.deleted_at is not None:
+            raise NotFoundError("Версия не найдена")
+        process = await session.get(TechnologicalProcess, version.process_id, with_for_update=True)
+        if process is None or process.deleted_at is not None:
+            raise NotFoundError("Техпроцесс не найден")
+        # The process lock also serializes version creation and activation.
+        await session.refresh(version, with_for_update=True)
+        if version.status == "active":
+            raise ConflictError("Сначала деактивируйте версию")
+        remaining = list(
+            await session.scalars(
+                select(TechnologicalProcessVersion.id).where(
+                    TechnologicalProcessVersion.process_id == process.id,
+                    TechnologicalProcessVersion.deleted_at.is_(None),
+                )
+            )
+        )
+        if len(remaining) <= 1:
+            raise ConflictError("Последнюю версию нельзя удалить. Удалите техпроцесс целиком.")
+        name = f"{process.name} · v{version.version_number}"
+        version.deleted_at = datetime.now(UTC)
     elif kind == "operation_group":
         from app.modules.operations.groups import lock_groups
 
@@ -267,6 +290,17 @@ async def restore(session: AsyncSession, entry_id: uuid.UUID, actor: str) -> Non
                 )
                 if process is not None and process.default_group_id is None:
                     process.default_group_id = entry.entity_id
+        elif kind == "process_version":
+            version = await session.get(TechnologicalProcessVersion, entry.entity_id)
+            if version is None:
+                raise NotFoundError("Версия не найдена")
+            process = await session.get(
+                TechnologicalProcess, version.process_id, with_for_update=True
+            )
+            if process is None or process.deleted_at is not None:
+                raise ConflictError("Сначала восстановите техпроцесс")
+            await session.refresh(version, with_for_update=True)
+            version.deleted_at = None
         elif kind != "finance_entry":
             target = await session.get(CATALOG_MODELS[kind], entry.entity_id, with_for_update=True)
             if target is None:

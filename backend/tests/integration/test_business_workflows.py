@@ -124,13 +124,15 @@ async def test_hierarchy_ownership_and_recipe_conflicts(client: AsyncClient) -> 
         "/api/v1/technological-processes/import",
         json={**graph, "name": "Другой", "outputItemId": None},
     )
-    assert duplicate.status_code == 409
+    assert duplicate.status_code == 201, duplicate.text
+    assert duplicate.json()["version"]["status"] == "error"
     graph["nodes"].append({"id": "s2", "type": "manufactured_item", "referenceId": semi["id"]})
     invalid = await client.put(
         f"/api/v1/technological-processes/{imported['process']['id']}/versions/{imported['version']['id']}/graph",
         json=graph,
     )
-    assert invalid.status_code == 409
+    assert invalid.status_code == 200, invalid.text
+    assert invalid.json()["status"] == "error"
 
 
 async def test_serialized_release_sale_and_atomic_failures(client: AsyncClient) -> None:

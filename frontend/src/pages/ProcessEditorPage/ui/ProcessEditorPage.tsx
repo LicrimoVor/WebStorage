@@ -1,8 +1,9 @@
+import {ProcessSettings} from './ProcessSettings';
 import {Select} from '@/shared/ui/FormControls';
 import {Alert, Button, Card, Label, Skeleton, Text} from '@gravity-ui/uikit';
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   activateTechnologicalProcessVersion,
@@ -19,7 +20,7 @@ import {
   ProcessCanvas,
   type ProcessCanvasHandle,
 } from "@/features/EditProcessGraph";
-import { getErrorMessage } from "@/shared/api";
+import { apiRequest, getErrorMessage } from "@/shared/api";
 import { formatDateTime } from "@/shared/lib";
 import { routes } from "@/shared/routes";
 
@@ -27,8 +28,9 @@ import styles from "./ProcessEditorPage.module.scss";
 
 const statusView: Record<
   ProcessStatus,
-  { text: string; theme: "info" | "success" | "normal" }
+  { text: string; theme: "info" | "success" | "normal" | "danger" }
 > = {
+  error: {text: "Ошибка", theme: "danger"},
   draft: { text: "Черновик", theme: "info" },
   active: { text: "Активен", theme: "success" },
   archived: { text: "Архив", theme: "normal" },
@@ -49,11 +51,14 @@ function downloadJson(document: object, name: string) {
 export function ProcessEditorPage() {
   const { processId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const canvasRef = useRef<ProcessCanvasHandle>(null);
+  const ownersQuery = useQuery({queryKey: ["process-recipe-owners", processId],
+    queryFn: () => apiRequest<Record<string, string>>(`/technological-processes/recipe-owners?exclude_process_id=${processId}`)});
   const processQuery = useTechnologicalProcessQuery(processId);
   const versionsQuery = useTechnologicalProcessVersionsQuery(processId);
-  const [selectedVersionOverride, setSelectedVersionOverride] = useState("");
+  const [selectedVersionOverride, setSelectedVersionOverride] = useState(searchParams.get("version") ?? "");
   const defaultVersionId =
     processQuery.data?.latest_version.id ??
     versionsQuery.data?.items[0]?.id ??
@@ -154,7 +159,7 @@ export function ProcessEditorPage() {
 
   const process = processQuery.data;
   const version = versionQuery.data;
-  const editable = version?.status === "draft" && !process.archived;
+  const editable = (version?.status === "draft" || version?.status === "error") && !process.archived;
   const versionOptions = versionsQuery.data.items.map((item) => ({
     value: item.id,
     content: `v${item.version_number} · ${statusView[item.status].text}`,
@@ -198,6 +203,7 @@ export function ProcessEditorPage() {
           </Text>
         </Card>
         <div className={styles.toolbar}>
+          <ProcessSettings process={process} versions={versionsQuery.data.items} beforeOpen={async () => canvasRef.current?.save()} />
           <Select
             options={versionOptions}
             value={selectedVersionId ? [selectedVersionId] : []}
@@ -250,8 +256,9 @@ export function ProcessEditorPage() {
         <Skeleton className={styles.editorSkeleton} />
       ) : version ? (
         <ProcessCanvas
-          key={version.id}
+          key={`${version.id}:${process.name}:${process.default_group_id ?? ""}`}
           ref={canvasRef}
+          lockedInputIds={Object.keys(ownersQuery.data ?? {})}
           processId={processId}
           defaultGroupId={process.default_group_id}
           version={version}

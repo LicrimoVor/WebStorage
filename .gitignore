@@ -21,3 +21,5 @@ test-results/
 Thumbs.db
 .DS_Store
 backend/media/
+
+lighthouse-*.local.json

@@ -1,7 +1,8 @@
+import {optimizeImage} from './optimizeImage';
 import {TextInput} from '@/shared/ui/FormControls';
 import {Button, Dialog, Loader, Text} from '@gravity-ui/uikit';
 import {useMutation} from '@tanstack/react-query';
-import {useEffect, useRef, useState, type ChangeEvent} from 'react';
+import {useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent} from 'react';
 
 import {getErrorMessage, uploadImage} from '@/shared/api';
 
@@ -9,6 +10,9 @@ import styles from './ImageUploadField.module.scss';
 import {ImageCropDialog} from './ImageCropDialog';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp',
+};
 
 interface ImageUploadFieldProps {
   allowCrop?: boolean;
@@ -53,13 +57,14 @@ export function ImageUploadField({value, onUpdate, alt, onBusyChange, allowCrop 
           throw new Error('Файл превышает допустимый размер 5 МБ');
         }
         const blob = await response.blob();
-        const extension = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp'}[blob.type];
+        const extension = IMAGE_EXTENSIONS[blob.type];
         if (!extension) throw new Error('По ссылке должен находиться файл PNG, JPEG, GIF или WebP');
         file = new File([blob], `image.${extension}`, {type: blob.type});
       } else {
         file = source;
       }
       if (file.size > MAX_IMAGE_BYTES) throw new Error('Файл превышает допустимый размер 5 МБ');
+      file = await optimizeImage(file);
       if (!mounted.current) throw new Error('Загрузка отменена');
       if (typeof URL.createObjectURL === 'function') setPreview(URL.createObjectURL(file));
       return uploadImage({
@@ -109,17 +114,33 @@ export function ImageUploadField({value, onUpdate, alt, onBusyChange, allowCrop 
     }, 600);
     return () => window.clearTimeout(timer);
   }, [link, value, mutate]);
-  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
+  const uploadFile = (file: File) => {
+    if (mutation.isPending) return;
+    mutation.reset();
+    if (!IMAGE_EXTENSIONS[file.type]) {
+      setLocalError('Выберите изображение PNG, JPEG, GIF или WebP');
+      return;
+    }
     if (file.size > MAX_IMAGE_BYTES) {
       mutation.reset();
       setLocalError('Файл превышает допустимый размер 5 МБ');
       return;
     }
     setLocalError(undefined);
-    mutation.mutate(file);
+    setLink(value);
+    mutation.mutate(file.name ? file : new File([file], `image.${IMAGE_EXTENSIONS[file.type]}`, {type: file.type}));
+  };
+  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) uploadFile(file);
+  };
+  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const item = Array.from(event.clipboardData.items ?? []).find((entry) => entry.kind === 'file' && entry.type.startsWith('image/'));
+    const file = item?.getAsFile() ?? Array.from(event.clipboardData.files ?? []).find((entry) => entry.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    uploadFile(file);
   };
 
   return (
@@ -129,14 +150,14 @@ export function ImageUploadField({value, onUpdate, alt, onBusyChange, allowCrop 
         value={link}
         disabled={mutation.isPending}
         onUpdate={(next) => {mutation.reset(); setLocalError(undefined); setLink(next); if (!next.trim()) onUpdate('');}}
-        placeholder="https://… или загрузите файл ниже"
-        controlProps={{'aria-label': 'Ссылка на изображение'}}
+        placeholder="Вставьте ссылку или изображение из буфера"
+        controlProps={{'aria-label': 'Ссылка на изображение', onPaste}}
       />
       <div className={styles.heading}>
         <div>
           <Text variant="subheader-2">Изображение</Text>
           <Text as="div" color="secondary" variant="caption-2">
-            PNG, JPEG, GIF или WebP, до 5 МБ
+            PNG, JPEG, GIF или WebP, до 5 МБ. Можно вставить изображение через Ctrl+V.
           </Text>
         </div>
         <div className={styles.actions}>
@@ -150,6 +171,7 @@ export function ImageUploadField({value, onUpdate, alt, onBusyChange, allowCrop 
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
             onChange={onFileChange}
+            disabled={mutation.isPending}
             aria-label="Выбрать изображение"
           />
           <Button

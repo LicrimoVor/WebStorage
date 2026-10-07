@@ -16,6 +16,6 @@ export function MaterialImage({image, name}: MaterialImageProps) {
       </Box>
     );
   }
-  return <img className={styles.image} src={image} alt={name} loading="lazy" />;
+  return <img className={styles.image} src={image} alt={name} width={44} height={44} loading="lazy" decoding="async" />;
 }
 

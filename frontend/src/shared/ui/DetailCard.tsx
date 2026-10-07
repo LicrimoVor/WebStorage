@@ -6,7 +6,7 @@ import styles from './DetailCard.module.scss';
 export function DetailCardImage({image, name}: {image: string | null; name: string}) {
   const [failedUrl, setFailedUrl] = useState<string>();
   return image && image !== failedUrl
-    ? <img src={image} alt={name} className={styles.image} onError={() => setFailedUrl(image)} />
+    ? <img decoding="async" src={image} alt={name} className={styles.image} onError={() => setFailedUrl(image)} />
     : <div className={styles.imagePlaceholder} aria-label="Нет изображения"><Icon data={Picture} size={48} /></div>;
 }
 

@@ -7,9 +7,7 @@ from httpx import AsyncClient
 from tests.integration.helpers import embedded_process, owner_product
 
 
-async def create_material(
-    client: AsyncClient, *, name: str, stock: str
-) -> dict[str, Any]:
+async def create_material(client: AsyncClient, *, name: str, stock: str) -> dict[str, Any]:
     response = await client.post(
         "/api/v1/materials",
         json={"name": name, "unit": "kg", "initial_quantity": stock, "price": "1"},
@@ -174,7 +172,12 @@ async def activate_embedded_semi_recipe(
         json=graph,
     )
     if expect_conflict:
-        assert saved.status_code == 409, saved.text
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["status"] == "error"
+        activated = await client.post(
+            f"/api/v1/technological-processes/{process_id}/versions/{version_id}/activate"
+        )
+        assert activated.status_code == 422, activated.text
         return
     assert saved.status_code == 200, saved.text
     activated = await client.post(

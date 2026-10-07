@@ -1,6 +1,9 @@
+import {participatingNodes} from '../model/participatingNodes';
+import {ArrowRotateLeft, ArrowRotateRight, ArrowDownToLine, ArrowUpFromLine, LayoutCells, CircleQuestion, Copy, Pencil, TrashBin} from '@gravity-ui/icons';
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
 import {CanvasNodeImage} from './CanvasNodeImage';
-import {Alert, Button, Card, Dialog, Label, MobileProvider, RadioGroup, Tab, TabList, Text} from '@gravity-ui/uikit';
+import {NodeRecipe} from './NodeRecipe';
+import {Alert, Button, Card, Dialog, Icon, Label, MobileProvider, RadioGroup, Tab, TabList, Text} from '@gravity-ui/uikit';
 import { useMutation } from "@tanstack/react-query";
 import {
   forwardRef,
@@ -10,7 +13,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type DragEvent,
   type PointerEvent,
 } from "react";
 
@@ -34,11 +36,10 @@ import {
   normalizeGraph,
   type CanvasGraph,
 } from "../model/excalidraw";
-import { calculateDroppedNodePosition } from "../model/geometry";
 import styles from "./ProcessCanvas.module.scss";
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 144;
+const NODE_WIDTH = 260;
+const NODE_HEIGHT = 168;
 
 const nodeTypeView: Record<
   ProcessNode["type"],
@@ -128,6 +129,7 @@ export interface ProcessCanvasHandle {
 }
 
 interface ProcessCanvasProps {
+  lockedInputIds?: string[];
   defaultGroupId?: string | null | undefined;
   processId: string;
   version: ProcessVersion;
@@ -148,7 +150,7 @@ export const ProcessCanvas = forwardRef<
   ProcessCanvasHandle,
   ProcessCanvasProps
 >(function ProcessCanvas(
-  { processId, version, editable, onVersionUpdate, defaultGroupId },
+  { processId, version, editable, onVersionUpdate, defaultGroupId, lockedInputIds = [] },
   ref,
 ) {
   const initialGraph = useMemo(
@@ -157,7 +159,7 @@ export const ProcessCanvas = forwardRef<
   );
   const history = useGraphHistory(initialGraph);
   const { graph } = history;
-  const graphSignature = JSON.stringify(graph);
+  const graphSignature = useMemo(() => JSON.stringify(graph), [graph]);
   const [savedSignature, setSavedSignature] = useState(graphSignature);
   const [saveError, setSaveError] = useState<string>();
   const failedSignatureRef = useRef<string | undefined>(undefined);
@@ -167,7 +169,14 @@ export const ProcessCanvas = forwardRef<
   const savePromiseRef = useRef<Promise<ProcessVersion> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const [snapToGrid, setSnapToGrid] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionArea, setSelectionArea] = useState<{x: number; y: number; endX: number; endY: number}>();
+  const [dragPreview, setDragPreview] = useState<{nodes: ProcessNode[]; dx: number; dy: number; copy: boolean}>();
+  const dragFrameRef = useRef<number | null>(null);
+  const dragRef = useRef<{x: number; y: number; nodes: ProcessNode[]; copy: boolean; dx: number; dy: number} | null>(null);
+  const [connectionError, setConnectionError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 80, y: 70, zoom: 1 });
   const [pan, setPan] = useState<PanState>();
   const [connectionDrag, setConnectionDrag] = useState<ConnectionDrag>();
@@ -177,6 +186,10 @@ export const ProcessCanvas = forwardRef<
   const [edgeDialog, setEdgeDialog] = useState<EdgeDialogState>();
   const [edgeDialogError, setEdgeDialogError] = useState<string>();
   const [importError, setImportError] = useState<string>();
+
+  useEffect(() => () => {
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+  }, []);
 
   const materialsQuery = useMaterialsQuery({
     page: 1,
@@ -197,6 +210,8 @@ export const ProcessCanvas = forwardRef<
     sort_by: "name",
     sort_order: "asc",
   });
+  const materialById = useMemo(() => new Map(materialsQuery.data?.items.map((item) => [item.id, item])), [materialsQuery.data]);
+  const itemById = useMemo(() => new Map(itemsQuery.data?.items.map((item) => [item.id, item])), [itemsQuery.data]);
   const nodeCatalogQuery = nodeDialog?.type === 'material' ? materialsQuery
     : nodeDialog?.type === 'operation' ? operationsQuery : itemsQuery;
 
@@ -210,7 +225,7 @@ export const ProcessCanvas = forwardRef<
 
   const {mutateAsync: saveDraft} = saveMutation;
   const persist = useCallback(async (): Promise<ProcessVersion | undefined> => {
-    if (!editable || graphSignature === savedSignature) return undefined;
+    if (!editable || (graphSignature === savedSignature && version.status !== "error")) return undefined;
     if (savePromiseRef.current) return savePromiseRef.current;
     const submittedGraph = graph;
     const submittedSignature = graphSignature;
@@ -244,6 +259,7 @@ export const ProcessCanvas = forwardRef<
     onVersionUpdate,
     saveDraft,
     savedSignature,
+    version.status,
   ]);
 
   useImperativeHandle(ref, () => ({ save: persist }), [persist]);
@@ -270,6 +286,8 @@ export const ProcessCanvas = forwardRef<
   useEffect(() => {
     if (!editable) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {setSelectedIds(new Set()); setSelectionArea(undefined); setDragPreview(undefined); dragRef.current = null;}
+      if ((event.target as Element)?.closest("input, textarea, [contenteditable=true]")) return;
       if (!(event.ctrlKey || event.metaKey)) return;
       if (event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -332,12 +350,11 @@ export const ProcessCanvas = forwardRef<
     setNodeDialogError(undefined);
     if (
       !editable &&
-      (!node.referenceId ||
-        !["manufactured_item", "output"].includes(node.type))
+      !["manufactured_item", "output"].includes(node.type)
     ) {
       return;
     }
-    setNodeDialogTab(editable ? "settings" : "production");
+    setNodeDialogTab(editable ? "settings" : node.referenceId ? "production" : "composition");
     setNodeDialog({
       mode: "edit",
       groupId: "",
@@ -380,7 +397,9 @@ export const ProcessCanvas = forwardRef<
         ...graph,
         edges: nodeDialog.type === 'comment'
           ? graph.edges.filter((edge) => edge.source !== nodeDialog.nodeId && edge.target !== nodeDialog.nodeId)
-          : graph.edges,
+          : ['material', 'operation'].includes(nodeDialog.type)
+            ? graph.edges.filter((edge) => edge.target !== nodeDialog.nodeId)
+            : graph.edges,
         nodes: graph.nodes.map((node) =>
           node.id === nodeDialog.nodeId
             ? {
@@ -446,6 +465,7 @@ export const ProcessCanvas = forwardRef<
   };
 
   const deleteNode = (nodeId: string) => {
+    setSelectedIds((current) => {const next = new Set(current); next.delete(nodeId); return next;});
     history.commit({
       ...graph,
       nodes: graph.nodes.filter((node) => node.id !== nodeId),
@@ -456,8 +476,10 @@ export const ProcessCanvas = forwardRef<
     if (connectionDrag?.source === nodeId) setConnectionDrag(undefined);
   };
 
+  const copiedNode = (node: ProcessNode): ProcessNode => ({...node, id: crypto.randomUUID(),
+    referenceId: node.type === 'material' || node.type === 'comment' ? node.referenceId ?? null : null});
   const copyMaterial = (node: ProcessNode) => {
-    history.commit({...graph, nodes: [...graph.nodes, {...node, id: crypto.randomUUID(),
+    history.commit({...graph, nodes: [...graph.nodes, {...copiedNode(node),
       position: {x: (node.position?.x ?? 0) + 40, y: (node.position?.y ?? 0) + 40},
     }]});
   };
@@ -509,7 +531,13 @@ export const ProcessCanvas = forwardRef<
     const duplicate = graph.edges.some(
       (edge) => edge.source === connectionDrag.source && edge.target === target,
     );
-    if (target && nodeById.get(target)?.type !== 'comment' && target !== connectionDrag.source && !duplicate) {
+    const targetNode = target ? nodeById.get(target) : undefined;
+    const locked = targetNode?.type === 'manufactured_item' && targetNode.referenceId && lockedInputIds.includes(targetNode.referenceId);
+    const leafTarget = targetNode?.type === 'material' || targetNode?.type === 'operation';
+    if (leafTarget) setConnectionError('Материалы и операции не могут иметь входящие связи.');
+    else if (locked) setConnectionError('У полуфабриката уже есть рецепт. Входящие связи запрещены; исходящие разрешены.');
+    else setConnectionError(undefined);
+    if (target && !locked && !leafTarget && targetNode?.type !== 'comment' && target !== connectionDrag.source && !duplicate) {
       history.commit({
         ...graph,
         edges: [
@@ -526,29 +554,53 @@ export const ProcessCanvas = forwardRef<
     setConnectionDrag(undefined);
   };
 
-  const onDragStart = (event: DragEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    dragOffsetRef.current = {
-      x: (event.clientX - rect.left) / viewport.zoom,
-      y: (event.clientY - rect.top) / viewport.zoom,
-    };
-    event.dataTransfer.effectAllowed = "move";
+  const onNodePointerDown = (event: PointerEvent<HTMLDivElement>, node: ProcessNode) => {
+    if (event.button !== 0 || (event.target as Element).closest('button, input, a')) return;
+    event.preventDefault(); event.stopPropagation();
+    if (event.shiftKey) {
+      setSelectedIds((current) => {const next = new Set(current); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next;});
+      return;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const ids = selectedIds.has(node.id) ? selectedIds : new Set([node.id]);
+    const nodes = graph.nodes.filter((item) => ids.has(item.id));
+    const copy = editable && event.altKey;
+    const moving = copy ? nodes.filter((item) => item.type !== 'output').map(copiedNode) : nodes;
+    setSelectedIds(new Set(moving.map((item) => item.id)));
+    dragRef.current = {x: event.clientX, y: event.clientY, nodes: moving, copy, dx: 0, dy: 0};
+    setDragPreview({nodes: moving, dx: 0, dy: 0, copy});
   };
-  const onDragEnd = (event: DragEvent<HTMLDivElement>, nodeId: string) => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const position = calculateDroppedNodePosition(
-      { x: event.clientX, y: event.clientY },
-      rect,
-      viewport,
-      dragOffsetRef.current,
-    );
-    history.commit({
-      ...graph,
-      nodes: graph.nodes.map((node) =>
-        node.id === nodeId ? { ...node, position } : node,
-      ),
+  const onNodePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    event.stopPropagation();
+    let dx = (event.clientX - drag.x) / viewport.zoom;
+    let dy = (event.clientY - drag.y) / viewport.zoom;
+    const anchor = drag.nodes[0]?.position ?? {x: 0, y: 0};
+    if (snapToGrid || event.ctrlKey || event.metaKey) {
+      dx = Math.round((anchor.x + dx) / 24) * 24 - anchor.x;
+      dy = Math.round((anchor.y + dy) / 24) * 24 - anchor.y;
+    }
+    drag.dx = dx; drag.dy = dy;
+    if (dragFrameRef.current === null) dragFrameRef.current = requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      const latest = dragRef.current;
+      if (latest) setDragPreview({nodes: latest.nodes, dx: latest.dx, dy: latest.dy, copy: latest.copy});
     });
+  };
+  const onNodePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    dragFrameRef.current = null;
+    event.stopPropagation();
+    if (drag.dx || drag.dy) {
+      const moved = new Map(drag.nodes.map((node) => [node.id, {...node, position: {
+        x: (node.position?.x ?? 0) + drag.dx, y: (node.position?.y ?? 0) + drag.dy}}]));
+      history.commit({...graph, nodes: drag.copy ? [...graph.nodes, ...moved.values()]
+        : graph.nodes.map((node) => moved.get(node.id) ?? node)});
+    } else if (drag.copy) setSelectedIds(new Set());
+    dragRef.current = null; setDragPreview(undefined);
   };
 
   const onCanvasPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -560,6 +612,12 @@ export const ProcessCanvas = forwardRef<
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (editable && event.shiftKey) {
+      const point = connectionPoint(event.clientX, event.clientY);
+      setSelectionArea({...point, endX: point.x, endY: point.y});
+      return;
+    }
+    setSelectedIds(new Set());
     setPan({
       x: event.clientX,
       y: event.clientY,
@@ -568,6 +626,11 @@ export const ProcessCanvas = forwardRef<
     });
   };
   const onCanvasPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (selectionArea) {
+      const point = connectionPoint(event.clientX, event.clientY);
+      setSelectionArea({...selectionArea, endX: point.x, endY: point.y});
+      return;
+    }
     if (!pan) return;
     setViewport((current) => ({
       ...current,
@@ -575,7 +638,18 @@ export const ProcessCanvas = forwardRef<
       y: pan.originY + event.clientY - pan.y,
     }));
   };
-  const onCanvasPointerUp = () => setPan(undefined);
+  const onCanvasPointerUp = () => {
+    if (selectionArea) {
+      const left = Math.min(selectionArea.x, selectionArea.endX), right = Math.max(selectionArea.x, selectionArea.endX);
+      const top = Math.min(selectionArea.y, selectionArea.endY), bottom = Math.max(selectionArea.y, selectionArea.endY);
+      setSelectedIds(new Set(graph.nodes.filter((node) => {
+        const {x, y} = node.position ?? {x: 0, y: 0};
+        return x <= right && x + NODE_WIDTH >= left && y <= bottom && y + NODE_HEIGHT >= top;
+      }).map((node) => node.id)));
+      setSelectionArea(undefined);
+    }
+    setPan(undefined);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -660,15 +734,22 @@ export const ProcessCanvas = forwardRef<
     1400,
     ...graph.nodes.map((node) => (node.position?.y ?? 0) + 400),
   );
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const persistedNodes = useMemo(() => new Set(version.graph.nodes?.map((node) => node.id)), [version.graph]);
+  const participating = useMemo(() => participatingNodes(normalizeGraph(version.graph)), [version.graph]);
+  const movingById = new Map(dragPreview?.nodes.map((node) => [node.id, {...node,
+    position: {x: (node.position?.x ?? 0) + dragPreview.dx, y: (node.position?.y ?? 0) + dragPreview.dy}}]));
+  const renderedNodes = graph.nodes.map((node) => movingById.get(node.id) ?? node);
+  if (dragPreview?.copy) renderedNodes.push(...movingById.values());
+  const nodeById = new Map(renderedNodes.map((node) => [node.id, node]));
   const saveStatus = !editable
-    ? { text: "Активная версия", theme: "info" as const }
+    ? { text: version.status === "active" ? "Активная версия" : "Только просмотр", theme: "info" as const }
     : saveMutation.isPending
     ? { text: "Сохранение…", theme: "info" as const }
     : saveError
       ? { text: "Ошибка сохранения", theme: "danger" as const }
       : graphSignature === savedSignature
-        ? { text: "Сохранено", theme: "success" as const }
+        ? version.status === 'error' ? {text: "Сохранено с ошибкой", theme: "danger" as const}
+          : { text: "Сохранено", theme: "success" as const }
         : { text: "Есть изменения", theme: "warning" as const };
 
   return (
@@ -704,18 +785,25 @@ export const ProcessCanvas = forwardRef<
           ) : null}
           <Button
             view="outlined"
+            aria-label="Отменить (Ctrl+Z)" title="Отменить (Ctrl+Z)"
             onClick={history.undo}
             disabled={!editable || !history.canUndo}
           >
-            Undo
+            <Icon data={ArrowRotateLeft} size={20} />
           </Button>
           <Button
             view="outlined"
+            aria-label="Повторить (Ctrl+Y)" title="Повторить (Ctrl+Y)"
             onClick={history.redo}
             disabled={!editable || !history.canRedo}
           >
-            Redo
+            <Icon data={ArrowRotateRight} size={20} />
           </Button>
+          <Button view="outlined" aria-label="Помощь по клавишам" title="Помощь по клавишам" onClick={() => setHelpOpen(true)}><Icon data={CircleQuestion} size={20} /></Button>
+          {editable && <Button view={snapToGrid ? 'outlined-action' : 'flat-secondary'}
+            aria-label="Привязка к сетке" title="Привязка к сетке (Ctrl при перетаскивании)"
+            selected={snapToGrid} onClick={() => setSnapToGrid((current) => !current)}>
+            <Icon data={LayoutCells} size={20} /></Button>}
           <Button view="outlined" onClick={fitToScreen}>
             По размеру
           </Button>
@@ -754,12 +842,12 @@ export const ProcessCanvas = forwardRef<
             }}
           />
           {editable ? (
-            <Button view="outlined" onClick={() => importRef.current?.click()}>
-              Импорт .excalidraw
+            <Button view="outlined" aria-label="Импорт Excalidraw" title="Импорт Excalidraw" onClick={() => importRef.current?.click()}>
+              <Icon data={ArrowUpFromLine} size={20} />
             </Button>
           ) : null}
           <Button
-            view="outlined"
+            view="outlined" aria-label="Экспорт Excalidraw" title="Экспорт Excalidraw"
             onClick={() =>
               downloadFile(
                 JSON.stringify(graphToExcalidraw(graph), null, 2),
@@ -768,14 +856,14 @@ export const ProcessCanvas = forwardRef<
               )
             }
           >
-            Экспорт .excalidraw
+            <Icon data={ArrowDownToLine} size={20} />
           </Button>
           {editable ? (
             <Button
               view="outlined"
               onClick={() => void persist().catch(() => undefined)}
               loading={saveMutation.isPending}
-              disabled={graphSignature === savedSignature}
+              disabled={graphSignature === savedSignature && version.status !== "error"}
             >
               Сохранить сейчас
             </Button>
@@ -792,10 +880,13 @@ export const ProcessCanvas = forwardRef<
       ) : null}
       {importError ? <Alert theme="danger" message={importError} /> : null}
 
+      {version.status === 'error' && <Alert theme="danger" title="Схема сохранена с ошибками" message={(version.validation_errors ?? []).join('; ')} />}
+      {connectionError && <Alert theme="warning" message={connectionError} />}
       <div className={styles.workspace}>
         <div
           ref={canvasRef}
           className={`${styles.canvas} ${pan ? styles.panning : ""}`}
+          style={{backgroundSize: `${24 * viewport.zoom}px ${24 * viewport.zoom}px`, backgroundPosition: `${viewport.x}px ${viewport.y}px`}}
           aria-label="Полотно технологического процесса"
           onPointerDown={onCanvasPointerDown}
           onPointerMove={onCanvasPointerMove}
@@ -841,6 +932,7 @@ export const ProcessCanvas = forwardRef<
                 return (
                   <g
                     key={edge.id}
+                    className={!participating.has(edge.target) ? styles.inactive : undefined}
                     data-process-edge
                     onDoubleClick={(event) => {
                       event.stopPropagation();
@@ -897,20 +989,23 @@ export const ProcessCanvas = forwardRef<
                   })()
                 : null}
             </svg>
-            {graph.nodes.map((node) => {
+            {selectionArea && <div className={styles.selectionArea} style={{left: Math.min(selectionArea.x, selectionArea.endX), top: Math.min(selectionArea.y, selectionArea.endY), width: Math.abs(selectionArea.endX - selectionArea.x), height: Math.abs(selectionArea.endY - selectionArea.y)}} />}
+            {renderedNodes.map((node) => {
               const view = nodeTypeView[node.type];
               return (
                 <div
                   key={node.id}
                   data-process-node
                   data-process-node-id={node.id}
-                  className={`${styles.node} ${styles[node.type]} ${connectionDrag?.source === node.id ? styles.connecting : ""} ${connectionDrag?.target === node.id ? styles.connectionTarget : ""}`}
+                  data-process-participating={node.type === "comment" || participating.has(node.id)}
+                  className={`${styles.node} ${styles[node.type]} ${node.type !== "comment" && persistedNodes.has(node.id) && !participating.has(node.id) ? styles.inactive : ""} ${selectedIds.has(node.id) ? styles.selected : ""} ${connectionDrag?.source === node.id ? styles.connecting : ""} ${connectionDrag?.target === node.id ? styles.connectionTarget : ""}`}
                   style={{
                     transform: `translate(${node.position?.x ?? 0}px, ${node.position?.y ?? 0}px)`,
                   }}
-                  draggable={!connectionDrag}
-                  onDragStart={onDragStart}
-                  onDragEnd={(event) => onDragEnd(event, node.id)}
+                  onPointerDown={(event) => onNodePointerDown(event, node)}
+                  onPointerMove={onNodePointerMove}
+                  onPointerUp={onNodePointerUp}
+                  onPointerCancel={() => {dragRef.current = null; setDragPreview(undefined);}}
                   onDoubleClick={(event) => {
                     if (!(event.target as Element).closest("button, input")) {
                       openNodeDialog(node);
@@ -928,9 +1023,9 @@ export const ProcessCanvas = forwardRef<
                   {node.type === 'operation' && <svg className={styles.operationShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 200,1 219,72 200,143 20,143 1,72" /></svg>}
                   {node.type === 'comment' && <svg className={styles.commentShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 219,1 200,143 1,143" /></svg>}
                   <div className={styles.nodeContent} title={node.label ?? view.title}>
-                  {(node.type === 'material' || node.type === 'manufactured_item') && <CanvasNodeImage
-                    type={node.type} referenceId={node.referenceId} name={node.label ?? view.title}
-                    image={(node.type === 'material' ? materialsQuery.data?.items : itemsQuery.data?.items)?.find((item) => item.id === node.referenceId)?.image} />}
+                  {(node.type === 'material' || node.type === 'manufactured_item' || node.type === 'output') && <CanvasNodeImage
+                    type={node.type === 'material' ? 'material' : 'manufactured_item'} referenceId={node.referenceId} name={node.label ?? view.title}
+                    image={(node.type === 'material' ? materialById : itemById).get(node.referenceId ?? '')?.image} />}
                   <Text className={styles.nodeLabel} variant="subheader-2">
                     {node.label ?? "Не сопоставлено"}
                   </Text>
@@ -939,13 +1034,14 @@ export const ProcessCanvas = forwardRef<
                     {editable && node.type !== "output" ? (
                       <Button
                         view="flat"
-                        size="s"
+                        size="m"
+                        aria-label="Изменить" title="Изменить узел"
                         onClick={() => openNodeDialog(node)}
                       >
-                        Изменить
+                        <Icon data={Pencil} size={20} />
                       </Button>
                     ) : null}
-                    {editable && node.type === 'material' ? <Button view="flat" size="s" aria-label={`Создать копию материала ${node.label ?? node.id}`} onClick={() => copyMaterial(node)}>Копия</Button> : null}
+                    {editable && node.type !== 'output' ? <Button view="flat" size="m" aria-label={`Создать копию ${node.type === 'material' ? 'материала' : 'узла'} ${node.label ?? node.id}`} title="Создать копию" onClick={() => copyMaterial(node)}><Icon data={Copy} size={20} /></Button> : null}
                     {editable && node.type !== 'comment' && node.type !== 'output' ? (
                       <button
                         className={styles.connector}
@@ -968,10 +1064,11 @@ export const ProcessCanvas = forwardRef<
                     {editable && node.type !== "output" ? (
                       <Button
                         view="flat-danger"
-                        size="s"
+                        size="m"
+                        aria-label={`Удалить узел ${node.label ?? node.id}`} title="Удалить узел"
                         onClick={() => deleteNode(node.id)}
                       >
-                        ×
+                        <Icon data={TrashBin} size={20} />
                       </Button>
                     ) : null}
                   </div>
@@ -1006,7 +1103,7 @@ export const ProcessCanvas = forwardRef<
                   {editable ? (
                     <>
                       <Button view="flat" onClick={() => openEdgeDialog(edge)}>
-                        Изменить
+                        <Icon data={Pencil} size={20} />
                       </Button>
                       <Button
                         view="flat-danger"
@@ -1023,6 +1120,18 @@ export const ProcessCanvas = forwardRef<
         </aside> */}
       </div>
 
+      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)}>
+        <Dialog.Header caption="Клавиши и управление" />
+        <Dialog.Body><ul>
+          <li>Колесо мыши — масштаб; перетаскивание фона — перемещение схемы.</li>
+          <li>Ctrl / Cmd + S — сохранить; Ctrl / Cmd + Z — отменить; Ctrl / Cmd + Shift + Z — повторить.</li>
+          <li>Ctrl при перетаскивании — привязка к сетке. Кнопка с сеткой включает её постоянно.</li>
+          <li>Alt + перетаскивание — копия. У операций и полуфабрикатов копия создаётся без привязки к справочнику; результат не копируется.</li>
+          <li>Shift + выделение области или Shift + клик — выбрать несколько узлов. Перетаскивание выбранного узла перемещает всю группу.</li>
+          <li>Двойной клик — изменить узел или соединение. Escape — снять выделение.</li>
+        </ul></Dialog.Body>
+        <Dialog.Footer textButtonCancel="Закрыть" onClickButtonCancel={() => setHelpOpen(false)} />
+      </Dialog>
       <Dialog
         open={Boolean(nodeDialog)}
         onClose={() => setNodeDialog(undefined)}
@@ -1033,22 +1142,24 @@ export const ProcessCanvas = forwardRef<
           <Dialog.Header caption={`Производство: ${nodeDialog?.label ?? ""}`} />
         ) : (
           <Dialog.Header
-          caption={nodeDialog?.mode === "edit" ? "Изменить узел" : "Новый узел"}
+          caption={!editable ? `Узел: ${nodeDialog?.label ?? ""}` : nodeDialog?.mode === "edit" ? "Изменить узел" : "Новый узел"}
           />
         )}
         <Dialog.Body>
           {nodeDialog ? (
             <div className={styles.dialogForm}>
-              {editable &&
-              nodeDialog.mode === "edit" &&
-              ["manufactured_item", "output"].includes(nodeDialog.type) &&
-              nodeDialog.referenceId ? (
+              {nodeDialog.mode === "edit" &&
+              ["manufactured_item", "output"].includes(nodeDialog.type) ? (
                 <TabList value={nodeDialogTab} onUpdate={setNodeDialogTab}>
-                  <Tab value="settings">Настройки</Tab>
-                  <Tab value="production">Производство</Tab>
+                  {editable && <Tab value="settings">Настройки</Tab>}
+                  <Tab value="composition">Состав</Tab>
+                  {nodeDialog.referenceId && <Tab value="production">Производство</Tab>}
                 </TabList>
               ) : null}
-              {nodeDialogTab === "production" ? (
+              {nodeDialogTab === "composition" && nodeDialog.nodeId ? (
+                <NodeRecipe graph={graph} node={graph.nodes.find((node) => node.id === nodeDialog.nodeId)!}
+                  processId={processId} onSelect={(ids) => {setSelectedIds(ids); setNodeDialog(undefined);}} />
+              ) : nodeDialogTab === "production" ? (
                 <div className={styles.productionTab}>
                   <Text color="secondary">
                     Расчёт использует активный рецепт и сначала расходует доступные
@@ -1115,29 +1226,32 @@ export const ProcessCanvas = forwardRef<
                     width="max"
                     aria-label="Сущность узла"
                   /></MobileProvider>}
+                  {nodeDialog.type === 'manufactured_item' && lockedInputIds.includes(nodeDialog.referenceId) && <Alert theme="info" message="У полуфабриката уже есть рецепт: можно проводить связи от него, но нельзя к нему." />}
                   {nodeDialog.type !== 'comment' && nodeCatalogQuery.isError && <Alert theme="danger"
                     title="Не удалось загрузить справочник" message={getErrorMessage(nodeCatalogQuery.error)}
                     actions={<Button onClick={() => nodeCatalogQuery.refetch()}>Повторить</Button>} />}
                 </>
               )}
-              {editable && nodeDialogTab !== "production" ? (
+              {editable && nodeDialogTab === "settings" ? (
               nodeDialog.type === 'comment' ? <TextArea label="Комментарий" value={nodeDialog.label}
                 onUpdate={(label) => {setNodeDialogError(undefined); setNodeDialog({...nodeDialog, label});}}
                 controlProps={{'aria-label': 'Текст комментария', maxLength: 200}} /> : <TextInput
                 label="Подпись"
-                disabled={!editable || nodeDialogTab === "production"}
+                disabled={!editable}
                 value={nodeDialog.label}
                 onUpdate={(label) => setNodeDialog({ ...nodeDialog, label })}
                 controlProps={{ "aria-label": "Подпись узла" }}
               />
               ) : null}
               {nodeDialogError && <Alert theme="danger" message={nodeDialogError} />}
+              {['material', 'operation'].includes(nodeDialog.type) && graph.edges.some((edge) => edge.target === nodeDialog.nodeId) &&
+                <Alert theme="warning" message="Входящие связи будут удалены: материалы и операции могут быть только источниками." />}
               {nodeDialog.type === 'comment' && graph.edges.some((edge) => edge.source === nodeDialog.nodeId || edge.target === nodeDialog.nodeId) &&
                 <Alert theme="warning" message="При превращении узла в комментарий его производственные связи будут удалены." />}
             </div>
           ) : null}
         </Dialog.Body>
-        {nodeDialogTab === "production" ? (
+        {!editable || nodeDialogTab !== "settings" ? (
           <Dialog.Footer
             textButtonCancel="Закрыть"
             onClickButtonCancel={() => setNodeDialog(undefined)}
