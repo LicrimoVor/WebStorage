@@ -1,3 +1,4 @@
+import {portPoint, type PortSide} from './connectionGeometry';
 import type {
   ProcessEdgeInput,
   ProcessGraphInput,
@@ -120,10 +121,8 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
     if (!source || !target) return [];
-    const x = (source.position?.x ?? 0) + 220;
-    const y = (source.position?.y ?? 0) + 72;
-    const targetX = target.position?.x ?? 0;
-    const targetY = (target.position?.y ?? 0) + 72;
+    const {x, y} = portPoint(source.position ?? {x: 0, y: 0}, edge.sourceSide ?? 'right', 220, 144);
+    const {x: targetX, y: targetY} = portPoint(target.position ?? {x: 0, y: 0}, edge.targetSide ?? 'left', 220, 144);
     return [
       {
         ...baseElement(edge.id, x, y),
@@ -214,6 +213,8 @@ function edgeFromCustomData(
     return null;
   }
   return {
+    ...(typeof source.sourceSide === 'string' && ['left', 'right', 'top', 'bottom'].includes(source.sourceSide) ? {sourceSide: source.sourceSide as PortSide} : {}),
+    ...(typeof source.targetSide === 'string' && ['left', 'right', 'top', 'bottom'].includes(source.targetSide) ? {targetSide: source.targetSide as PortSide} : {}),
     id: source.id,
     source: source.source,
     target: source.target,

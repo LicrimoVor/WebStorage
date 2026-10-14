@@ -45,10 +45,18 @@ class GraphNode(BaseModel):
 
 
 class GraphEdge(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str = Field(min_length=1, max_length=100)
     source: str = Field(min_length=1, max_length=100)
     target: str = Field(min_length=1, max_length=100)
     quantity: Quantity | None = None
+    source_side: Literal["left", "right", "top", "bottom"] | None = Field(
+        default=None, alias="sourceSide", exclude_if=lambda value: value is None
+    )
+    target_side: Literal["left", "right", "top", "bottom"] | None = Field(
+        default=None, alias="targetSide", exclude_if=lambda value: value is None
+    )
 
 
 class ProcessGraphDocument(BaseModel):

@@ -92,7 +92,7 @@ async def repair(
 @router.get("/business-documents")
 async def history(
     session: Session,
-    kind: str = Query(pattern="^(receipt|repair)$"),
+    kind: str = Query(pattern="^(receipt|repair|external_receipt)$"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> Any:

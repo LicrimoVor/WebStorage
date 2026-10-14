@@ -228,6 +228,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/external-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Providers */
+        get: operations["list_providers_api_v1_external_providers_get"];
+        put?: never;
+        /** Create Provider */
+        post: operations["create_provider_api_v1_external_providers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/external-providers/{provider_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Provider */
+        patch: operations["update_provider_api_v1_external_providers__provider_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/external-offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Offers */
+        get: operations["list_offers_api_v1_external_offers_get"];
+        put?: never;
+        /** Create Offer */
+        post: operations["create_offer_api_v1_external_offers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/external-offers/{offer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Offer */
+        put: operations["update_offer_api_v1_external_offers__offer_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/external-receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive */
+        post: operations["receive_api_v1_external_receipts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/warehouse/import/preview": {
         parameters: {
             query?: never;
@@ -2187,6 +2274,53 @@ export interface components {
          * @enum {string}
          */
         ExportDataset: "procurement" | "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
+        /** ExternalMaterial */
+        "ExternalMaterial-Input": {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Quantity */
+            quantity: number | string;
+        };
+        /** ExternalMaterial */
+        "ExternalMaterial-Output": {
+            /**
+             * Material Id
+             * Format: uuid
+             */
+            material_id: string;
+            /** Quantity */
+            quantity: string;
+        };
+        /** ExternalReceiptCreate */
+        ExternalReceiptCreate: {
+            /** Funding Allocations */
+            funding_allocations?: components["schemas"]["FundingPart-Input"][];
+            /**
+             * Offer Id
+             * Format: uuid
+             */
+            offer_id: string;
+            /** Quantity */
+            quantity: number | string;
+            /**
+             * Funding Source Id
+             * Format: uuid
+             */
+            funding_source_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+        };
         /** FinanceEdit */
         FinanceEdit: {
             /** Funding Allocations */
@@ -2426,6 +2560,10 @@ export interface components {
             target: string;
             /** Quantity */
             quantity?: number | string | null;
+            /** Sourceside */
+            sourceSide?: ("left" | "right" | "top" | "bottom") | null;
+            /** Targetside */
+            targetSide?: ("left" | "right" | "top" | "bottom") | null;
         };
         /** GraphEdge */
         "GraphEdge-Output": {
@@ -2437,6 +2575,10 @@ export interface components {
             target: string;
             /** Quantity */
             quantity?: string | null;
+            /** Sourceside */
+            sourceSide?: ("left" | "right" | "top" | "bottom") | null;
+            /** Targetside */
+            targetSide?: ("left" | "right" | "top" | "bottom") | null;
         };
         /** GraphNode */
         GraphNode: {
@@ -3053,6 +3195,72 @@ export interface components {
             image?: string | null;
             /** Group Ids */
             group_ids?: string[] | null;
+        };
+        /** OfferRead */
+        OfferRead: {
+            /**
+             * Provider Id
+             * Format: uuid
+             */
+            provider_id: string;
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Money Cost
+             * @default 0
+             */
+            money_cost: string;
+            /** Materials */
+            materials?: components["schemas"]["ExternalMaterial-Output"][];
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Operation Id
+             * Format: uuid
+             */
+            operation_id: string;
+            /** Provider Name */
+            provider_name: string;
+            /** Item Name */
+            item_name: string;
+            /** Unit */
+            unit: string;
+        };
+        /** OfferWrite */
+        OfferWrite: {
+            /**
+             * Provider Id
+             * Format: uuid
+             */
+            provider_id: string;
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Money Cost
+             * @default 0
+             */
+            money_cost: number | string;
+            /** Materials */
+            materials?: components["schemas"]["ExternalMaterial-Input"][];
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
         };
         /** OperationAnalyticsRow */
         OperationAnalyticsRow: {
@@ -4033,6 +4241,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** ProviderRead */
+        ProviderRead: {
+            /** Name */
+            name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** ProviderWrite */
+        ProviderWrite: {
+            /** Name */
+            name: string;
         };
         /** PublicInstructionRead */
         PublicInstructionRead: {
@@ -5350,6 +5573,230 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_v1_external_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderRead"][];
+                };
+            };
+        };
+    };
+    create_provider_api_v1_external_providers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_provider_api_v1_external_providers__provider_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_offers_api_v1_external_offers_get: {
+        parameters: {
+            query?: {
+                provider_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_offer_api_v1_external_offers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_offer_api_v1_external_offers__offer_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_api_v1_external_receipts_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExternalReceiptCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

@@ -105,6 +105,79 @@ describe('ProcessCanvas', () => {
     vi.mocked(useInventoryGroupsQuery).mockReturnValue({data: []} as unknown as ReturnType<typeof useInventoryGroupsQuery>);
   });
 
+  it('connects the bottom of a material to the top of a result and saves both ports', async () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material' as const, label: 'Сталь', position: {x: 0, y: 0}}]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const targetPort = document.querySelector('[data-process-node-id="output"] [data-port-side="top"]')!;
+    Object.defineProperty(document, 'elementFromPoint', {configurable: true, value: vi.fn().mockReturnValue(targetPort)});
+    const sourcePort = screen.getByRole('button', {name: 'Потянуть связь из Сталь (снизу)'});
+    fireEvent.pointerDown(sourcePort, {clientX: 100, clientY: 100, button: 0});
+    fireEvent.pointerUp(sourcePort, {clientX: 600, clientY: 200});
+    expect(document.querySelector('[data-process-edge] path')).toHaveAttribute('d', expect.stringMatching(/^M 130 168 C .*630 200$/));
+    await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledWith(version.process_id, version.id,
+      expect.objectContaining({graph: expect.objectContaining({edges: [expect.objectContaining({sourceSide: 'bottom', targetSide: 'top'})]})})), {timeout: 3000});
+  });
+
+  it('uses normal, compact and far layouts at three zoom levels', () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material' as const, label: 'Сталь', position: {x: 0, y: 0}},
+      {id: 'semi', type: 'manufactured_item' as const, label: 'Узел', position: {x: 300, y: 0}}]}};
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const material = document.querySelector('[data-process-node-id="material"]')!;
+    const semi = document.querySelector('[data-process-node-id="semi"]')!;
+    const zoomOut = screen.getByRole('button', {name: '−'});
+    const zoomIn = screen.getByRole('button', {name: '+'});
+    expect(material).toHaveAttribute('data-compact', 'false');
+    for (let i = 0; i < 5; i++) fireEvent.click(zoomOut);
+    expect(material).toHaveAttribute('data-compact', 'true');
+    expect(semi).toHaveAttribute('data-compact', 'true');
+    expect(document.querySelector('[data-process-node-id="output"]')).toHaveAttribute('data-zoom-level', 'compact');
+    fireEvent.click(zoomIn);
+    fireEvent.click(zoomIn);
+    expect(material).toHaveAttribute('data-zoom-level', 'compact');
+    for (let i = 0; i < 3; i++) fireEvent.click(zoomOut);
+    expect(material).toHaveAttribute('data-zoom-level', 'far');
+    expect(semi).toHaveAttribute('data-zoom-level', 'far');
+    expect(document.querySelector('[data-process-node-id="output"]')).toHaveAttribute('data-zoom-level', 'far');
+    for (let i = 0; i < 5; i++) fireEvent.click(zoomIn);
+    expect(material).toHaveAttribute('data-zoom-level', 'normal');
+  });
+
+  it.each(['Delete', 'Backspace'])('deletes selected nodes and incident edges with %s and preserves the result', (key) => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material' as const, label: 'Сталь', position: {x: 0, y: 0}}],
+      edges: [{id: 'edge', source: 'material', target: 'output', quantity: '1'}]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    fireEvent.pointerDown(document.querySelector('[data-process-node-id="material"]')!, {button: 0, shiftKey: true});
+    fireEvent.pointerDown(document.querySelector('[data-process-node-id="output"]')!, {button: 0, shiftKey: true});
+    fireEvent.keyDown(document.body, {key});
+    expect(document.querySelector('[data-process-node-id="material"]')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-process-node-id="output"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-process-edge]')).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, {key: 'z', ctrlKey: true});
+    expect(document.querySelector('[data-process-node-id="material"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-process-edge]')).toBeInTheDocument();
+  });
+
+  it('highlights an edge with Shift and deletes it without deleting its nodes', () => {
+    const draft = {...version, graph: {...version.graph, nodes: [...(version.graph.nodes ?? []),
+      {id: 'material', type: 'material' as const, label: 'Сталь', position: {x: 0, y: 0}}],
+      edges: [{id: 'edge', source: 'material', target: 'output', quantity: '1'}]}};
+    mockDraftSave(draft);
+    renderWithProviders(<ProcessCanvas processId={version.process_id} version={draft} editable onVersionUpdate={vi.fn()} />);
+    const edge = document.querySelector('[data-process-edge]')!;
+    fireEvent.pointerEnter(edge, {shiftKey: true});
+    expect(edge.getAttribute('class')).toContain('edgeDeleteTarget');
+    fireEvent.keyUp(document.body, {key: 'Shift'});
+    expect(edge.getAttribute('class')).not.toContain('edgeDeleteTarget');
+    fireEvent.click(edge, {shiftKey: true});
+    expect(document.querySelector('[data-process-edge]')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[data-process-node]')).toHaveLength(2);
+  });
+
   it('keeps a save error visible and stops autosaving an unchanged rejected graph', async () => {
     const draft: ProcessVersion = {...version, graph: {...version.graph, nodes: [
       ...(version.graph.nodes ?? []), {id: 'steel', type: 'material', referenceId: null, label: 'Сталь'},

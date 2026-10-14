@@ -11,6 +11,7 @@ from app.modules.business.router import router as business_router
 from app.modules.catalog_import import router as catalog_import_router
 from app.modules.employees.router import router as employees_router
 from app.modules.exports.router import router as exports_router
+from app.modules.externals.router import router as externals_router
 from app.modules.finance.router import router as finance_router
 from app.modules.inventory.router import router as inventory_router
 from app.modules.manufactured_items.router import router as manufactured_items_router
@@ -38,6 +39,7 @@ from app.modules.warehouse.router import groups_router, warehouse_router
 api_router = APIRouter(dependencies=[Depends(require_section_access)])
 
 api_router.include_router(business_router)
+api_router.include_router(externals_router)
 api_router.include_router(catalog_import_router)
 api_router.include_router(users_router)
 api_router.include_router(materials_router)

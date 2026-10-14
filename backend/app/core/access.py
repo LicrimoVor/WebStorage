@@ -44,6 +44,20 @@ def required_sections(
     read = method in {"GET", "HEAD"}
     if read and parts == ["warehouse", "revision"] and entity_type == "material":
         return {Section.WAREHOUSE, Section.REPAIRS}
+    if resource in {"external-providers", "external-offers"}:
+        return (
+            {
+                Section.PERSONNEL,
+                Section.WAREHOUSE,
+                Section.PROCESSES,
+                Section.PLANNING,
+                Section.OPERATIONS,
+            }
+            if read
+            else {Section.PERSONNEL}
+        )
+    if resource == "external-receipts":
+        return {Section.WAREHOUSE}
     if resource == "operations" and "work-entries" in parts:
         return {Section.OPERATIONS, Section.PERSONNEL}
     if resource == "work-entries":
@@ -102,8 +116,14 @@ def required_sections(
         return {Section.WAREHOUSE, Section.PLANNING, Section.REPAIRS, Section.SALES}
     # Only catalog reads, never movements, payroll, exports or mutations.
     shared = {
-        "materials": {Section.PLANNING, Section.PROCESSES, Section.REPAIRS},
-        "manufactured-items": {Section.PLANNING, Section.PROCESSES, Section.REPAIRS, Section.SALES},
+        "materials": {Section.PLANNING, Section.PROCESSES, Section.REPAIRS, Section.PERSONNEL},
+        "manufactured-items": {
+            Section.PLANNING,
+            Section.PROCESSES,
+            Section.REPAIRS,
+            Section.SALES,
+            Section.PERSONNEL,
+        },
         "operations": {Section.PLANNING, Section.PROCESSES, Section.PERSONNEL, Section.REPAIRS},
         "operation-groups": {Section.PROCESSES, Section.PERSONNEL, Section.REPAIRS},
         "inventory-groups": {Section.PROCESSES},

@@ -8,6 +8,7 @@ from app.modules.audit.model import AuditEvent  # noqa: F401
 from app.modules.auth.model import AuthSession, UserAccount  # noqa: F401
 from app.modules.business.model import BusinessDocument, FundingSource, ProductUnit  # noqa: F401
 from app.modules.employees.model import Employee  # noqa: F401
+from app.modules.externals.model import ExternalOffer, ExternalProvider  # noqa: F401
 from app.modules.finance.model import FinancialTransaction  # noqa: F401
 from app.modules.inventory.model import InventoryMovement  # noqa: F401
 from app.modules.manufactured_items.model import (  # noqa: F401

@@ -1,3 +1,4 @@
+import {ExternalProviders} from '@/widgets/ExternalProviders/ExternalProviders';
 import { Text } from "@gravity-ui/uikit";
 
 import { EmployeesTableWidget } from "@/widgets/EmployeesTable";
@@ -13,6 +14,7 @@ export function PersonnelPage() {
         </Text>
       </header>
       <EmployeesTableWidget />
+      <ExternalProviders />
     </main>
   );
 }

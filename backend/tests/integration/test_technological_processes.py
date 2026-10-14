@@ -702,3 +702,35 @@ async def test_incoming_leaf_connections_are_saved_as_error(
     assert (
         await client.post(f"/api/v1/technological-processes/{pid}/versions/{vid}/activate")
     ).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_connection_sides_survive_reload_export_and_version_copy(client: AsyncClient) -> None:
+    output = await create_item(client, name="Port output")
+    material = await create_material(client, name="Port material")
+    created = await create_process(client, name="Port process", output_item_id=output["id"])
+    pid, vid = created["process"]["id"], created["version"]["id"]
+    document = graph(
+        name="Port process",
+        output_item_id=output["id"],
+        output_name=output["name"],
+        material_id=material["id"],
+    )
+    document["edges"][0].update(sourceSide="bottom", targetSide="top")
+    saved = await client.put(
+        f"/api/v1/technological-processes/{pid}/versions/{vid}/draft",
+        json={"expected_revision": 0, "graph": document},
+    )
+    assert saved.status_code == 200, saved.text
+    for suffix in ("", "/export"):
+        response = await client.get(f"/api/v1/technological-processes/{pid}/versions/{vid}{suffix}")
+        assert response.status_code == 200, response.text
+        data = response.json()["graph"] if not suffix else response.json()
+        assert data["edges"][0]["sourceSide"] == "bottom"
+        assert data["edges"][0]["targetSide"] == "top"
+    copied = await client.post(
+        f"/api/v1/technological-processes/{pid}/versions", json={"source_version_id": vid}
+    )
+    assert copied.status_code == 201, copied.text
+    assert copied.json()["graph"]["edges"][0]["sourceSide"] == "bottom"
+    assert copied.json()["graph"]["edges"][0]["targetSide"] == "top"

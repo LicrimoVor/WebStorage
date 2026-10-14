@@ -618,7 +618,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^(receipt|repair)$",
+              "pattern": "^(receipt|repair|external_receipt)$",
               "title": "Kind"
             }
           },
@@ -726,6 +726,325 @@
               "application/json": {
                 "schema": {
                   "title": "Response Units Api V1 Product Units Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-providers": {
+      "get": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "List Providers",
+        "operationId": "list_providers_api_v1_external_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Providers Api V1 External Providers Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "Create Provider",
+        "operationId": "create_provider_api_v1_external_providers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-providers/{provider_id}": {
+      "patch": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "Update Provider",
+        "operationId": "update_provider_api_v1_external_providers__provider_id__patch",
+        "parameters": [
+          {
+            "name": "provider_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Provider Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-offers": {
+      "get": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "List Offers",
+        "operationId": "list_offers_api_v1_external_offers_get",
+        "parameters": [
+          {
+            "name": "provider_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OfferRead"
+                  },
+                  "title": "Response List Offers Api V1 External Offers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "Create Offer",
+        "operationId": "create_offer_api_v1_external_offers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-offers/{offer_id}": {
+      "put": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "Update Offer",
+        "operationId": "update_offer_api_v1_external_offers__offer_id__put",
+        "parameters": [
+          {
+            "name": "offer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Offer Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-receipts": {
+      "post": {
+        "tags": [
+          "external providers"
+        ],
+        "summary": "Receive",
+        "operationId": "receive_api_v1_external_receipts_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalReceiptCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Receive Api V1 External Receipts Post"
                 }
               }
             }
@@ -9526,6 +9845,108 @@
         ],
         "title": "ExportDataset"
       },
+      "ExternalMaterial-Input": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "quantity"
+        ],
+        "title": "ExternalMaterial"
+      },
+      "ExternalMaterial-Output": {
+        "properties": {
+          "material_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Material Id"
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "material_id",
+          "quantity"
+        ],
+        "title": "ExternalMaterial"
+      },
+      "ExternalReceiptCreate": {
+        "properties": {
+          "funding_allocations": {
+            "items": {
+              "$ref": "#/components/schemas/FundingPart-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Funding Allocations"
+          },
+          "offer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offer Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "funding_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Funding Source Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "offer_id",
+          "quantity",
+          "funding_source_id",
+          "occurred_at"
+        ],
+        "title": "ExternalReceiptCreate"
+      },
       "FinanceEdit": {
         "properties": {
           "funding_allocations": {
@@ -10080,6 +10501,40 @@
               }
             ],
             "title": "Quantity"
+          },
+          "sourceSide": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceside"
+          },
+          "targetSide": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetside"
           }
         },
         "type": "object",
@@ -10121,6 +10576,40 @@
               }
             ],
             "title": "Quantity"
+          },
+          "sourceSide": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceside"
+          },
+          "targetSide": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right",
+                  "top",
+                  "bottom"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetside"
           }
         },
         "type": "object",
@@ -11935,6 +12424,119 @@
         },
         "type": "object",
         "title": "MaterialUpdate"
+      },
+      "OfferRead": {
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Provider Id"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "money_cost": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
+            "title": "Money Cost",
+            "default": "0"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalMaterial-Output"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Materials"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "provider_name": {
+            "type": "string",
+            "title": "Provider Name"
+          },
+          "item_name": {
+            "type": "string",
+            "title": "Item Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_id",
+          "item_id",
+          "id",
+          "operation_id",
+          "provider_name",
+          "item_name",
+          "unit"
+        ],
+        "title": "OfferRead"
+      },
+      "OfferWrite": {
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Provider Id"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Item Id"
+          },
+          "money_cost": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Money Cost",
+            "default": "0"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalMaterial-Input"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Materials"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider_id",
+          "item_id"
+        ],
+        "title": "OfferWrite"
       },
       "OperationAnalyticsRow": {
         "properties": {
@@ -14565,6 +15167,42 @@
           "created_at"
         ],
         "title": "ProductionRecordRead"
+      },
+      "ProviderRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "ProviderRead"
+      },
+      "ProviderWrite": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProviderWrite"
       },
       "PublicInstructionRead": {
         "properties": {

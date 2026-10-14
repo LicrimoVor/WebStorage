@@ -37,6 +37,8 @@ describe('Excalidraw process adapter', () => {
           source: 'material',
           target: 'output',
           quantity: '2.500000',
+          sourceSide: 'bottom',
+          targetSide: 'top',
         },
       ],
     });

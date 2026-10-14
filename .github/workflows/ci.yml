@@ -17,7 +17,7 @@ jobs:
         env:
           BACKEND_IMAGE: webstorage-backend:check
         run: docker compose --env-file infra/production.env.example -f infra/compose.yml config --quiet
-      - run: docker build --tag webstorage-backend:check backend
+      - run: docker build --build-arg SOURCE_REVISION="$GITHUB_SHA" --tag webstorage-backend:check backend
       - name: Check containers and migrations
         run: |
           set -Eeuo pipefail
@@ -37,9 +37,11 @@ jobs:
           # Only this isolated test project's volumes are removed.
           trap 'compose down --volumes --remove-orphans' EXIT
           compose up -d --wait --wait-timeout 120 database
-          compose run --rm --no-deps backend alembic upgrade head
-          compose run --rm --no-deps backend alembic check
-          compose up -d --wait --wait-timeout 120 backend
+          # Starting the API against an empty database must apply migrations itself.
+          compose up -d --pull never --wait --wait-timeout 120 backend
+          # An explicit repeated run must verify the same head without changing it.
+          compose run --rm --no-deps --pull never backend python -m scripts.migrate
+          compose run --rm --no-deps --pull never backend alembic check
           compose exec -T backend python -c '
           import os
           import urllib.error
@@ -85,13 +87,14 @@ jobs:
           cache: pip
       - run: python -m pip install -e ".[dev]"
         working-directory: backend
-      - run: alembic upgrade head
+      - name: Apply migrations and verify database head
+        run: python -m scripts.migrate
         working-directory: backend
       - run: alembic check
         working-directory: backend
       - run: ruff check .
         working-directory: backend
-      - run: mypy app
+      - run: mypy app scripts/migrate.py
         working-directory: backend
       - run: pytest
         working-directory: backend

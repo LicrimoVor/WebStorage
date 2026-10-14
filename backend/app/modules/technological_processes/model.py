@@ -162,3 +162,5 @@ class TechnologicalProcessEdge(UUIDPrimaryKeyMixin, Base):
     source_node_id: Mapped[str] = mapped_column(String(100), nullable=False)
     target_node_id: Mapped[str] = mapped_column(String(100), nullable=False)
     quantity: Mapped[Decimal | None] = mapped_column(Numeric(20, 6), nullable=True)
+    source_side: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    target_side: Mapped[str | None] = mapped_column(String(6), nullable=True)

@@ -1,6 +1,6 @@
 import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
-import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Text} from '@gravity-ui/uikit';
+import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Tab, TabList, Text} from '@gravity-ui/uikit';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -23,7 +23,7 @@ import {
 } from "@/entities/ProductionPlan";
 import { ExportExcelButton } from "@/features/ExportExcel";
 import { getErrorMessage } from "@/shared/api";
-import { formatDateTime, formatDecimal } from "@/shared/lib";
+import { formatDateTime, formatDecimal, isDecimal, normalizeDecimal } from "@/shared/lib";
 
 import styles from "./ProductionPlansPage.module.scss";
 
@@ -152,16 +152,55 @@ function CreatePlanButton() {
   );
 }
 
-function RequirementTable({ plan }: { plan: ProductionPlan }) {
+function EditPlanButton({plan, onSaved}: {plan: ProductionPlan; onSaved: () => Promise<void>}) {
+  const [open, setOpen] = useState(false);
+  const [quantity, setQuantity] = useState(plan.planned_quantity);
+  const [targetDate, setTargetDate] = useState(plan.target_date ?? '');
+  const mutation = useMutation({
+    mutationFn: () => updateProductionPlan(plan.id, {
+      planned_quantity: normalizeDecimal(quantity), target_date: targetDate || null,
+    }),
+    onSuccess: async () => {await onSaved(); setOpen(false);},
+  });
+  const valid = isDecimal(quantity) && Number(normalizeDecimal(quantity)) > 0 &&
+    Number(normalizeDecimal(quantity)) >= Number(plan.produced_quantity);
+  const close = () => {if (!mutation.isPending) {setOpen(false); mutation.reset();}};
+  return <>
+    <Button view="outlined" onClick={() => {
+      setQuantity(formatDecimal(plan.planned_quantity).replaceAll(' ', ''));
+      setTargetDate(plan.target_date ?? ''); mutation.reset(); setOpen(true);
+    }}>Редактировать</Button>
+    <Dialog open={open} onClose={close} maxWidth="m" fullWidth>
+      <Dialog.Header caption={`Редактирование плана: ${plan.product_name}`} />
+      <Dialog.Body><div className={styles.form}>
+        <Text color="secondary">Уже изготовлено: {amount(plan.produced_quantity, ` ${plan.product_unit}`)}.</Text>
+        <TextInput label="Количество" value={quantity} onUpdate={setQuantity}
+          controlProps={{inputMode: 'decimal', 'aria-label': 'Плановое количество'}} />
+        <label className={styles.dateField}><span>Плановая дата</span>
+          <input type="date" aria-label="Плановая дата" value={targetDate}
+            onChange={(event) => setTargetDate(event.target.value)} /></label>
+        {!valid && <Text color="danger">Количество должно быть положительным и не меньше уже изготовленного.</Text>}
+        {mutation.error && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
+      </div></Dialog.Body>
+      <Dialog.Footer textButtonApply="Сохранить" textButtonCancel="Закрыть"
+        onClickButtonApply={() => mutation.mutate()} onClickButtonCancel={close}
+        loading={mutation.isPending} propsButtonApply={{disabled: !valid}} />
+    </Dialog>
+  </>;
+}
+
+type RequirementTab = 'materials' | 'semis' | 'operations';
+
+function RequirementTable({plan, tab}: {plan: ProductionPlan; tab: RequirementTab}) {
   const semis = plan.manufactured_items.filter((item) => !item.is_plan_output);
   return (
     <div className={styles.requirements}>
-      <section>
+      {tab === 'materials' && (<section>
         <Text as="h4" variant="subheader-2">
           Материалы
         </Text>
         {plan.materials.length ? (
-          <table>
+          <table><colgroup><col className={styles.positionColumn} /><col /><col /><col /></colgroup>
             <thead>
               <tr>
                 <th>Позиция</th>
@@ -173,7 +212,8 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <tbody>
               {plan.materials.map((item) => (
                 <tr key={item.material_id}>
-                  <td>{item.name}</td>
+                  <td><div className={styles.positionName} tabIndex={0} title={item.name}
+                    aria-label={`Название позиции: ${item.name}`}>{item.name}</div></td>
                   <td data-numeric>{amount(item.required_quantity, ` ${item.unit}`)}</td>
                   <td data-numeric>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
                   <td data-numeric
@@ -192,13 +232,13 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
         ) : (
           <Text color="secondary">Дополнительные материалы не требуются.</Text>
         )}
-      </section>
-      <section>
+      </section>)}
+      {tab === 'semis' && (<section>
         <Text as="h4" variant="subheader-2">
           Полуфабрикаты
         </Text>
         {semis.length ? (
-          <table>
+          <table><colgroup><col className={styles.positionColumn} /><col /><col /><col /></colgroup>
             <thead>
               <tr>
                 <th>Позиция</th>
@@ -210,7 +250,8 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <tbody>
               {semis.map((item) => (
                 <tr key={item.manufactured_item_id}>
-                  <td>{item.name}</td>
+                  <td><div className={styles.positionName} tabIndex={0} title={item.name}
+                    aria-label={`Название позиции: ${item.name}`}>{item.name}</div></td>
                   <td data-numeric>{amount(item.required_quantity, ` ${item.unit}`)}</td>
                   <td data-numeric>{amount(item.stock_used_quantity, ` ${item.unit}`)}</td>
                   <td data-numeric>{amount(item.to_produce_quantity, ` ${item.unit}`)}</td>
@@ -221,16 +262,16 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
         ) : (
           <Text color="secondary">Вложенных полуфабрикатов нет.</Text>
         )}
-      </section>
-      <section>
+      </section>)}
+      {tab === 'operations' && (<section>
         <Text as="h4" variant="subheader-2">
           Операции
         </Text>
         {plan.operations.length ? (
-          <table>
+          <table><colgroup><col className={styles.positionColumn} /><col /><col /><col /></colgroup>
             <thead>
               <tr>
-                <th>Операция</th>
+                <th>Позиция</th>
                 <th data-numeric>Количество</th>
                 <th data-numeric>Время, мин</th>
                 <th data-numeric>Стоимость</th>
@@ -239,7 +280,8 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
             <tbody>
               {plan.operations.map((item) => (
                 <tr key={item.operation_id}>
-                  <td>{item.name}</td>
+                  <td><div className={styles.positionName} tabIndex={0} title={item.name}
+                    aria-label={`Название позиции: ${item.name}`}>{item.name}</div></td>
                   <td data-numeric>{amount(item.required_quantity)}</td>
                   <td data-numeric>{amount(item.required_time_minutes)}</td>
                   <td data-numeric>{amount(item.cost, " ₽")}</td>
@@ -250,9 +292,31 @@ function RequirementTable({ plan }: { plan: ProductionPlan }) {
         ) : (
           <Text color="secondary">Операции не требуются.</Text>
         )}
-      </section>
+      </section>)}
     </div>
   );
+}
+
+function RequirementsButton({plan}: {plan: ProductionPlan}) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<RequirementTab>('materials');
+  return <>
+    <Button view="outlined" className={styles.requirementsOpen} onClick={() => setOpen(true)}>Потребности в материалах и операциях</Button>
+    <Dialog open={open} onClose={() => setOpen(false)} maxWidth="l" fullWidth>
+      <Dialog.Header caption="Потребности в материалах и операциях" />
+      <Dialog.Body className={styles.requirementsBody}>
+        <Text as="div" variant="subheader-2" className={styles.requirementsProduct}>{plan.product_name}</Text>
+        <Text as="div" color="secondary">Осталось изготовить: {amount(plan.remaining_quantity, ` ${plan.product_unit}`)}</Text>
+        <TabList value={tab} onUpdate={(value) => setTab(value as RequirementTab)}>
+          <Tab value="materials">Материалы</Tab>
+          <Tab value="semis">Полуфабрикаты</Tab>
+          <Tab value="operations">Операции</Tab>
+        </TabList>
+        <RequirementTable plan={plan} tab={tab} />
+      </Dialog.Body>
+      <Dialog.Footer textButtonCancel="Закрыть" onClickButtonCancel={() => setOpen(false)} />
+    </Dialog>
+  </>;
 }
 
 function ProductionRecordRow({ record }: { record: ProductionRecord }) {
@@ -318,10 +382,6 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
     mutationFn: () => recalculateProductionPlan(plan.id),
     onSuccess: refresh,
   });
-  const cancel = useMutation({
-    mutationFn: () => updateProductionPlan(plan.id, { status: "cancelled" }),
-    onSuccess: refresh,
-  });
   return (
     <Card view="outlined" className={styles.planCard}>
       <div className={styles.planHeading}>
@@ -350,18 +410,13 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
               >
                 Пересчитать
               </Button>
-              <Button
-                view="flat-danger"
-                loading={cancel.isPending}
-                onClick={() => cancel.mutate()}
-              >
-                Отменить
-              </Button>
+              <EditPlanButton plan={plan} onSaved={refresh} />
             </>
           ) : null}
         </div>
       </div>
       <div className={styles.planMetrics}>
+        <div><Text color="secondary">Плановая дата</Text><b>{plan.target_date?.split('-').reverse().join('.') ?? '—'}</b></div>
         <div>
           <Text color="secondary">План</Text>
           <b>{amount(plan.planned_quantity, ` ${plan.product_unit}`)}</b>
@@ -390,19 +445,13 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
           message={plan.missing_data.join(" · ")}
         />
       ) : null}
-      {recalculate.error || cancel.error ? (
+      {recalculate.error ? (
         <Alert
           theme="danger"
-          message={getErrorMessage(recalculate.error ?? cancel.error)}
+          message={getErrorMessage(recalculate.error)}
         />
       ) : null}
-      <details className={styles.details}>
-        <summary>Показать рассчитанные потребности</summary>
-        <details>
-          <summary>Потребности в материалах и операциях</summary>
-          <RequirementTable plan={plan} />
-        </details>
-      </details>
+      <div><RequirementsButton plan={plan} /></div>
       <details
         className={styles.details}
         onToggle={(event) => setHistoryOpen(event.currentTarget.open)}

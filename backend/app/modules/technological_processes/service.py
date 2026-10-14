@@ -279,6 +279,8 @@ def _graph_document(
                 source=edge.source_node_id,
                 target=edge.target_node_id,
                 quantity=edge.quantity,
+                source_side=edge.source_side,
+                target_side=edge.target_side,
             )
             for edge in edges
         ],
@@ -307,6 +309,8 @@ def _graph_entities(
             source_node_id=edge.source,
             target_node_id=edge.target,
             quantity=edge.quantity,
+            source_side=edge.source_side,
+            target_side=edge.target_side,
         )
         for edge in document.edges
     ]

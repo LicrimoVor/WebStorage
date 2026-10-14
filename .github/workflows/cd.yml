@@ -68,9 +68,9 @@ jobs:
           git checkout --detach "$2"
           REMOTE
 
-      - name: Start Docker Compose
+      - name: Build backend, migrate database and start API
         run: |
-          ssh production 'sudo -n bash -se' <<'REMOTE'
+          ssh production "sudo -n bash -se -- '$GITHUB_SHA'" <<'REMOTE'
           set -euo pipefail
           cd /opt/webstorage/repository
           compose() {
@@ -79,7 +79,7 @@ jobs:
               --file /opt/webstorage/repository/infra/compose.yml "$@"
           }
           compose config --quiet
-          compose build backend
+          compose build --build-arg SOURCE_REVISION="$1" backend
           compose up -d --wait --wait-timeout 120 database
           compose stop backend
           umask 077
@@ -87,8 +87,9 @@ jobs:
           backup="/opt/webstorage/backups/$(date -u +%Y%m%dT%H%M%SZ)-$$.dump"
           compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup.partial"
           mv "$backup.partial" "$backup"
-          compose run --rm --no-deps backend alembic upgrade head
-          compose up -d --no-deps --force-recreate --wait --wait-timeout 120 backend
+          compose run --rm --no-deps --pull never backend python -m scripts.migrate
+          compose run --rm --no-deps --pull never backend alembic check
+          compose up -d --no-deps --pull never --force-recreate --wait --wait-timeout 120 backend
           compose ps
           REMOTE
 

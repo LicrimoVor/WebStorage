@@ -1,6 +1,7 @@
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
 
 import {apiRequest} from '@/shared/api';
+import {allPages} from '@/shared/api/allPages';
 
 import type {
   Operation,
@@ -37,10 +38,12 @@ export async function listOperations(
   );
 }
 
-export function useOperationsQuery(params: OperationListParams) {
+export function useOperationsQuery(params: OperationListParams, fetchAll = false) {
   return useQuery({
-    queryKey: operationKeys.list(params),
-    queryFn: ({signal}) => listOperations(params, signal),
+    queryKey: fetchAll ? [...operationKeys.list(params), {fetchAll}] : operationKeys.list(params),
+    queryFn: ({signal}) => fetchAll
+      ? allPages((page) => listOperations({...params, page, page_size: 100}, signal))
+      : listOperations(params, signal),
     placeholderData: keepPreviousData,
   });
 }

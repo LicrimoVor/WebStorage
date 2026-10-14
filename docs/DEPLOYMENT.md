@@ -15,7 +15,9 @@ shell-скриптов. GitHub Actions выполняет деплои посл�
 3. Проверяет production-конфигурацию и собирает backend через `infra/compose.yml`,
    явно указывая `.env` из `/opt/webstorage/.env` и проект `webstorage-production`.
 4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
-   `alembic upgrade head`. Пересоздаёт backend из нового образа и ожидает healthcheck.
+   `python -m scripts.migrate` (внутри выполняется `alembic upgrade head`). Скрипт
+   сверяет фактическую версию базы с единственным `head` нового образа; затем
+   выполняется `alembic check`. Только после этого CD пересоздаёт backend и ожидает healthcheck.
 5. Устанавливает `infra/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
    `nginx -t` и перезагружает Nginx.
 6. Передаёт архив frontend по SSH, распаковывает во временную папку, обновляет
@@ -176,3 +178,33 @@ volumes БД и фотографий сохраняются. PostgreSQL не п�
 Старые `/opt/webstorage/releases` и ссылка `current` больше не используются.
 После успешного перехода их можно удалить вручную, сохранив необходимые
 резервные копии. CD не удаляет существующие серверные данные автоматически.
+
+
+## Проверка применения миграций
+
+В CI и CD применяется один скрипт `python -m scripts.migrate`. В логах видны
+хост и имя базы (без пароля), SHA образа, целевая версия Alembic и версии базы
+до и после обновления. Успешный шаг заканчивается `Database after upgrade: …; verified`.
+Если версии не совпали или миграция завершилась ошибкой, шаг падает.
+
+Backend выполняет тот же скрипт перед запуском Uvicorn. Поэтому ручное
+`docker compose up` также применяет миграции. Для параллельных запусков используется
+блокировка PostgreSQL; повторный запуск на актуальной базе ничего не меняет.
+`AUTO_MIGRATE=0` отключает автоматическое применение при старте API, но не явный
+шаг миграций в CI/CD.
+
+CD маркирует образ SHA коммита и использует `--pull never` для миграций и запуска
+backend, чтобы после сборки не получить другой образ из registry.
+
+Проверить текущую версию на сервере:
+
+```bash
+cd /opt/webstorage/repository
+docker compose --project-name webstorage-production \
+  --env-file /opt/webstorage/.env --file infra/compose.yml \
+  run --rm --no-deps --pull never backend alembic current --verbose
+```
+
+GitHub запускает код из коммита. Новые файлы миграций, `scripts/migrate.py` и другие
+новые файлы необходимо включить в коммит вместе с изменениями моделей и workflow.
+Локальные неотслеживаемые файлы не попадают на сервер через `git fetch`.

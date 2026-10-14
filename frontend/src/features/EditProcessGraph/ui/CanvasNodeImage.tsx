@@ -5,9 +5,9 @@ import {memo, useState} from 'react';
 import {apiRequest} from '@/shared/api';
 import styles from './ProcessCanvas.module.scss';
 
-export const CanvasNodeImage = memo(function CanvasNodeImage({type, referenceId, name, image}: {
+export const CanvasNodeImage = memo(function CanvasNodeImage({type, referenceId, name, image, fallbackToName = false}: {
   type: 'material' | 'manufactured_item'; referenceId: string | null | undefined;
-  name: string; image: string | null | undefined;
+  name: string; image: string | null | undefined; fallbackToName?: boolean;
 }) {
   const entity = type === 'material' ? 'materials' : 'manufactured-items';
   const query = useQuery({
@@ -21,5 +21,6 @@ export const CanvasNodeImage = memo(function CanvasNodeImage({type, referenceId,
   const [failedUrl, setFailedUrl] = useState<string>();
   return url && url !== failedUrl
     ? <img className={styles.nodeImage} src={url} alt={name} width={48} height={48} loading="lazy" decoding="async" draggable={false} onError={() => setFailedUrl(url)} />
+    : fallbackToName ? <span className={styles.nodeLabel}>{name}</span>
     : <div className={styles.nodeImagePlaceholder} aria-label={`Нет изображения: ${name}`}><Icon data={Picture} size={28} /></div>;
 });

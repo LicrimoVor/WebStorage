@@ -424,3 +424,171 @@
     text-align: right;
   }
 }
+
+.material,
+.manufactured_item {
+  grid-template-rows: 32px 1fr;
+
+  .nodeImage,
+  .nodeImagePlaceholder {
+    flex-basis: 96px;
+    width: 96px;
+    height: 96px;
+  }
+
+  .nodeLabel {
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  .nodeActions {
+    align-self: center;
+    gap: 0;
+  }
+}
+
+.farNode {
+  display: flex;
+  padding: 6px;
+
+  .nodeHeading,
+  > .nodeActions {
+    display: none;
+  }
+
+  .nodeContent {
+    width: 100%;
+    height: 100%;
+  }
+
+  .nodeImage,
+  .nodeImagePlaceholder {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+  }
+
+  .connector {
+    opacity: 0;
+  }
+
+  &:hover .connector,
+  .connector:focus-visible {
+    opacity: 1;
+  }
+}
+
+.port_left {
+  top: 50%;
+  right: auto;
+  left: -11px;
+  transform: translateY(-50%);
+}
+
+.port_right {
+  top: 50%;
+  right: -11px;
+}
+
+.port_top {
+  top: -11px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.port_bottom {
+  inset: auto auto -11px 50%;
+  transform: translateX(-50%);
+}
+
+.inputPort {
+  background: var(--g-color-base-background);
+}
+
+.operation > .connector {
+  position: absolute;
+}
+
+.compactNode {
+  grid-template-rows: 1fr;
+
+  .nodeHeading,
+  .nodeActions {
+    display: none;
+  }
+
+  .nodeImage,
+  .nodeImagePlaceholder {
+    flex-basis: 104px;
+    width: 104px;
+    height: 100%;
+    max-height: 104px;
+  }
+
+  .nodeContent { gap: 6px; }
+
+  .nodeLabel {
+    font-size: 30px;
+    line-height: 1.05;
+    font-weight: 700;
+  }
+
+  .nodeImagePlaceholder svg {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.farNode {
+  .nodeImagePlaceholder { display: none; }
+
+  .nodeLabel {
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 700;
+  }
+
+  .nodeContent {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+.edgeDeleteTarget {
+  cursor: pointer;
+  opacity: 1;
+
+  .edgePath { stroke: var(--g-color-line-danger); }
+  .edgeLabel { fill: var(--g-color-text-danger); }
+}
+
+.node.comment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 28px;
+
+  .nodeHeading {
+    position: absolute;
+    inset: 12px 28px auto;
+  }
+
+  .nodeActions {
+    position: absolute;
+    inset: auto 28px 12px auto;
+  }
+
+  .nodeContent {
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    text-align: center;
+  }
+
+  .nodeLabel {
+    width: 100%;
+    text-align: center;
+  }
+}

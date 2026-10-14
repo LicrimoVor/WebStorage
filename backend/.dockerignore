@@ -6,5 +6,7 @@
 !migrations/
 !migrations/**
 !docker-entrypoint.py
+!scripts/
+!scripts/**
 **/__pycache__/
 **/*.pyc

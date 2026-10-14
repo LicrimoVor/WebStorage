@@ -1,3 +1,4 @@
+import {ExternalReceipt} from './ExternalReceipt';
 import {ImportStockJson} from "@/features/ImportStockJson";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { FundingSplit } from "@/entities/Funding/FundingSplit";
@@ -9,7 +10,7 @@ import { isAdmin, canAccess } from "@/shared/lib/access";
 import { formatDecimal, isDecimal } from "@/shared/lib";
 import { useProductionPlansQuery } from "@/entities/ProductionPlan";
 import { PlanRelease } from "./PlanRelease";
-import { Alert, Button, Icon } from "@gravity-ui/uikit";
+import { Alert, Button, Icon, Tab, TabList } from "@gravity-ui/uikit";
 import { ClockArrowRotateLeft, Persons } from "@gravity-ui/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useRef, useState } from "react";
@@ -90,6 +91,7 @@ export function SettingsPage() {
 }
 
 export function ReceiptPage() {
+  const [receiptTab, setReceiptTab] = useState('materials');
   const rows = useStockRevisionRowsQuery({ type: "material" });
   const groups = useInventoryGroupsQuery();
   const [materialId, setMaterialId] = useState("");
@@ -147,7 +149,9 @@ export function ReceiptPage() {
   }
   return (
     <main className={styles.page}>
-      <h1>Приход материалов</h1>
+      <h1>Приход</h1>
+      <TabList value={receiptTab} onUpdate={setReceiptTab}><Tab value="materials">Материалы</Tab><Tab value="external">Внешние</Tab></TabList>
+      {receiptTab === "external" ? <ExternalReceipt /> : <>
       <ImportStockJson mode="receipt" catalog={rows.data ?? []} disabled={!rows.data || rows.isError || mutation.isPending}
         onImport={(document) => {
           setValues((current) => ({...current, ...Object.fromEntries(document.entries.map((entry) => [entry.id, {quantity: entry.quantity}]))}));
@@ -303,6 +307,7 @@ export function ReceiptPage() {
         )}
       </section>
       <History kind="receipt" />
+      </>}
     </main>
   );
 }

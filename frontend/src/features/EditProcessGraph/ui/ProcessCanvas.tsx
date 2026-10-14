@@ -1,3 +1,4 @@
+import {connectionCurve, nearestPort, portPoint, portSides, type PortSide} from '../model/connectionGeometry';
 import {participatingNodes} from '../model/participatingNodes';
 import {ArrowRotateLeft, ArrowRotateRight, ArrowDownToLine, ArrowUpFromLine, LayoutCells, CircleQuestion, Copy, Pencil, TrashBin} from '@gravity-ui/icons';
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
@@ -40,6 +41,7 @@ import styles from "./ProcessCanvas.module.scss";
 
 const NODE_WIDTH = 260;
 const NODE_HEIGHT = 168;
+const portNames: Record<PortSide, string> = {left: 'слева', right: 'справа', top: 'сверху', bottom: 'снизу'};
 
 const nodeTypeView: Record<
   ProcessNode["type"],
@@ -106,6 +108,8 @@ interface EdgeDialogState {
 
 interface ConnectionDrag {
   source: string;
+  sourceSide: PortSide;
+  targetSide?: PortSide;
   x: number;
   y: number;
   target?: string;
@@ -171,6 +175,8 @@ export const ProcessCanvas = forwardRef<
   const importRef = useRef<HTMLInputElement>(null);
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [hoveredEdge, setHoveredEdge] = useState<string>();
+  const [shiftPressed, setShiftPressed] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectionArea, setSelectionArea] = useState<{x: number; y: number; endX: number; endY: number}>();
   const [dragPreview, setDragPreview] = useState<{nodes: ProcessNode[]; dx: number; dy: number; copy: boolean}>();
@@ -209,7 +215,7 @@ export const ProcessCanvas = forwardRef<
     page_size: 100,
     sort_by: "name",
     sort_order: "asc",
-  });
+  }, true);
   const materialById = useMemo(() => new Map(materialsQuery.data?.items.map((item) => [item.id, item])), [materialsQuery.data]);
   const itemById = useMemo(() => new Map(itemsQuery.data?.items.map((item) => [item.id, item])), [itemsQuery.data]);
   const nodeCatalogQuery = nodeDialog?.type === 'material' ? materialsQuery
@@ -287,7 +293,16 @@ export const ProcessCanvas = forwardRef<
     if (!editable) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {setSelectedIds(new Set()); setSelectionArea(undefined); setDragPreview(undefined); dragRef.current = null;}
-      if ((event.target as Element)?.closest("input, textarea, [contenteditable=true]")) return;
+      if (event.key === 'Shift') setShiftPressed(true);
+      if ((event.target as Element)?.closest("input, textarea, [contenteditable=true], [role=dialog]") || nodeDialog || edgeDialog || helpOpen) return;
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedIds.size) {
+        event.preventDefault();
+        const removed = new Set(graph.nodes.filter((node) => selectedIds.has(node.id) && node.type !== 'output').map((node) => node.id));
+        if (removed.size) history.commit({...graph, nodes: graph.nodes.filter((node) => !removed.has(node.id)),
+          edges: graph.edges.filter((edge) => !removed.has(edge.source) && !removed.has(edge.target))});
+        setSelectedIds(new Set());
+        return;
+      }
       if (!(event.ctrlKey || event.metaKey)) return;
       if (event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -301,9 +316,13 @@ export const ProcessCanvas = forwardRef<
         void persist().catch(() => undefined);
       }
     };
+    const onKeyUp = (event: KeyboardEvent) => {if (event.key === 'Shift') setShiftPressed(false);};
+    const onBlur = () => {setShiftPressed(false); setHoveredEdge(undefined);};
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editable, history, persist]);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", onBlur);};
+  }, [editable, history, persist, selectedIds, graph, nodeDialog, edgeDialog, helpOpen]);
 
   const referenceOptions = useMemo(() => {
     if (!nodeDialog) return [];
@@ -493,20 +512,26 @@ export const ProcessCanvas = forwardRef<
     };
   };
 
-  const connectionTargetAt = (clientX: number, clientY: number) =>
-    window.document
-      .elementFromPoint(clientX, clientY)
-      ?.closest<HTMLElement>("[data-process-node-id]")?.dataset.processNodeId;
+  const connectionTargetAt = (clientX: number, clientY: number) => {
+    const element = window.document.elementFromPoint(clientX, clientY);
+    const id = element?.closest<HTMLElement>("[data-process-node-id]")?.dataset.processNodeId;
+    if (!id) return undefined;
+    const node = graph.nodes.find((item) => item.id === id);
+    const port = element?.closest<HTMLElement>("[data-port-side]")?.dataset.portSide as PortSide | undefined;
+    return {id, side: port ?? nearestPort(node?.position ?? {x: 0, y: 0}, connectionPoint(clientX, clientY))};
+  };
 
   const onConnectionPointerDown = (
     event: PointerEvent<HTMLButtonElement>,
     source: string,
+    sourceSide: PortSide,
   ) => {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     setConnectionDrag({
       source,
+      sourceSide,
       ...connectionPoint(event.clientX, event.clientY),
     });
   };
@@ -518,8 +543,9 @@ export const ProcessCanvas = forwardRef<
     const target = connectionTargetAt(event.clientX, event.clientY);
     setConnectionDrag({
       source: connectionDrag.source,
+      sourceSide: connectionDrag.sourceSide,
       ...connectionPoint(event.clientX, event.clientY),
-      ...(target && target !== connectionDrag.source ? { target } : {}),
+      ...(target && target.id !== connectionDrag.source ? { target: target.id, targetSide: target.side } : {}),
     });
   };
 
@@ -527,7 +553,8 @@ export const ProcessCanvas = forwardRef<
     if (!connectionDrag) return;
     event.preventDefault();
     event.stopPropagation();
-    const target = connectionTargetAt(event.clientX, event.clientY);
+    const destination = connectionTargetAt(event.clientX, event.clientY);
+    const target = destination?.id;
     const duplicate = graph.edges.some(
       (edge) => edge.source === connectionDrag.source && edge.target === target,
     );
@@ -546,6 +573,8 @@ export const ProcessCanvas = forwardRef<
             id: crypto.randomUUID(),
             source: connectionDrag.source,
             target,
+            sourceSide: connectionDrag.sourceSide,
+            targetSide: destination!.side,
             quantity: "1",
           },
         ],
@@ -919,20 +948,27 @@ export const ProcessCanvas = forwardRef<
                 >
                   <path d="M 0 0 L 10 5 L 0 10 z" />
                 </marker>
+                <marker id={`arrow-danger-${version.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" style={{fill: 'var(--g-color-line-danger)'}} />
+                </marker>
               </defs>
               {graph.edges.map((edge) => {
                 const source = nodeById.get(edge.source);
                 const target = nodeById.get(edge.target);
                 if (!source || !target) return null;
-                const x1 = (source.position?.x ?? 0) + NODE_WIDTH;
-                const y1 = (source.position?.y ?? 0) + NODE_HEIGHT / 2;
-                const x2 = target.position?.x ?? 0;
-                const y2 = (target.position?.y ?? 0) + NODE_HEIGHT / 2;
-                const curve = Math.max(70, Math.abs(x2 - x1) * 0.45);
+                const sourceSide = edge.sourceSide ?? 'right';
+                const targetSide = edge.targetSide ?? 'left';
+                const curve = connectionCurve(portPoint(source.position ?? {x: 0, y: 0}, sourceSide),
+                  portPoint(target.position ?? {x: 0, y: 0}, targetSide), sourceSide, targetSide);
                 return (
                   <g
                     key={edge.id}
-                    className={!participating.has(edge.target) ? styles.inactive : undefined}
+                    className={`${!participating.has(edge.target) ? styles.inactive : ""} ${editable && shiftPressed && hoveredEdge === edge.id ? styles.edgeDeleteTarget : ""}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onPointerEnter={(event) => {setHoveredEdge(edge.id); setShiftPressed(event.shiftKey);}}
+                    onPointerMove={(event) => setShiftPressed(event.shiftKey)}
+                    onPointerLeave={() => setHoveredEdge(undefined)}
+                    onClick={(event) => {if (editable && event.shiftKey) {event.stopPropagation(); deleteEdge(edge.id); setHoveredEdge(undefined);}}}
                     data-process-edge
                     onDoubleClick={(event) => {
                       event.stopPropagation();
@@ -944,19 +980,19 @@ export const ProcessCanvas = forwardRef<
                     ) : null}
                     <path
                       className={styles.edgePath}
-                      d={`M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`}
-                      markerEnd={`url(#arrow-${version.id})`}
+                      d={curve.path}
+                      markerEnd={`url(#arrow-${editable && shiftPressed && hoveredEdge === edge.id ? "danger-" : ""}${version.id})`}
                     />
                     {editable ? (
                       <path
                         className={styles.edgeHitArea}
-                        d={`M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`}
+                        d={curve.path}
                       />
                     ) : null}
                     <text
                       className={styles.edgeLabel}
-                      x={(x1 + x2) / 2}
-                      y={(y1 + y2) / 2 - 8}
+                      x={curve.label.x}
+                      y={curve.label.y}
                     >
                       {edge.quantity === null || edge.quantity === undefined
                         ? "?"
@@ -972,17 +1008,15 @@ export const ProcessCanvas = forwardRef<
                     const target = connectionDrag.target
                       ? nodeById.get(connectionDrag.target)
                       : undefined;
-                    const x1 = (source.position?.x ?? 0) + NODE_WIDTH;
-                    const y1 = (source.position?.y ?? 0) + NODE_HEIGHT / 2;
-                    const x2 = target?.position?.x ?? connectionDrag.x;
-                    const y2 = target
-                      ? (target.position?.y ?? 0) + NODE_HEIGHT / 2
-                      : connectionDrag.y;
-                    const curve = Math.max(70, Math.abs(x2 - x1) * 0.45);
+                    const sourceSide = connectionDrag.sourceSide;
+                    const targetSide = connectionDrag.targetSide ?? 'left';
+                    const curve = connectionCurve(portPoint(source.position ?? {x: 0, y: 0}, sourceSide),
+                      target ? portPoint(target.position ?? {x: 0, y: 0}, targetSide) : connectionDrag,
+                      sourceSide, targetSide);
                     return (
                       <path
                         className={`${styles.edgePath} ${styles.draftEdge}`}
-                        d={`M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`}
+                        d={curve.path}
                         markerEnd={`url(#arrow-${version.id})`}
                       />
                     );
@@ -992,13 +1026,25 @@ export const ProcessCanvas = forwardRef<
             {selectionArea && <div className={styles.selectionArea} style={{left: Math.min(selectionArea.x, selectionArea.endX), top: Math.min(selectionArea.y, selectionArea.endY), width: Math.abs(selectionArea.endX - selectionArea.x), height: Math.abs(selectionArea.endY - selectionArea.y)}} />}
             {renderedNodes.map((node) => {
               const view = nodeTypeView[node.type];
+              const imageNode = node.type === 'material' || node.type === 'manufactured_item';
+              const level = viewport.zoom < 0.45 ? 'far' : viewport.zoom < 0.8 ? 'compact' : 'normal';
+              const compact = level !== 'normal';
+              const actions = <div className={styles.nodeActions}>
+                {editable && node.type !== 'output' && <>
+                  <Button view="flat" size="m" aria-label="Изменить" title="Изменить узел" onClick={() => openNodeDialog(node)}><Icon data={Pencil} size={20} /></Button>
+                  <Button view="flat" size="m" aria-label={`Создать копию ${node.type === 'material' ? 'материала' : 'узла'} ${node.label ?? node.id}`} title="Создать копию" onClick={() => copyMaterial(node)}><Icon data={Copy} size={20} /></Button>
+                  <Button view="flat-danger" size="m" aria-label={`Удалить узел ${node.label ?? node.id}`} title="Удалить узел" onClick={() => deleteNode(node.id)}><Icon data={TrashBin} size={20} /></Button>
+                </>}
+              </div>;
               return (
                 <div
                   key={node.id}
                   data-process-node
                   data-process-node-id={node.id}
+                  data-compact={compact}
+                  data-zoom-level={level}
                   data-process-participating={node.type === "comment" || participating.has(node.id)}
-                  className={`${styles.node} ${styles[node.type]} ${node.type !== "comment" && persistedNodes.has(node.id) && !participating.has(node.id) ? styles.inactive : ""} ${selectedIds.has(node.id) ? styles.selected : ""} ${connectionDrag?.source === node.id ? styles.connecting : ""} ${connectionDrag?.target === node.id ? styles.connectionTarget : ""}`}
+                  className={`${styles.node} ${styles[node.type]} ${level === "far" ? styles.farNode : level === "compact" ? styles.compactNode : ""} ${node.type !== "comment" && persistedNodes.has(node.id) && !participating.has(node.id) ? styles.inactive : ""} ${selectedIds.has(node.id) ? styles.selected : ""} ${connectionDrag?.source === node.id ? styles.connecting : ""} ${connectionDrag?.target === node.id ? styles.connectionTarget : ""}`}
                   style={{
                     transform: `translate(${node.position?.x ?? 0}px, ${node.position?.y ?? 0}px)`,
                   }}
@@ -1016,62 +1062,31 @@ export const ProcessCanvas = forwardRef<
                     <Label theme={view.theme} size="s">
                       {view.title}
                     </Label>
-                    <Text color="secondary" variant="caption-2">
-                      {node.id.slice(0, 8)}
-                    </Text>
+                    {imageNode ? actions : <Text color="secondary" variant="caption-2">{node.id.slice(0, 8)}</Text>}
                   </div>
                   {node.type === 'operation' && <svg className={styles.operationShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 200,1 219,72 200,143 20,143 1,72" /></svg>}
                   {node.type === 'comment' && <svg className={styles.commentShape} viewBox="0 0 220 144" preserveAspectRatio="none" aria-hidden="true"><polygon points="20,1 219,1 200,143 1,143" /></svg>}
                   <div className={styles.nodeContent} title={node.label ?? view.title}>
                   {(node.type === 'material' || node.type === 'manufactured_item' || node.type === 'output') && <CanvasNodeImage
-                    type={node.type === 'material' ? 'material' : 'manufactured_item'} referenceId={node.referenceId} name={node.label ?? view.title}
+                    type={node.type === 'material' ? 'material' : 'manufactured_item'} referenceId={node.referenceId} name={node.label ?? view.title} fallbackToName={level === "far"}
                     image={(node.type === 'material' ? materialById : itemById).get(node.referenceId ?? '')?.image} />}
-                  <Text className={styles.nodeLabel} variant="subheader-2">
+                  {(level !== 'far' || !['material', 'manufactured_item', 'output'].includes(node.type)) && <Text className={styles.nodeLabel} variant="subheader-2">
                     {node.label ?? "Не сопоставлено"}
-                  </Text>
+                  </Text>}
                   </div>
-                  <div className={styles.nodeActions}>
-                    {editable && node.type !== "output" ? (
-                      <Button
-                        view="flat"
-                        size="m"
-                        aria-label="Изменить" title="Изменить узел"
-                        onClick={() => openNodeDialog(node)}
-                      >
-                        <Icon data={Pencil} size={20} />
-                      </Button>
-                    ) : null}
-                    {editable && node.type !== 'output' ? <Button view="flat" size="m" aria-label={`Создать копию ${node.type === 'material' ? 'материала' : 'узла'} ${node.label ?? node.id}`} title="Создать копию" onClick={() => copyMaterial(node)}><Icon data={Copy} size={20} /></Button> : null}
-                    {editable && node.type !== 'comment' && node.type !== 'output' ? (
-                      <button
-                        className={styles.connector}
-                        type="button"
-                        draggable={false}
-                        aria-label={`Потянуть связь из ${node.label ?? node.id}`}
-                        title="Потяните к другому узлу"
-                        onDragStart={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                        }}
-                        onPointerDown={(event) =>
-                          onConnectionPointerDown(event, node.id)
-                        }
-                        onPointerMove={onConnectionPointerMove}
-                        onPointerUp={onConnectionPointerUp}
-                        onPointerCancel={() => setConnectionDrag(undefined)}
-                      />
-                    ) : null}
-                    {editable && node.type !== "output" ? (
-                      <Button
-                        view="flat-danger"
-                        size="m"
-                        aria-label={`Удалить узел ${node.label ?? node.id}`} title="Удалить узел"
-                        onClick={() => deleteNode(node.id)}
-                      >
-                        <Icon data={TrashBin} size={20} />
-                      </Button>
-                    ) : null}
-                  </div>
+                  {!imageNode && actions}
+                  {editable && node.type !== 'comment' && portSides.map((side) => (
+                    <button key={side} type="button" data-port-side={side}
+                      className={`${styles.connector} ${styles[`port_${side}`]} ${node.type === 'output' ? styles.inputPort : ''}`}
+                      aria-label={node.type === 'output' ? `Вход в ${node.label ?? node.id}: ${portNames[side]}` : `Потянуть связь из ${node.label ?? node.id}${side === 'right' ? '' : ` (${portNames[side]})`}`}
+                      title={`${node.type === 'output' ? 'Вход' : 'Соединение'}: ${portNames[side]}`}
+                      onPointerDown={(event) => {
+                        if (node.type !== 'output') onConnectionPointerDown(event, node.id, side);
+                        else {event.preventDefault(); event.stopPropagation();}
+                      }}
+                      onPointerMove={onConnectionPointerMove} onPointerUp={onConnectionPointerUp}
+                      onPointerCancel={() => setConnectionDrag(undefined)} />
+                  ))}
                 </div>
               );
             })}
@@ -1128,7 +1143,7 @@ export const ProcessCanvas = forwardRef<
           <li>Ctrl при перетаскивании — привязка к сетке. Кнопка с сеткой включает её постоянно.</li>
           <li>Alt + перетаскивание — копия. У операций и полуфабрикатов копия создаётся без привязки к справочнику; результат не копируется.</li>
           <li>Shift + выделение области или Shift + клик — выбрать несколько узлов. Перетаскивание выбранного узла перемещает всю группу.</li>
-          <li>Двойной клик — изменить узел или соединение. Escape — снять выделение.</li>
+          <li>Shift + клик по связи — удалить связь. Delete / Backspace — удалить выбранные узлы, кроме результата.</li><li>Двойной клик — изменить узел или соединение. Escape — снять выделение.</li>
         </ul></Dialog.Body>
         <Dialog.Footer textButtonCancel="Закрыть" onClickButtonCancel={() => setHelpOpen(false)} />
       </Dialog>

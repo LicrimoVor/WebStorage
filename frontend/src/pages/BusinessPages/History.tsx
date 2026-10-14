@@ -17,6 +17,9 @@ export interface Line {
 }
 export interface OperationLine {operation_id: string; quantity: string}
 export interface Document {
+  provider_name?: string;
+  operation_name?: string;
+  spent_materials?: Line[];
   id: string;
   created_at: string;
   occurred_at: string;
@@ -50,13 +53,15 @@ function DocumentDetails({document: doc}: {document: Document}) {
       <p className={styles.description}>{doc.comment || 'Без комментария'}</p>
     </section>
     <section>
-      <h3>Материалы</h3>
+      <h3>{doc.provider_name ? 'Получено извне' : 'Материалы'}</h3>
       <ul>{(doc.entries ?? doc.material_costs ?? doc.materials ?? []).map((line) => <li key={line.material_id}>
         {line.name ?? catalog.data?.find((m) => m.id === line.material_id)?.name ?? line.material_id}: {formatDecimal(line.quantity)}
         {line.defective_quantity && `; брак: ${formatDecimal(line.defective_quantity)}`}
         {line.unit_price && `; цена: ${line.unit_price}`}
       </li>)}</ul>
     </section>
+    {doc.provider_name && <section><h3>Внешний исполнитель</h3><p>{doc.provider_name}</p><p>{doc.operation_name}</p></section>}
+    {doc.spent_materials && <section><h3>Списанные материалы</h3><ul>{doc.spent_materials.map((line) => <li key={line.material_id}>{line.name}: {formatDecimal(line.quantity)}</li>)}</ul></section>}
     {doc.operation_snapshots && <section>
       <h3>Операции</h3>
       <ul>{doc.operation_snapshots.map((line, index) => <li key={index}>
@@ -68,7 +73,7 @@ function DocumentDetails({document: doc}: {document: Document}) {
 }
 
 export function History({kind, onCopy, copyingDisabled = false}: {
-  kind: 'receipt' | 'repair';
+  kind: 'receipt' | 'repair' | 'external_receipt';
   onCopy?: (doc: Document) => void;
   copyingDisabled?: boolean;
 }) {

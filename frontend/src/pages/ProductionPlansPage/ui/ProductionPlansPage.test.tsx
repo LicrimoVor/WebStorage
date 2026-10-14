@@ -1,4 +1,5 @@
-import {screen} from '@testing-library/react';
+import {screen, waitFor, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {useManufacturedItemsQuery} from '@/entities/ManufacturedItem';
@@ -6,6 +7,7 @@ import type * as ManufacturedItemExports from '@/entities/ManufacturedItem';
 import {registerProduction} from '@/entities/Production';
 import type * as ProductionExports from '@/entities/Production';
 import {
+  updateProductionPlan,
   useProductionPlanSummaryQuery,
   useProductionPlansQuery,
   type ProductionPlan,
@@ -24,6 +26,7 @@ vi.mock('@/entities/ProductionPlan', async (importOriginal) => {
   const actual = await importOriginal<typeof ProductionPlanExports>();
   return {
     ...actual,
+    updateProductionPlan: vi.fn(),
     useProductionPlansQuery: vi.fn(),
     useProductionPlanSummaryQuery: vi.fn(),
   };
@@ -103,6 +106,52 @@ describe('ProductionPlansPage production execution', () => {
       components: [],
       created_at: '2026-08-28T11:00:00Z',
     });
+  });
+
+  it('edits quantity and date, preserves production history and removes cancellation', async () => {
+    vi.mocked(updateProductionPlan).mockResolvedValue({...plan, planned_quantity: '12', target_date: '2026-11-01'});
+    renderWithProviders(<ProductionPlansPage />, '/production-plans');
+    expect(screen.queryByRole('button', {name: 'Отменить'})).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Редактировать'}));
+    const quantity = screen.getByRole('textbox', {name: 'Плановое количество'});
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, '2');
+    expect(screen.getByRole('button', {name: 'Сохранить'})).toBeDisabled();
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, '12,5');
+    await userEvent.type(screen.getByLabelText('Плановая дата'), '2026-11-01');
+    await userEvent.click(screen.getByRole('button', {name: 'Сохранить'}));
+    await waitFor(() => expect(updateProductionPlan).toHaveBeenCalledWith(plan.id, {planned_quantity: '12.5', target_date: '2026-11-01'}));
+    await waitFor(() => expect(screen.queryByText(/Редактирование плана:/)).not.toBeInTheDocument());
+  });
+
+  it('opens requirements directly and switches between material, semi-finished and operation tables', async () => {
+    const names = ['Длинное название материала '.repeat(10).trim(), 'Длинное название полуфабриката '.repeat(10).trim(), 'Длинное название операции '.repeat(10).trim()];
+    const withRequirements: ProductionPlan = {...plan,
+      materials: [{material_id: 'material-id', name: names[0]!, unit: 'кг', required_quantity: '4', stock_used_quantity: '1', deficit_quantity: '3', unit_price: '5', cost: '20'}],
+      manufactured_items: [{manufactured_item_id: 'semi-id', process_version_id: null, name: names[1]!, unit: 'шт', required_quantity: '2', stock_used_quantity: '0', to_produce_quantity: '2', is_plan_output: false}],
+      operations: [{operation_id: 'operation-id', name: names[2]!, required_quantity: '3', time_norm: '6', required_time_minutes: '18', price: '4', cost: '12'}],
+    };
+    vi.mocked(useProductionPlansQuery).mockReturnValue({isPending: false, isError: false,
+      data: {items: [withRequirements], page: 1, page_size: 20, total: 1, pages: 1}} as unknown as ReturnType<typeof useProductionPlansQuery>);
+    renderWithProviders(<ProductionPlansPage />, '/production-plans');
+    expect(screen.queryByText('Показать рассчитанные потребности')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Потребности в материалах и операциях'}));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getAllByRole('table')).toHaveLength(1);
+    expect(within(dialog).getAllByRole('columnheader')).toHaveLength(4);
+    expect(within(dialog).getByTitle(names[0]!)).toHaveAttribute('tabindex', '0');
+    await waitFor(() => expect(within(dialog).getByRole('cell', {name: '3 кг'})).toBeVisible());
+    await userEvent.click(within(dialog).getByRole('tab', {name: 'Полуфабрикаты'}));
+    expect(within(dialog).queryByTitle(names[0]!)).not.toBeInTheDocument();
+    expect(within(dialog).getByTitle(names[1]!)).toBeInTheDocument();
+    expect(within(dialog).getByRole('columnheader', {name: 'Изготовить'})).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('tab', {name: 'Операции'}));
+    expect(within(dialog).getByTitle(names[2]!)).toBeInTheDocument();
+    expect(within(dialog).getByRole('cell', {name: '18'})).toBeVisible();
+    expect(within(dialog).getByRole('cell', {name: '12 ₽'})).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('button', {name: 'Закрыть'}));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('shows the plan without production commands', () => {
