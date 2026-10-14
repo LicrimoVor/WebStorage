@@ -14,7 +14,8 @@ shell-скриптов. GitHub Actions выполняет деплои посл�
    При первом запуске клонирует репозиторий в `/opt/webstorage/repository`.
 3. Проверяет production-конфигурацию и собирает backend через `infra/compose.yml`,
    явно указывая `.env` из `/opt/webstorage/.env` и проект `webstorage-production`.
-4. Запускает PostgreSQL и сохраняет дамп БД до остановки backend. В отдельном шаге
+4. Запускает PostgreSQL, проверяет подключение с паролем backend через TCP и сохраняет
+   дамп БД до остановки backend. В отдельном шаге
    останавливает backend и применяет
    `python -m scripts.migrate` (внутри выполняется `alembic upgrade head`). Скрипт
    сверяет фактическую версию базы с единственным `head` нового образа; затем
@@ -183,6 +184,28 @@ volumes БД и фотографий сохраняются. PostgreSQL не п�
 
 
 ## Проверка применения миграций
+
+Если в логе возникает `InvalidPasswordError: password authentication failed`, пароль
+backend не совпадает с паролем роли в существующей БД. Изменение `POSTGRES_PASSWORD`
+в `/opt/webstorage/.env` не меняет пароль роли в уже созданном PostgreSQL volume.
+Healthcheck `pg_isready` и локальный `pg_dump` могут проходить без проверки этого пароля.
+CD проверяет именно подключение backend (`scripts.migrate --check-connection`) до
+остановки API и прекращает деплой при ошибке аутентификации.
+
+Для восстановления верните в `.env` действующий пароль БД либо установите для роли
+пароль, указанный в `.env`. Второй вариант выполняется на сервере интерактивно:
+
+```bash
+sudo docker compose --project-name webstorage-production \
+  --env-file /opt/webstorage/.env \
+  --file /opt/webstorage/repository/infra/compose.yml \
+  exec database sh -c 'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+В открывшемся psql выполните `\password webstorage`, дважды введите значение
+`POSTGRES_PASSWORD` из `.env`, затем выйдите командой `\q`. Пароль не выводится
+на экран и не записывается в историю команды изменения пароля. После этого
+повторите CD или выполните команды восстановления ниже. Удалять volume не нужно.
 
 В CI и CD применяется один скрипт `python -m scripts.migrate`. В логах видны
 хост и имя базы (без пароля), SHA образа, целевая версия Alembic и версии базы

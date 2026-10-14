@@ -25,8 +25,11 @@ docker() {
       ;;
   esac
   case "$CD_FAIL_STAGE:$*" in
-    backup:*" exec "*|migration:*"scripts.migrate"*|startup:*"--force-recreate"*)
+    authentication:*"--check-connection"*|backup:*" exec "*|startup:*"--force-recreate"*)
       return 42
+      ;;
+    migration:*"scripts.migrate"*)
+      case "$*" in *"--check-connection"*) ;; *) return 42 ;; esac
       ;;
   esac
   case "$*" in *" exec "*) printf 'fake database dump\n' ;; esac
@@ -89,14 +92,20 @@ def test_cd_backup_migrations_and_startup_reach_end_of_ssh_input(tmp_path: Path)
     commands = (tmp_path / "docker.log").read_text().splitlines()
     backup = next(i for i, command in enumerate(commands) if " exec " in command)
     stop = next(i for i, command in enumerate(commands) if command.endswith("stop backend"))
-    migration = next(i for i, command in enumerate(commands) if "scripts.migrate" in command)
+    authentication = next(
+        i for i, command in enumerate(commands) if "--check-connection" in command
+    )
+    migration = next(
+        i for i, command in enumerate(commands)
+        if "scripts.migrate" in command and "--check-connection" not in command
+    )
     check = next(i for i, command in enumerate(commands) if "alembic check" in command)
     startup = next(i for i, command in enumerate(commands) if "--force-recreate" in command)
-    assert backup < stop < migration < check < startup
+    assert authentication < backup < stop < migration < check < startup
     assert list((tmp_path / "backups").glob("*.dump"))
 
 
-@pytest.mark.parametrize("stage", ["backup", "migration", "startup"])
+@pytest.mark.parametrize("stage", ["authentication", "backup", "migration", "startup"])
 def test_cd_failure_is_reported_and_does_not_execute_later_steps(
     tmp_path: Path, stage: str
 ) -> None:
@@ -106,9 +115,11 @@ def test_cd_failure_is_reported_and_does_not_execute_later_steps(
             break
     assert result.returncode == 42
     commands = (tmp_path / "docker.log").read_text()
-    if stage == "backup":
+    if stage in {"authentication", "backup"}:
         assert "stop backend" not in commands
-        assert "scripts.migrate" not in commands
+        assert "backend python -m scripts.migrate\n" not in commands
+        if stage == "authentication":
+            assert " exec " not in commands
     elif stage == "migration":
         assert "migration step failed" in result.stderr
         assert "alembic check" not in commands

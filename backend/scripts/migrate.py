@@ -1,5 +1,6 @@
 """Apply migrations and refuse startup unless this database matches this image."""
 
+import argparse
 import asyncio
 import os
 from pathlib import Path
@@ -9,6 +10,7 @@ from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from app.core.config import get_settings
+from asyncpg import InvalidPasswordError
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -27,6 +29,21 @@ def alembic_config() -> Config:
     config.set_main_option("script_location", str(ROOT / "migrations"))
     config.set_main_option("prepend_sys_path", str(ROOT))
     return config
+
+
+async def check_connection() -> None:
+    """Verify the API's credentials without changing the database or taking a lock."""
+    url = make_url(get_settings().database_url)
+    engine = create_async_engine(url, poolclass=NullPool)
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+        print(
+            f"Database connection verified: {url.host}:{url.port or 5432}/{url.database}",
+            flush=True,
+        )
+    finally:
+        await engine.dispose()
 
 
 async def migrate() -> None:
@@ -66,4 +83,14 @@ async def migrate() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(migrate())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-connection", action="store_true", help="Check credentials only")
+    args = parser.parse_args()
+    try:
+        asyncio.run(check_connection() if args.check_connection else migrate())
+    except InvalidPasswordError:
+        raise SystemExit(
+            "PostgreSQL rejected the configured password. Match /opt/webstorage/.env to the "
+            "existing database credentials, or change the database role password with psql "
+            "\\password. Changing POSTGRES_PASSWORD does not update an existing database."
+        ) from None

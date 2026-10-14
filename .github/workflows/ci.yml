@@ -37,6 +37,7 @@ jobs:
           # Only this isolated test project's volumes are removed.
           trap 'compose down --volumes --remove-orphans' EXIT
           compose up -d --wait --wait-timeout 120 database
+          compose run --rm --no-deps --pull never backend python -m scripts.migrate --check-connection
           # Starting the API against an empty database must apply migrations itself.
           compose up -d --pull never --wait --wait-timeout 120 backend
           # An explicit repeated run must verify the same head without changing it.
