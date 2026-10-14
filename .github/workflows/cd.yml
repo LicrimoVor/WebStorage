@@ -68,7 +68,7 @@ jobs:
           git checkout --detach "$2"
           REMOTE
 
-      - name: Build backend, migrate database and start API
+      - name: Build backend and back up database
         run: |
           ssh production "sudo -n bash -se -- '$GITHUB_SHA'" <<'REMOTE'
           set -euo pipefail
@@ -81,14 +81,54 @@ jobs:
           compose config --quiet
           compose build --build-arg SOURCE_REVISION="$1" backend
           compose up -d --wait --wait-timeout 120 database
-          compose stop backend
           umask 077
           install -d -m 700 /opt/webstorage/backups
           backup="/opt/webstorage/backups/$(date -u +%Y%m%dT%H%M%SZ)-$$.dump"
-          compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup.partial"
+          compose exec --interactive=false -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup.partial" < /dev/null
           mv "$backup.partial" "$backup"
-          compose run --rm --no-deps --pull never backend python -m scripts.migrate
-          compose run --rm --no-deps --pull never backend alembic check
+          echo "Database backup saved: $backup"
+          REMOTE
+
+      - name: Apply database migrations
+        run: |
+          ssh production 'sudo -n bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/webstorage/repository
+          compose() {
+            docker compose --project-name webstorage-production \
+              --env-file /opt/webstorage/.env \
+              --file /opt/webstorage/repository/infra/compose.yml "$@"
+          }
+          failure() {
+            status=$?
+            echo "Database migration step failed (exit $status); API startup was not attempted." >&2
+            compose ps --all || true
+            exit "$status"
+          }
+          trap failure ERR
+          compose stop backend
+          compose run --interactive=false --rm --no-deps --pull never backend python -m scripts.migrate < /dev/null
+          compose run --interactive=false --rm --no-deps --pull never backend alembic check < /dev/null
+          REMOTE
+
+      - name: Start backend and verify health
+        run: |
+          ssh production 'sudo -n bash -se' <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/webstorage/repository
+          compose() {
+            docker compose --project-name webstorage-production \
+              --env-file /opt/webstorage/.env \
+              --file /opt/webstorage/repository/infra/compose.yml "$@"
+          }
+          failure() {
+            status=$?
+            echo "Backend startup failed (exit $status)." >&2
+            compose ps --all || true
+            compose logs --no-color --tail 100 backend || true
+            exit "$status"
+          }
+          trap failure ERR
           compose up -d --no-deps --pull never --force-recreate --wait --wait-timeout 120 backend
           compose ps
           REMOTE

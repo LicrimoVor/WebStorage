@@ -14,10 +14,12 @@ shell-скриптов. GitHub Actions выполняет деплои посл�
    При первом запуске клонирует репозиторий в `/opt/webstorage/repository`.
 3. Проверяет production-конфигурацию и собирает backend через `infra/compose.yml`,
    явно указывая `.env` из `/opt/webstorage/.env` и проект `webstorage-production`.
-4. Запускает PostgreSQL, останавливает backend, сохраняет дамп БД и применяет
+4. Запускает PostgreSQL и сохраняет дамп БД до остановки backend. В отдельном шаге
+   останавливает backend и применяет
    `python -m scripts.migrate` (внутри выполняется `alembic upgrade head`). Скрипт
    сверяет фактическую версию базы с единственным `head` нового образа; затем
    выполняется `alembic check`. Только после этого CD пересоздаёт backend и ожидает healthcheck.
+   При ошибке миграций выводится состояние контейнеров, при ошибке запуска — также логи backend.
 5. Устанавливает `infra/nginx.conf` с доменом из `PUBLIC_APP_URL`, выполняет
    `nginx -t` и перезагружает Nginx.
 6. Передаёт архив frontend по SSH, распаковывает во временную папку, обновляет
@@ -196,13 +198,38 @@ Backend выполняет тот же скрипт перед запуском 
 CD маркирует образ SHA коммита и использует `--pull never` для миграций и запуска
 backend, чтобы после сборки не получить другой образ из registry.
 
+В SSH-скриптах `compose exec` и `compose run` выполняются с `--interactive=false`
+и перенаправлением stdin из `/dev/null`. Один `exec -T` отключает только терминал:
+Docker может прочитать оставшиеся команды из SSH heredoc. В результате шаг заканчивается
+успешно после резервного копирования, а миграции и запуск backend не выполняются.
+`Exited (143)` у старого backend в этом случае означает его остановку через SIGTERM.
+
+Если образ уже собран, но деплой прервался таким образом, завершить миграции и запуск
+можно на сервере следующими командами. Используется существующий образ и production-БД;
+при ошибке миграций выполнение остановится до запуска API.
+
+```bash
+sudo -n bash <<'RECOVER'
+set -euo pipefail
+compose() {
+  docker compose --project-name webstorage-production \
+    --env-file /opt/webstorage/.env \
+    --file /opt/webstorage/repository/infra/compose.yml "$@"
+}
+compose run --interactive=false --rm --no-deps --pull never backend python -m scripts.migrate < /dev/null
+compose run --interactive=false --rm --no-deps --pull never backend alembic check < /dev/null
+compose up -d --no-deps --pull never --force-recreate --wait --wait-timeout 120 backend
+compose ps
+RECOVER
+```
+
 Проверить текущую версию на сервере:
 
 ```bash
 cd /opt/webstorage/repository
 docker compose --project-name webstorage-production \
   --env-file /opt/webstorage/.env --file infra/compose.yml \
-  run --rm --no-deps --pull never backend alembic current --verbose
+  run --interactive=false --rm --no-deps --pull never backend alembic current --verbose < /dev/null
 ```
 
 GitHub запускает код из коммита. Новые файлы миграций, `scripts/migrate.py` и другие
