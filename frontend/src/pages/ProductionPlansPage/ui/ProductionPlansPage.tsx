@@ -1,3 +1,5 @@
+import {ReleasedStock} from './ReleasedStock';
+import {PlanProduction} from './PlanProduction';
 import {Select, TextInput} from '@/shared/ui/FormControls';
 import { Wrench } from "@gravity-ui/icons";
 import {Alert, Button, Card, Dialog, Label, Pagination, PlaceholderContainer, Skeleton, Tab, TabList, Text} from '@gravity-ui/uikit';
@@ -451,7 +453,8 @@ function PlanCard({ plan }: { plan: ProductionPlan }) {
           message={getErrorMessage(recalculate.error)}
         />
       ) : null}
-      <div><RequirementsButton plan={plan} /></div>
+      <div className={styles.planButtons}><RequirementsButton plan={plan} />
+        {plan.status === "active" && <PlanProduction plan={plan} />}</div>
       <details
         className={styles.details}
         onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
@@ -587,10 +590,11 @@ function PlanningListPage() {
 export function ProductionPlansPage() {
   const [params, setParams] = useSearchParams();
   const release = params.get("tab") === "release";
+  const stock = params.get("tab") === "stock";
   return (
     <>
       <nav className={styles.tabs} aria-label="Разделы планирования">
-        <Button size="l" selected={!release} onClick={() => setParams({})}>
+        <Button size="l" selected={!release && !stock} onClick={() => setParams({})}>
           Планы
         </Button>
         <Button
@@ -600,8 +604,9 @@ export function ProductionPlansPage() {
         >
           Выпуск продукции
         </Button>
+        <Button size="l" selected={stock} onClick={() => setParams({tab: "stock"})}>Склад</Button>
       </nav>
-      {release ? <ProductionPage /> : <PlanningListPage />}
+      {stock ? <ReleasedStock /> : release ? <ProductionPage /> : <PlanningListPage />}
     </>
   );
 }

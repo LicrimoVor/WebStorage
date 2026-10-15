@@ -28,8 +28,11 @@ class ExternalOffer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     item_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("manufactured_items.id", ondelete="RESTRICT")
     )
-    operation_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("operations.id", ondelete="RESTRICT"), unique=True
+    process_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("technological_process_versions.id", ondelete="RESTRICT"), nullable=True
+    )
+    operation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("operations.id", ondelete="RESTRICT"), unique=True, nullable=True
     )
     money_cost: Mapped[Decimal] = mapped_column(
         Numeric(20, 2), default=Decimal("0"), server_default="0"

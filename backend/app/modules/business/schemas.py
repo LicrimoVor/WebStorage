@@ -32,6 +32,22 @@ class ReceiptLine(BaseModel):
     unit_price: Money | None = None
 
 
+class ProductReleaseCreate(BaseModel):
+    product_id: uuid.UUID
+    serial_numbers: list[str] = Field(min_length=1, max_length=10000)
+    photo: str | None = Field(default=None, max_length=2000)
+    comment: str = Field(default="", max_length=2000)
+
+    @field_validator("serial_numbers")
+    @classmethod
+    def validate_serials(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() or len(value) > 200 for value in values):
+            raise ValueError("ID должен содержать от 1 до 200 символов")
+        if len(set(values)) != len(values):
+            raise ValueError("ID не должны повторяться")
+        return values
+
+
 class ReceiptCreate(FundingWrite):
     total_amount: Money | None = None
     funding_source_id: uuid.UUID

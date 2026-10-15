@@ -74,3 +74,10 @@ it('imports receipt JSON into the form and displays the AI prompt and format', a
   expect(screen.getByRole('textbox', {name: 'Сумма за приход'})).toHaveValue('123.45');
   expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path === '/warehouse/receipts')).toBe(false);
 });
+
+
+it('opens the combined history of material and external receipts', async () => {
+  renderWithProviders(<ReceiptPage />);
+  await userEvent.click(screen.getByRole('tab', {name: 'История приходов'}));
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('/business-documents?kind=receipts&offset=0'));
+});

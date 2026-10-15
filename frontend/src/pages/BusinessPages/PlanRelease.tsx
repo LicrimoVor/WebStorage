@@ -1,58 +1,6 @@
-import {TextArea, TextInput} from '@/shared/ui/FormControls';
-import {Alert, Button, Dialog} from '@gravity-ui/uikit';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { registerProduction } from '@/entities/Production';
-import type { ProductionPlan } from '@/entities/ProductionPlan';
-import { getErrorMessage } from '@/shared/api';
-import {formatDecimal} from '@/shared/lib';
-import { ImageUploadField } from '@/shared/ui';
-import styles from './BusinessPages.module.scss';
+import type {ProductionPlan} from '@/entities/ProductionPlan';
+import {ReleaseProductsButton} from '@/features/ProduceManufacturedItem/ui/ReleaseProductsButton';
 
-export function PlanRelease({ plan }: { plan: ProductionPlan }) {
-  const [open, setOpen] = useState(false);
-  const [quantity, setQuantity] = useState('1');
-  const [serials, setSerials] = useState('');
-  const [photo, setPhoto] = useState('');
-  const [comment, setComment] = useState('');
-  const key = useRef(crypto.randomUUID());
-  const client = useQueryClient();
-  const numbers = serials.split('\n').map((s) => s.trim()).filter(Boolean);
-  const valid = Number.isInteger(Number(quantity)) && Number(quantity) > 0 &&
-    Number(quantity) <= Number(plan.remaining_quantity) && numbers.length <= Number(quantity) &&
-    new Set(numbers).size === numbers.length;
-  const mutation = useMutation({
-    mutationFn: () => registerProduction(plan.id, {
-      item_id: plan.product_id, quantity, serial_numbers: numbers,
-      photo: photo || null, comment: comment.trim() || null,
-    }, key.current),
-    onSuccess: async () => {
-      setOpen(false); setSerials(''); setPhoto(''); setComment('');
-      key.current = crypto.randomUUID();
-      await client.invalidateQueries();
-    },
-  });
-  return <>
-    <Button onClick={() => { mutation.reset(); setOpen(true); }}>Выпустить по плану</Button>
-    <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)} maxWidth="m" fullWidth>
-      <Dialog.Header caption={`Выпуск: ${plan.product_name}`} />
-      <Dialog.Body>
-        <div className={styles.form}>
-          <p>Осталось по плану: {formatDecimal(plan.remaining_quantity)}. Версия техпроцесса: {plan.process_version_number}.</p>
-          <p>Для сборки материалы и полуфабрикаты должны быть на складе.</p>
-          <TextInput label="Количество изделий" value={quantity} onUpdate={setQuantity} />
-          <label>Номера изделий
-            <TextArea placeholder="Каждый номер с новой строки" value={serials} onUpdate={setSerials} controlProps={{'aria-label': 'Номера изделий'}} />
-          </label>
-          <p>Введено номеров: {numbers.length} из {quantity || '0'}. Остальные изделия будут выпущены анонимно. Номера можно не заполнять.</p>
-          <ImageUploadField value={photo} onUpdate={setPhoto} alt="Фото выпуска" />
-          <TextInput label="Комментарий" value={comment} onUpdate={setComment} />
-          {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
-        </div>
-      </Dialog.Body>
-      <Dialog.Footer textButtonApply="Выпустить" textButtonCancel="Отмена"
-        onClickButtonApply={() => mutation.mutate()} onClickButtonCancel={() => setOpen(false)}
-        propsButtonApply={{ disabled: !valid }} loading={mutation.isPending} />
-    </Dialog>
-  </>;
+export function PlanRelease({plan}: {plan: ProductionPlan}) {
+  return <ReleaseProductsButton productId={plan.product_id} productName={plan.product_name} label="Выпустить по плану" />;
 }

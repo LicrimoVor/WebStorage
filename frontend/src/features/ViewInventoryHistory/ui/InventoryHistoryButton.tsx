@@ -130,17 +130,18 @@ export function InventoryHistoryButton({
               />
             </div>
           )}
-          <ExportExcelButton
-            dataset="inventory_movements"
-            params={{ material_id: material.id }}
-            label="История в Excel"
-            size="m"
-          />
         </Dialog.Body>
-        <Dialog.Footer
-          textButtonCancel="Закрыть"
-          onClickButtonCancel={() => setOpen(false)}
-        />
+        <Dialog.Footer>
+          <div className={styles.footer}>
+            <ExportExcelButton
+              dataset="inventory_movements"
+              params={{ material_id: material.id }}
+              label="История в Excel"
+              size="m"
+            />
+            <Button onClick={() => setOpen(false)}>Закрыть</Button>
+          </div>
+        </Dialog.Footer>
       </Dialog>
     </>
   );

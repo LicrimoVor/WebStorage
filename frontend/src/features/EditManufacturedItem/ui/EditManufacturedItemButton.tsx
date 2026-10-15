@@ -58,6 +58,7 @@ export function EditManufacturedItemButton({item}: EditManufacturedItemButtonPro
       name: form.name.trim(),
       is_product: form.isProduct,
       is_byproduct: !form.isProduct && Boolean(form.isByproduct),
+      is_accountable: form.isProduct || Boolean(form.isByproduct && form.isAccountable),
       product_id: form.isProduct ? null : form.productId || null,
       unit: form.unit.trim(),
       image: form.image || null,

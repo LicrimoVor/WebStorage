@@ -1,3 +1,4 @@
+import {FitNodeText} from './FitNodeText';
 import {Picture} from '@gravity-ui/icons';
 import {Icon} from '@gravity-ui/uikit';
 import {useQuery} from '@tanstack/react-query';
@@ -21,6 +22,6 @@ export const CanvasNodeImage = memo(function CanvasNodeImage({type, referenceId,
   const [failedUrl, setFailedUrl] = useState<string>();
   return url && url !== failedUrl
     ? <img className={styles.nodeImage} src={url} alt={name} width={48} height={48} loading="lazy" decoding="async" draggable={false} onError={() => setFailedUrl(url)} />
-    : fallbackToName ? <span className={styles.nodeLabel}>{name}</span>
+    : fallbackToName ? <FitNodeText maxFontSize={32}>{name}</FitNodeText>
     : <div className={styles.nodeImagePlaceholder} aria-label={`Нет изображения: ${name}`}><Icon data={Picture} size={28} /></div>;
 });

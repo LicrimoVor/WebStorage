@@ -80,28 +80,6 @@ function RegisterSaleButton() {
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [serialNumbers, setSerialNumbers] = useState<string[]>([]);
-  const units = useQuery({
-    queryKey: ["sale-units", productId],
-    enabled: Boolean(productId),
-    queryFn: async () => {
-      const all: {
-        serial_number: string | null;
-        sale_id: string | null;
-        issued_for_repair_id: string | null;
-      }[] = [];
-      for (let offset = 0; ; offset += 500) {
-        const batch = await apiRequest<
-          {
-            serial_number: string | null;
-            sale_id: string | null;
-            issued_for_repair_id: string | null;
-          }[]
-        >(`/product-units?product_id=${productId}&limit=500&offset=${offset}`);
-        all.push(...batch);
-        if (batch.length < 500) return all;
-      }
-    },
-  });
   const [quantity, setQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [soldAt, setSoldAt] = useState(currentDateTime);
@@ -122,8 +100,34 @@ function RegisterSaleButton() {
     sort_by: "name",
     sort_order: "asc",
     availability: "all",
+  }, true);
+  const saleableProducts = products.data?.items ?? [];
+  const selected = saleableProducts.find((item) => item.id === productId);
+  const units = useQuery({
+    queryKey: ["sale-units", productId],
+    enabled: open && Boolean(selected?.is_accountable),
+    queryFn: async () => {
+      const all: {
+        serial_number: string | null;
+        sale_id: string | null;
+        issued_for_repair_id: string | null;
+      }[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const batch = await apiRequest<
+          {
+            serial_number: string | null;
+            sale_id: string | null;
+            issued_for_repair_id: string | null;
+          }[]
+        >(`/product-units?product_id=${productId}&available_only=true&limit=500&offset=${offset}`);
+        all.push(...batch);
+        if (batch.length < 500) return all;
+      }
+    },
   });
-  const selected = products.data?.items.find((item) => item.id === productId);
+  const availableUnits = (units.data ?? []).filter(
+    (unit) => unit.serial_number && !unit.sale_id && !unit.issued_for_repair_id,
+  );
   const mutation = useMutation({
     mutationFn: (payload: SaleCreate) =>
       registerSale(payload, commandKey.current),
@@ -137,6 +141,8 @@ function RegisterSaleButton() {
         queryClient.invalidateQueries({ queryKey: manufacturedItemKeys.all }),
       ]);
       setOpen(false);
+      setProductId('');
+      setSerialNumbers([]);
       setQuantity("");
       setUnitPrice("");
       setComment("");
@@ -159,7 +165,15 @@ function RegisterSaleButton() {
       return;
     }
     const normalizedQuantity = normalizeDecimal(quantity);
-    if (!productId) {
+    if (selected?.is_accountable && (!serialNumbers.length || Number(normalizedQuantity) !== serialNumbers.length)) {
+      setValidationError('Выберите ID всех продаваемых изделий: продукция подотчётная.');
+      return;
+    }
+    if (selected?.is_accountable && (!units.isSuccess || serialNumbers.some((id) => !availableUnits.some((unit) => unit.serial_number === id)))) {
+      setValidationError('Выберите доступные ID выпущенных изделий. Обновите список, если изделие уже продано.');
+      return;
+    }
+    if (!selected) {
       setValidationError("Выберите продукт.");
       return;
     }
@@ -170,7 +184,7 @@ function RegisterSaleButton() {
       return;
     }
     if (
-      selected &&
+      !selected.is_accountable &&
       Number(normalizedQuantity) > Number(selected.free_quantity)
     ) {
       setValidationError(
@@ -218,15 +232,17 @@ function RegisterSaleButton() {
               />
             ) : null}
             <Select
-              label="Продукт"
-              options={(products.data?.items ?? []).map((item) => ({
+              label="Продукт или продаваемый п/ф"
+              options={saleableProducts.map((item) => ({
                 value: item.id,
-                content: `${item.name}${item.is_byproduct ? ' (побочный продукт)' : ''} · доступно ${formatDecimal(item.free_quantity)} ${item.unit}`,
+                content: `${item.name}${item.is_byproduct ? ' (п/ф для продажи)' : ''} · ${item.is_accountable ? 'выпущено' : 'свободно без ID'} ${formatDecimal(item.is_accountable ? String(item.released_quantity ?? 0) : item.free_quantity)} ${item.unit}`,
               }))}
               value={productId ? [productId] : []}
               onUpdate={(values) => {
                 setProductId(values[0] ?? "");
                 setSerialNumbers([]);
+                setQuantity('');
+                setValidationError(undefined);
               }}
               loading={products.isPending}
               width="max"
@@ -234,13 +250,26 @@ function RegisterSaleButton() {
               filterable
               aria-label="Продаваемый продукт"
             />
+            {products.isError && <Alert theme="danger" message={getErrorMessage(products.error)} />}
+            {selected?.is_accountable && units.isError && <Alert theme="danger" message={getErrorMessage(units.error)} />}
+            {selected?.is_accountable && units.isSuccess && !availableUnits.length && (
+              <Alert theme="warning" message="Нет выпущенных изделий с ID для продажи. Сначала оформите выпуск этой позиции." />
+            )}
+            {selected && !selected.is_accountable && Number(selected.free_quantity) <= 0 && (
+              <Alert theme="warning" message="Нет свободного остатка для продажи этой позиции." />
+            )}
+            {selected?.is_accountable && units.isSuccess && (
+              <Text>Выпущено и доступно к продаже: {availableUnits.length} {selected.unit}</Text>
+            )}
+            <Text color="secondary">{selected ? (selected.is_accountable ? 'Продажа из выпущенной продукции. Количество определяется выбранными ID.' : 'Продажа из свободного остатка без ID.') : 'Выберите продукт или полуфабрикат, разрешённый к продаже.'}</Text>
             <TextInput
               label={`Количество${selected ? `, ${selected.unit}` : ""}`}
-              value={quantity}
+              value={selected?.is_accountable ? String(serialNumbers.length) : quantity}
               onUpdate={setQuantity}
               controlProps={{
                 inputMode: "decimal",
                 "aria-label": "Количество продажи",
+                readOnly: Boolean(selected?.is_accountable),
               }}
               placeholder="0"
               size="l"
@@ -265,24 +294,25 @@ function RegisterSaleButton() {
                 onChange={(event) => setSoldAt(event.target.value)}
               />
             </label>
-            <Select
-              label="Номера изделий"
-              placeholder="Без номера (анонимные изделия)"
+            {selected?.is_accountable && <Select
+              label="Выпущенная продукция с ID"
+              aria-label="Выпущенные изделия для продажи"
+              loading={units.isPending && Boolean(selected)}
+              placeholder="Выберите ID выпущенных изделий"
               multiple
               filterable
               width="max"
               value={serialNumbers}
-              options={(units.data ?? [])
-                .filter((unit) => unit.serial_number && !unit.sale_id && !unit.issued_for_repair_id)
+              options={availableUnits
                 .map((unit) => ({
                   value: unit.serial_number!,
-                  content: unit.serial_number!,
+                  content: `${selected?.name ?? ''} — ID: ${unit.serial_number!}`,
                 }))}
               onUpdate={(ids) => {
                 setSerialNumbers(ids);
-                if (ids.length) setQuantity(String(ids.length));
+                setQuantity(String(ids.length));
               }}
-            />
+            />}
             <>
               <FundingSelect
                 value={fundingSource}

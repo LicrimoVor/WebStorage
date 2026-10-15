@@ -1,14 +1,16 @@
 import hashlib
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, DomainValidationError
 from app.modules.business.model import BusinessDocument, FundingSource, ProductUnit
-from app.modules.business.schemas import ReceiptCreate, RepairCreate
+from app.modules.business.schemas import ProductReleaseCreate, ReceiptCreate, RepairCreate
 from app.modules.finance.model import FinancialTransaction
 from app.modules.finance.service import money, timestamp
 from app.modules.inventory.repository import create_movement
@@ -209,11 +211,11 @@ async def register_units(
     from app.modules.manufactured_items.model import ManufacturedItem
 
     item = await session.get(ManufacturedItem, item_id)
-    if item is None or not item.is_product:
+    if item is None or not (item.is_product or item.is_byproduct):
         if serial_numbers:
             raise DomainValidationError("Номера назначаются готовой продукции")
         return
-    numbers = [number.strip() for number in serial_numbers if number.strip()]
+    numbers = [number for number in serial_numbers if number.strip()]
     if quantity != quantity.to_integral_value() or quantity > 10000 or len(numbers) > quantity:
         raise DomainValidationError(
             "Выпускайте от 1 до 10000 целых изделий; номеров не может быть больше количества"
@@ -230,6 +232,80 @@ async def register_units(
                 production_record_id=record_id,
                 photo=photo,
             )
-            for number in [*numbers, *([None] * (int(quantity) - len(numbers)))]
+            for number in numbers
         ]
     )
+
+
+async def release_products(
+    session: AsyncSession, payload: ProductReleaseCreate, key: str, actor: str
+) -> dict[str, Any]:
+
+    from app.modules.manufactured_items.model import ManufacturedItem
+    from app.modules.manufactured_items.repository import balance_expression
+
+    fingerprint = hashlib.sha256(("release" + payload.model_dump_json()).encode()).hexdigest()
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": key}
+    )
+    existing = await session.scalar(
+        select(BusinessDocument).where(BusinessDocument.idempotency_key == key)
+    )
+    if existing:
+        if existing.fingerprint != fingerprint:
+            raise ConflictError("Ключ уже использован для другого документа")
+        return document_read(existing)
+    item = await session.get(ManufacturedItem, payload.product_id, with_for_update=True)
+    if item is None or item.archived or not (item.is_product or item.is_byproduct):
+        raise DomainValidationError("Выберите действующий продукт")
+    free = await session.scalar(select(balance_expression()).where(ManufacturedItem.id == item.id))
+    if len(payload.serial_numbers) > (free or Decimal("0")):
+        raise ConflictError("Недостаточно свободных товаров для выпуска")
+    if await session.scalar(
+        select(ProductUnit.id).where(ProductUnit.serial_number.in_(payload.serial_numbers))
+    ):
+        raise ConflictError("Изделие с таким ID уже существует")  # noqa: RUF001
+    anonymous = list(
+        (
+            await session.scalars(
+                select(ProductUnit)
+                .where(
+                    ProductUnit.product_id == item.id,
+                    ProductUnit.serial_number.is_(None),
+                    ProductUnit.sale_id.is_(None),
+                    ProductUnit.issued_for_repair_id.is_(None),
+                )
+                .order_by(ProductUnit.created_at, ProductUnit.id)
+                .limit(len(payload.serial_numbers))
+                .with_for_update()
+            )
+        ).all()
+    )
+    for index, number in enumerate(payload.serial_numbers):
+        unit = anonymous[index] if index < len(anonymous) else ProductUnit(product_id=item.id)
+        unit.serial_number, unit.photo = number, payload.photo
+        unit.created_at = datetime.now(UTC)
+        session.add(unit)
+    document = BusinessDocument(
+        kind="release",
+        idempotency_key=key,
+        fingerprint=fingerprint,
+        funding_source_id=None,
+        created_by=actor,
+        data={
+            **payload.model_dump(mode="json"),
+            "product_name": item.name,
+            "quantity": str(len(payload.serial_numbers)),
+        },
+    )
+    session.add(document)
+    try:
+        await session.flush()
+        from app.modules.production_plans.service import recalculate_active_snapshots
+
+        await recalculate_active_snapshots(session)
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+        raise ConflictError("Изделие с таким ID уже существует") from error  # noqa: RUF001
+    return document_read(document)

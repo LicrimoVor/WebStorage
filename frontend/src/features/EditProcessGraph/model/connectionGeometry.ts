@@ -2,6 +2,12 @@ export type PortSide = 'left' | 'right' | 'top' | 'bottom';
 export const portSides: PortSide[] = ['left', 'right', 'top', 'bottom'];
 export const nodeWidth = 260;
 export const nodeHeight = 168;
+export function nodeDimensions(type: string) {
+  if (type === 'material') return {width: 184, height: 112};
+  if (type === 'manufactured_item') return {width: 244, height: 156};
+  if (type === 'output') return {width: 328, height: 210};
+  return {width: nodeWidth, height: nodeHeight};
+}
 type Point = {x: number; y: number};
 
 const normal: Record<PortSide, Point> = {
@@ -15,9 +21,9 @@ export function portPoint(position: Point, side: PortSide, width = nodeWidth, he
   };
 }
 
-export function nearestPort(position: Point, pointer: Point): PortSide {
+export function nearestPort(position: Point, pointer: Point, width = nodeWidth, height = nodeHeight): PortSide {
   return portSides.reduce((best, side) => {
-    const a = portPoint(position, best), b = portPoint(position, side);
+    const a = portPoint(position, best, width, height), b = portPoint(position, side, width, height);
     return Math.hypot(b.x - pointer.x, b.y - pointer.y) < Math.hypot(a.x - pointer.x, a.y - pointer.y) ? side : best;
   });
 }

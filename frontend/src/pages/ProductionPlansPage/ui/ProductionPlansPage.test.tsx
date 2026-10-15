@@ -160,4 +160,12 @@ describe('ProductionPlansPage production execution', () => {
     expect(screen.queryByRole('button', {name: 'Зарегистрировать выпуск'})).not.toBeInTheDocument();
     expect(registerProduction).not.toHaveBeenCalled();
   });
+
+  it('opens the released stock tab with the server stock filter', async () => {
+    renderWithProviders(<ProductionPlansPage />, '/production-plans');
+    await userEvent.click(screen.getByRole('button', {name: 'Склад'}));
+    expect(await screen.findByRole('heading', {name: 'Склад выпущенной продукции'})).toBeVisible();
+    expect(useManufacturedItemsQuery).toHaveBeenCalledWith(expect.objectContaining({released_only: true, kind: 'saleable'}));
+  });
+
 });

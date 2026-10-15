@@ -40,6 +40,14 @@ async def create_movement(
     balance_after = balance_before + quantity
     if balance_after < 0:
         raise ConflictError("Inventory movement would make the balance negative")
+    if quantity < 0 and movement_type != MovementType.SALE and source_type != "repair_replacement":
+        from app.modules.manufactured_items.repository import balance_expression
+
+        free = await session.scalar(
+            select(balance_expression()).where(ManufacturedItem.id == item_id)
+        )
+        if (free or Decimal("0")) + quantity < 0:
+            raise ConflictError("Недостаточно свободных товаров: часть остатка уже выпущена с ID")  # noqa: RUF001
 
     movement = ManufacturedItemMovement(
         manufactured_item_id=item_id,

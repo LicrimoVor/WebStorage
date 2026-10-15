@@ -62,7 +62,7 @@ export function ManufacturedDetails({row, onClose}: {row: {id: string; name: str
           <div><dt>Изменён</dt><dd>{formatDateTime(item.updated_at)}</dd></div>
         </dl>
       </>}
-      {item?.is_product && <ProductUnits productId={item.id} />}
+      {(item?.is_product || item?.is_byproduct) && <ProductUnits productId={item.id} />}
       <h3>Состав на 1 {item?.unit ?? row.unit}</h3>
       {query.isPending && <p role="status">Загрузка состава…</p>}
       {query.isError && <Alert theme="danger" message={getErrorMessage(query.error)} actions={<Button onClick={() => query.refetch()}>Повторить</Button>} />}
@@ -82,7 +82,7 @@ export function ManufacturedDetails({row, onClose}: {row: {id: string; name: str
     </div></Dialog.Body>
     <DetailCardFooter onClose={onClose}>{item && <>
       {query.data && <ProcessLink processId={query.data.process_id} />}
-      {!item.archived && !item.is_product && <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />}
+      {!item.archived && <ProduceManufacturedItemButton itemId={item.id} itemName={item.name} />}
       {!item.archived && <EditManufacturedItemButton item={item} />}
       {!item.archived && <DeleteEntityButton kind="manufactured_item" id={item.id} name={item.name} onDeleted={onClose} />}
       <ManufacturedInventoryHistoryButton item={item} />

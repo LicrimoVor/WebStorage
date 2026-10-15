@@ -2,9 +2,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.types import Money, Quantity
+from app.core.types import Quantity
 from app.modules.finance.funding import FundingWrite
 
 
@@ -30,23 +30,18 @@ class ExternalMaterial(BaseModel):
 
 
 class OfferWrite(BaseModel):
+    process_id: uuid.UUID
     provider_id: uuid.UUID
-    item_id: uuid.UUID
-    money_cost: Money = Field(default=Decimal("0"), ge=0)
-    materials: list[ExternalMaterial] = Field(default_factory=list, max_length=1000)
     active: bool = True
-
-    @model_validator(mode="after")
-    def unique_materials(self) -> "OfferWrite":
-        ids = [line.material_id for line in self.materials]
-        if len(set(ids)) != len(ids):
-            raise ValueError("Материалы не должны повторяться")
-        return self
 
 
 class OfferRead(OfferWrite):
     id: uuid.UUID
-    operation_id: uuid.UUID
+    process_version_id: uuid.UUID | None
+    process_name: str
+    item_id: uuid.UUID
+    money_cost: Decimal
+    materials: list[ExternalMaterial]
     provider_name: str
     item_name: str
     unit: str

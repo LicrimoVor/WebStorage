@@ -33,15 +33,18 @@ def to_read_model(
     free_quantity: Decimal,
     required_quantity: Decimal = Decimal("0"),
     groups: list[InventoryGroupSummary] | None = None,
+    released_quantity: int = 0,
 ) -> ManufacturedItemRead:
     return ManufacturedItemRead(
         id=item.id,
         name=item.name,
         is_product=item.is_product,
         is_byproduct=item.is_byproduct,
+        is_accountable=item.is_accountable,
         product_id=item.product_id,
         unit=item.unit,
         free_quantity=free_quantity,
+        released_quantity=released_quantity,
         required_quantity=required_quantity,
         to_produce_quantity=max(required_quantity - free_quantity, Decimal("0")),
         image=item.image,
@@ -62,6 +65,9 @@ async def create(session: AsyncSession, payload: ManufacturedItemCreate) -> Manu
         name=payload.name,
         is_product=payload.is_product,
         is_byproduct=payload.is_byproduct and not payload.is_product,
+        is_accountable=payload.is_accountable
+        if payload.is_accountable is not None
+        else payload.is_product,
         unit=payload.unit,
         image=_url_value(payload.image),
     )
@@ -101,6 +107,7 @@ async def list_all(
     sort_order: SortOrder,
     product_id: uuid.UUID | None,
     group_id: uuid.UUID | None,
+    released_only: bool = False,
 ) -> ManufacturedItemList:
     allowed_ids = None
     if product_id is not None:
@@ -126,11 +133,15 @@ async def list_all(
         sort_order=sort_order,
         allowed_ids=allowed_ids,
         group_id=group_id,
+        released_only=released_only,
     )
     group_map = await warehouse_repository.item_group_map(session, (item.id for item, _, _ in rows))
+    released = await repository.released_quantities(session, [item.id for item, _, _ in rows])
     return ManufacturedItemList(
         items=[
-            to_read_model(item, balance, required, group_map.get(item.id, []))
+            to_read_model(
+                item, balance, required, group_map.get(item.id, []), released.get(item.id, 0)
+            )
             for item, balance, required in rows
         ],
         page=page,
@@ -145,7 +156,8 @@ async def get(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItemRead
     if result is None:
         raise NotFoundError("Manufactured item was not found")
     groups = await warehouse_repository.item_group_map(session, [item_id])
-    return to_read_model(*result, groups.get(item_id, []))
+    released = await repository.released_quantities(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []), released.get(item_id, 0))
 
 
 async def update(
@@ -188,7 +200,8 @@ async def update(
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Manufactured item was not found")
     groups = await warehouse_repository.item_group_map(session, [item_id])
-    return to_read_model(*result, groups.get(item_id, []))
+    released = await repository.released_quantities(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []), released.get(item_id, 0))
 
 
 async def archive(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItemRead:
@@ -202,7 +215,8 @@ async def archive(session: AsyncSession, item_id: uuid.UUID) -> ManufacturedItem
     if result is None:  # pragma: no cover - protected by the row lock above
         raise NotFoundError("Manufactured item was not found")
     groups = await warehouse_repository.item_group_map(session, [item_id])
-    return to_read_model(*result, groups.get(item_id, []))
+    released = await repository.released_quantities(session, [item_id])
+    return to_read_model(*result, groups.get(item_id, []), released.get(item_id, 0))
 
 
 async def validate_product(

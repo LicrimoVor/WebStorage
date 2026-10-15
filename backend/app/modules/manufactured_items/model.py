@@ -35,6 +35,7 @@ class ManufacturedItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     is_product: Mapped[bool] = mapped_column(Boolean, nullable=False)
     is_byproduct: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_accountable: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     unit: Mapped[str] = mapped_column(String(32), nullable=False)
     image: Mapped[str | None] = mapped_column(Text, nullable=True)
     active_process_id: Mapped[uuid.UUID | None] = mapped_column(

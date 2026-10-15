@@ -149,7 +149,7 @@ async def _execute(
             )
         ).all()
     )
-    if units and sale_quantity != sale_quantity.to_integral_value():
+    if payload.serial_numbers and sale_quantity != sale_quantity.to_integral_value():
         raise DomainValidationError("Выпущенные изделия продаются только целиком")
     if payload.serial_numbers:
         if (
@@ -162,6 +162,8 @@ async def _execute(
             raise ConflictError("Изделие не найдено, принадлежит другому продукту или уже продано")
         for unit in selected_units:
             unit.sale_id = sale.id
+    if product.is_accountable and Decimal(len(payload.serial_numbers)) != sale_quantity:
+        raise DomainValidationError("Подотчётная продукция продаётся только после выпуска с ID")  # noqa: RUF001
     unnamed_quantity = sale_quantity - len(payload.serial_numbers)
     if units and unnamed_quantity:
         from app.modules.manufactured_items.repository import balance_expression
@@ -169,8 +171,7 @@ async def _execute(
         balance = await session.scalar(
             select(balance_expression()).where(ManufacturedItem.id == product.id)
         )
-        named_count = sum(unit.serial_number is not None for unit in units)
-        if unnamed_quantity > (balance or Decimal("0")) - named_count:
+        if unnamed_quantity > (balance or Decimal("0")) - len(payload.serial_numbers):
             raise DomainValidationError(
                 "Недостаточно изделий без номера. Выберите номера продаваемых изделий"
             )

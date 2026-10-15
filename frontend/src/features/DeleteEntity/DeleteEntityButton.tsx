@@ -6,8 +6,8 @@ import {useAuthSessionQuery} from '@/entities/Auth';
 import {apiRequest, getErrorMessage} from '@/shared/api';
 import {isAdmin} from '@/shared/lib/access';
 
-export function DeleteEntityButton({kind, id, name, onDeleted}: {
-  kind: string; id: string; name: string; onDeleted?: () => void;
+export function DeleteEntityButton({kind, id, name, onDeleted, label = 'Удалить'}: {
+  kind: string; id: string; name: string; onDeleted?: () => void; label?: string;
 }) {
   const session = useAuthSessionQuery();
   const client = useQueryClient();
@@ -22,11 +22,12 @@ export function DeleteEntityButton({kind, id, name, onDeleted}: {
   });
   if (!session.data || !isAdmin(session.data)) return null;
   return <>
-    <Button view="flat-danger" onClick={() => {mutation.reset(); setOpen(true);}}>Удалить</Button>
+    <Button view="flat-danger" onClick={() => {mutation.reset(); setOpen(true);}}>{label}</Button>
     <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)}>
       <Dialog.Header caption="Переместить в корзину?" />
       <Dialog.Body>
         <p>«{name}» можно будет восстановить в настройках, в разделе «Корзина».</p>
+        {kind === 'external_offer' && <p>Будет удалена привязка к исполнителю. Техкарта и история приходов сохранятся.</p>}
         {kind === 'finance_entry' && <p>Запись перестанет учитываться в финансовых итогах. Складские движения и производственная история сохранятся.</p>}
         {mutation.isError && <Alert theme="danger" message={getErrorMessage(mutation.error)} />}
       </Dialog.Body>

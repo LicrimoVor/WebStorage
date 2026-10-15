@@ -53,6 +53,7 @@ export function ManufacturedItemForm({
         Готовый продукт
       </Switch>
       {!value.isProduct && <Checkbox checked={Boolean(value.isByproduct)} onUpdate={(next) => update('isByproduct', next)}>Побочный продукт — можно продавать</Checkbox>}
+      {!value.isProduct && value.isByproduct && <Checkbox checked={Boolean(value.isAccountable)} onUpdate={(next) => update('isAccountable', next)}>Подотчётный — выпуск и продажа с ID</Checkbox>}
       {!value.isProduct && <Select aria-label="Продукт полуфабриката" label="Продукт" placeholder="Выберите продукт" width="max" value={value.productId ? [value.productId] : []} options={(products.data ?? []).map((p) => ({value: p.id, content: p.name}))} onUpdate={(ids) => update("productId", ids[0] ?? "")} />}
       {!value.isProduct ? (
         <Select

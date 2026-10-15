@@ -116,3 +116,11 @@
   flex: 1;
   min-width: min(240px, 100%);
 }
+
+.filterHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}

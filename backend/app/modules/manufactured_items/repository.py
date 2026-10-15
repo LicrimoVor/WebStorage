@@ -21,13 +21,51 @@ from app.modules.production_plans.model import (
 from app.modules.warehouse.model import InventoryGroup, InventoryGroupManufacturedItem
 
 
-def balance_expression() -> ColumnElement[Decimal]:
+def stock_expression() -> ColumnElement[Decimal]:
     return (
         select(func.coalesce(func.sum(ManufacturedItemMovement.quantity), Decimal("0")))
         .where(ManufacturedItemMovement.manufactured_item_id == ManufacturedItem.id)
         .correlate(ManufacturedItem)
         .scalar_subquery()
     )
+
+
+def released_expression() -> ColumnElement[int]:
+    from app.modules.business.model import ProductUnit
+
+    return (
+        select(func.count(ProductUnit.id))
+        .where(
+            ProductUnit.product_id == ManufacturedItem.id,
+            ProductUnit.serial_number.is_not(None),
+            ProductUnit.sale_id.is_(None),
+            ProductUnit.issued_for_repair_id.is_(None),
+        )
+        .correlate(ManufacturedItem)
+        .scalar_subquery()
+    )
+
+
+def balance_expression() -> ColumnElement[Decimal]:
+    return stock_expression() - released_expression()
+
+
+async def released_quantities(session: AsyncSession, ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+    from app.modules.business.model import ProductUnit
+
+    if not ids:
+        return {}
+    rows = await session.execute(
+        select(ProductUnit.product_id, func.count(ProductUnit.id))
+        .where(
+            ProductUnit.product_id.in_(ids),
+            ProductUnit.serial_number.is_not(None),
+            ProductUnit.sale_id.is_(None),
+            ProductUnit.issued_for_repair_id.is_(None),
+        )
+        .group_by(ProductUnit.product_id)
+    )
+    return {row[0]: int(row[1]) for row in rows}
 
 
 def required_expression() -> ColumnElement[Decimal]:
@@ -57,6 +95,7 @@ def _apply_filters(
     kind: ManufacturedItemKind,
     allowed_ids: set[uuid.UUID] | None,
     group_id: uuid.UUID | None,
+    released_only: bool = False,
 ) -> Select[tuple[ManufacturedItem]]:
     if not include_archived:
         statement = statement.where(ManufacturedItem.archived.is_(False))
@@ -84,6 +123,8 @@ def _apply_filters(
         statement = statement.where(ManufacturedItem.is_product | ManufacturedItem.is_byproduct)
 
     balance = balance_expression()
+    if released_only:
+        statement = statement.where(released_expression() > 0)
     if availability == AvailabilityFilter.IN_STOCK:
         statement = statement.where(balance > 0)
     elif availability == AvailabilityFilter.OUT_OF_STOCK:
@@ -104,6 +145,7 @@ async def list_items(
     sort_order: SortOrder,
     allowed_ids: set[uuid.UUID] | None = None,
     group_id: uuid.UUID | None = None,
+    released_only: bool = False,
 ) -> tuple[list[tuple[ManufacturedItem, Decimal, Decimal]], int]:
     balance = balance_expression().label("free_quantity")
     required = required_expression().label("required_quantity")
@@ -115,6 +157,7 @@ async def list_items(
         kind=kind,
         allowed_ids=allowed_ids,
         group_id=group_id,
+        released_only=released_only,
     )
     count_statement = select(func.count()).select_from(statement.order_by(None).subquery())
     total = int((await session.execute(count_statement)).scalar_one())

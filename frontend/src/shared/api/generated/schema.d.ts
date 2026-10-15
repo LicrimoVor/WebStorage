@@ -228,6 +228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release */
+        post: operations["release_api_v1_product_releases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/external-providers": {
         parameters: {
             query?: never;
@@ -1926,6 +1943,11 @@ export interface components {
              */
             updated_at: string;
             /**
+             * Released Quantity
+             * @default 0
+             */
+            released_quantity: number;
+            /**
              * Kind
              * @enum {string}
              */
@@ -2275,17 +2297,7 @@ export interface components {
          */
         ExportDataset: "procurement" | "materials" | "manufactured_items" | "inventory_movements" | "operations" | "work_entries" | "employees" | "payroll_accruals" | "employee_payments" | "production_plans" | "production_records" | "sales" | "finance_entries" | "analytics";
         /** ExternalMaterial */
-        "ExternalMaterial-Input": {
-            /**
-             * Material Id
-             * Format: uuid
-             */
-            material_id: string;
-            /** Quantity */
-            quantity: number | string;
-        };
-        /** ExternalMaterial */
-        "ExternalMaterial-Output": {
+        ExternalMaterial: {
             /**
              * Material Id
              * Format: uuid
@@ -2910,6 +2922,8 @@ export interface components {
         ManualMovementType: "receipt" | "consumption" | "adjustment" | "write_off";
         /** ManufacturedItemCreate */
         ManufacturedItemCreate: {
+            /** Is Accountable */
+            is_accountable?: boolean | null;
             /**
              * Is Byproduct
              * @default false
@@ -3003,6 +3017,16 @@ export interface components {
         /** ManufacturedItemRead */
         ManufacturedItemRead: {
             /**
+             * Released Quantity
+             * @default 0
+             */
+            released_quantity: number;
+            /**
+             * Is Accountable
+             * @default false
+             */
+            is_accountable: boolean;
+            /**
              * Is Byproduct
              * @default false
              */
@@ -3058,6 +3082,11 @@ export interface components {
         ManufacturedItemSortField: "name" | "free_quantity" | "created_at";
         /** ManufacturedItemUpdate */
         ManufacturedItemUpdate: {
+            /**
+             * Is Accountable
+             * @default false
+             */
+            is_accountable: boolean;
             /**
              * Is Byproduct
              * @default false
@@ -3199,22 +3228,15 @@ export interface components {
         /** OfferRead */
         OfferRead: {
             /**
+             * Process Id
+             * Format: uuid
+             */
+            process_id: string;
+            /**
              * Provider Id
              * Format: uuid
              */
             provider_id: string;
-            /**
-             * Item Id
-             * Format: uuid
-             */
-            item_id: string;
-            /**
-             * Money Cost
-             * @default 0
-             */
-            money_cost: string;
-            /** Materials */
-            materials?: components["schemas"]["ExternalMaterial-Output"][];
             /**
              * Active
              * @default true
@@ -3225,11 +3247,19 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Process Version Id */
+            process_version_id: string | null;
+            /** Process Name */
+            process_name: string;
             /**
-             * Operation Id
+             * Item Id
              * Format: uuid
              */
-            operation_id: string;
+            item_id: string;
+            /** Money Cost */
+            money_cost: string;
+            /** Materials */
+            materials: components["schemas"]["ExternalMaterial"][];
             /** Provider Name */
             provider_name: string;
             /** Item Name */
@@ -3240,22 +3270,15 @@ export interface components {
         /** OfferWrite */
         OfferWrite: {
             /**
+             * Process Id
+             * Format: uuid
+             */
+            process_id: string;
+            /**
              * Provider Id
              * Format: uuid
              */
             provider_id: string;
-            /**
-             * Item Id
-             * Format: uuid
-             */
-            item_id: string;
-            /**
-             * Money Cost
-             * @default 0
-             */
-            money_cost: number | string;
-            /** Materials */
-            materials?: components["schemas"]["ExternalMaterial-Input"][];
             /**
              * Active
              * @default true
@@ -3902,6 +3925,23 @@ export interface components {
              * Format: date-time
              */
             generated_at: string;
+        };
+        /** ProductReleaseCreate */
+        ProductReleaseCreate: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Serial Numbers */
+            serial_numbers: string[];
+            /** Photo */
+            photo?: string | null;
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
         };
         /** ProductSalesRow */
         ProductSalesRow: {
@@ -5559,6 +5599,7 @@ export interface operations {
                 product_id?: string | null;
                 offset?: number;
                 limit?: number;
+                available_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -5568,6 +5609,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_api_v1_product_releases_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductReleaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6482,6 +6558,7 @@ export interface operations {
                 sort_order?: components["schemas"]["SortOrder"];
                 product_id?: string | null;
                 group_id?: string | null;
+                released_only?: boolean;
             };
             header?: never;
             path?: never;

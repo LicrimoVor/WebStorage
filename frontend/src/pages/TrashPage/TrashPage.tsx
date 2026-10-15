@@ -11,6 +11,7 @@ interface TrashEntry {
   id: string; entity_type: string; name: string; deleted_at: string; deleted_by: string;
 }
 const labels: Record<string, string> = {
+  external_provider: 'Внешний исполнитель', external_offer: 'Техпроцесс внешнего исполнителя',
   material: 'Материал', manufactured_item: 'Полуфабрикат / продукт',
   operation: 'Операция', employee: 'Сотрудник', process_version: 'Версия техпроцесса', process: 'Техпроцесс',
   finance_entry: 'Финансовая операция', inventory_group: 'Группа / подгруппа',

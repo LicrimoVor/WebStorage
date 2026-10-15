@@ -592,3 +592,62 @@
     text-align: center;
   }
 }
+
+.nodeContent {
+  min-height: 0;
+  height: 100%;
+}
+
+.nodeLabel {
+  flex: 1;
+  min-width: 0;
+  max-height: 100%;
+  line-height: 1.15;
+}
+
+.material {
+  padding: 8px;
+
+  .nodeImage, .nodeImagePlaceholder {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  &.compactNode .nodeImage, &.compactNode .nodeImagePlaceholder {
+    flex-basis: 56px;
+    width: 56px;
+    height: 56px;
+  }
+}
+
+.manufactured_item {
+  .nodeImage, .nodeImagePlaceholder {
+    flex-basis: 84px;
+    width: 84px;
+    height: 84px;
+  }
+}
+
+.output {
+  .nodeImage, .nodeImagePlaceholder {
+    flex-basis: 120px;
+    width: 120px;
+    height: 120px;
+  }
+}
+
+.farNode {
+  .nodeImage, .nodeImagePlaceholder {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+  }
+}
+
+.node.comment .nodeContent {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}

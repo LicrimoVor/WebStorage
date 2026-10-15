@@ -27,3 +27,10 @@ describe('MaterialsTable', () => {
     expect(onSelect).toHaveBeenCalledWith(materialFixture);
   });
 });
+
+
+it('shows the released stock count in the product table', () => {
+  renderWithProviders(<MaterialsTable items={[{...materialFixture, released_quantity: 3}]} onSelect={vi.fn()} showReleased />);
+  expect(screen.getByRole('columnheader', {name: 'Выпущенные'})).toBeVisible();
+  expect(screen.getByRole('cell', {name: '3'})).toBeVisible();
+});

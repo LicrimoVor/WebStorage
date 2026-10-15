@@ -21,6 +21,7 @@ async def create_item(
         json={
             "name": name,
             "is_product": is_product,
+            "is_accountable": False,
             "unit": "pcs",
             "initial_quantity": stock,
         },

@@ -20,3 +20,17 @@
     width: 100%;
   }
 }
+
+.content, .tableWrap {
+  width: 100%;
+  min-width: 0;
+}
+.tableWrap :global(.g-table), .tableWrap table { width: 100%; }
+
+.footer {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}

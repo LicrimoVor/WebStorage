@@ -13,10 +13,11 @@ from app.modules.business.model import BusinessDocument, FundingSource, ProductU
 from app.modules.business.schemas import (
     FundingSourceCreate,
     FundingSourceRead,
+    ProductReleaseCreate,
     ReceiptCreate,
     RepairCreate,
 )
-from app.modules.business.service import document_read, register_document
+from app.modules.business.service import document_read, register_document, release_products
 from app.modules.trash.service import move_to_trash
 
 router = APIRouter(tags=["business"])
@@ -92,13 +93,17 @@ async def repair(
 @router.get("/business-documents")
 async def history(
     session: Session,
-    kind: str = Query(pattern="^(receipt|repair|external_receipt)$"),
+    kind: str = Query(pattern="^(receipt|receipts|repair|external_receipt|release)$"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> Any:
     rows = await session.scalars(
         select(BusinessDocument)
-        .where(BusinessDocument.kind == kind)
+        .where(
+            BusinessDocument.kind.in_(["receipt", "external_receipt"])
+            if kind == "receipts"
+            else BusinessDocument.kind == kind
+        )
         .order_by(BusinessDocument.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -112,8 +117,13 @@ async def units(
     product_id: uuid.UUID | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
+    available_only: bool = False,
 ) -> Any:
-    query = select(ProductUnit)
+    query = select(ProductUnit).where(ProductUnit.serial_number.is_not(None))
+    if available_only:
+        query = query.where(
+            ProductUnit.sale_id.is_(None), ProductUnit.issued_for_repair_id.is_(None)
+        )
     if product_id:
         query = query.where(ProductUnit.product_id == product_id)
     rows = await session.scalars(
@@ -131,3 +141,11 @@ async def units(
         }
         for row in rows
     ]
+
+
+@router.post("/product-releases", status_code=201)
+async def release(
+    payload: ProductReleaseCreate, session: Session, actor: CurrentActor, idempotency_key: Key
+) -> Any:
+    require_any_role(actor, Role.WAREHOUSE, Role.PRODUCTION)
+    return await release_products(session, payload, idempotency_key, actor.subject)

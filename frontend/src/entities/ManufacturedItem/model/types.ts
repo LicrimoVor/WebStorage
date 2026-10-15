@@ -23,6 +23,7 @@ export interface ManufacturedItemFormValue {
   name: string;
   isProduct: boolean;
   isByproduct?: boolean;
+  isAccountable?: boolean;
   productId?: string;
   unit: string;
   initialQuantity: string;

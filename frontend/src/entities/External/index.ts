@@ -3,9 +3,9 @@ import {apiRequest} from '@/shared/api';
 
 import type {components} from '@/shared/api/generated/schema';
 export type ExternalProvider = components['schemas']['ProviderRead'];
-export type ExternalMaterial = components['schemas']['ExternalMaterial-Output'];
+export type ExternalMaterial = components['schemas']['ExternalMaterial'];
 export type ExternalOffer = Omit<components['schemas']['OfferRead'], 'materials'> & {materials: ExternalMaterial[]};
-export type OfferInput = Pick<ExternalOffer, 'provider_id' | 'item_id' | 'money_cost' | 'materials' | 'active'>;
+export type OfferInput = Pick<ExternalOffer, 'provider_id' | 'process_id' | 'active'>;
 export const externalKeys = ['externals'] as const;
 export function useExternalProvidersQuery() {
   return useQuery({queryKey: [...externalKeys, 'providers'], queryFn: ({signal}) => apiRequest<ExternalProvider[]>('/external-providers', {signal})});

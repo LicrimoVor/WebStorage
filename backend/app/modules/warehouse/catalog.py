@@ -25,6 +25,7 @@ from app.modules.warehouse.model import (
 
 
 class CatalogRow(MaterialRead):
+    released_quantity: int = 0
     kind: Literal["material", "semi_finished", "product"]
 
 
@@ -149,6 +150,7 @@ async def catalog(
     }
     material_groups = await groups.material_group_map(session, mids)
     item_groups = await groups.item_group_map(session, iids)
+    released = await items.released_quantities(session, iids)
     result = []
     for row in selected:
         if row.kind == "material":
@@ -157,7 +159,11 @@ async def catalog(
             ).model_dump()
         else:
             data = item_read(
-                item_map[row.id], row.balance, row.required, item_groups.get(row.id, [])
+                item_map[row.id],
+                row.balance,
+                row.required,
+                item_groups.get(row.id, []),
+                released.get(row.id, 0),
             ).model_dump()
             data.update(price=None, url=None, deficit_quantity=data["to_produce_quantity"])
         result.append(CatalogRow(kind=row.kind, **data))

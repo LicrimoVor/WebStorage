@@ -85,6 +85,7 @@ async def test_sales_export_preserves_numeric_cells_and_human_names(
         "/api/v1/manufactured-items",
         json={
             "name": "Export finished product",
+            "is_accountable": False,
             "is_product": True,
             "unit": "pcs",
             "initial_quantity": "5",

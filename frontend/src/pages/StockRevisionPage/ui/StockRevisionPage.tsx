@@ -272,8 +272,13 @@ export function StockRevisionPage() {
       </header>
 
       <Card view="outlined" className={styles.card}>
+        <div className={styles.filterHeading}>
+          <div><Text as="h2" variant="subheader-2">Фильтры списка добавления</Text><Text color="secondary">Выберите позиции, затем добавьте их в таблицу ревизии.</Text></div>
+          <Button disabled={!search && !type && !productId && !groupId} onClick={() => updateUrl({search: '', type: '', product_id: '', group_id: ''})}>Сбросить фильтры</Button>
+        </div>
         <div className={styles.filters}>
           <TextInput
+            label="Поиск позиции"
             type="search"
             value={search}
             onUpdate={(value) => updateUrl({ search: value })}
@@ -282,6 +287,8 @@ export function StockRevisionPage() {
             size="l"
           />
           <Select
+            label="Тип позиции"
+            aria-label="Тип позиции"
             options={typeOptions}
             value={type ? [type] : []}
             onUpdate={(next) => updateUrl({ type: next[0] ?? "" })}
@@ -291,6 +298,8 @@ export function StockRevisionPage() {
             size="l"
           />
           <Select
+            label="Продукт"
+            aria-label="Фильтр по продукту"
             options={(productsQuery.data ?? []).map((item) => ({
               value: item.id,
               content: item.name,
@@ -304,10 +313,12 @@ export function StockRevisionPage() {
             size="l"
           />
           <Select
+            label="Группа / подгруппа"
+            aria-label="Фильтр по группе"
             options={(groupsQuery.data ?? []).map((item) => ({
               value: item.id,
-              content: item.name,
-            }))}
+              content: item.parent_id ? `${groupsQuery.data?.find((parent) => parent.id === item.parent_id)?.name ?? ''} / ${item.name}` : item.name,
+            })).sort((a, b) => a.content.localeCompare(b.content, 'ru'))}
             value={groupId ? [groupId] : []}
             onUpdate={(next) => updateUrl({ group_id: next[0] ?? "" })}
             placeholder="Любая группа"

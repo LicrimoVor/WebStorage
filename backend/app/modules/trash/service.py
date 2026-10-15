@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ConflictError, NotFoundError
 from app.modules.business.model import FundingSource
 from app.modules.employees.model import Employee
+from app.modules.externals.model import ExternalOffer, ExternalProvider
 from app.modules.manufactured_items.model import ManufacturedItem
 from app.modules.materials.model import Material
 from app.modules.operation_instructions.model import OperationInstructionAsset
@@ -18,7 +19,7 @@ from app.modules.technological_processes.model import (
     TechnologicalProcess,
     TechnologicalProcessVersion,
 )
-from app.modules.trash.model import TrashEntry
+from app.modules.trash.model import TrashEntry, visible_entry
 from app.modules.warehouse.model import (
     InventoryGroup,
     InventoryGroupManufacturedItem,
@@ -82,6 +83,21 @@ async def move_to_trash(
         before = await snapshot(session, entity_id)
         name = str(before["description"])
         state = {"entry": before}
+    elif kind in {"external_provider", "external_offer"}:
+        if kind == "external_provider":
+            provider = await session.get(ExternalProvider, entity_id, with_for_update=True)
+            if provider is None:
+                raise NotFoundError("Исполнитель не найден")
+            name = provider.name
+        else:
+            offer = await session.get(ExternalOffer, entity_id)
+            if offer is None:
+                raise NotFoundError("Техпроцесс исполнителя не найден")
+            provider = await session.get(ExternalProvider, offer.provider_id, with_for_update=True)
+            await session.refresh(offer, with_for_update=True)
+            item = await session.get(ManufacturedItem, offer.item_id)
+            name = f"{provider.name if provider else ''} · {item.name if item else entity_id}"
+        # Keep the original rows and their relationships; queries exclude this tombstone.
     elif kind == "process_version":
         version = await session.get(TechnologicalProcessVersion, entity_id)
         if version is None or version.deleted_at is not None:
@@ -301,6 +317,25 @@ async def restore(session: AsyncSession, entry_id: uuid.UUID, actor: str) -> Non
                 raise ConflictError("Сначала восстановите техпроцесс")
             await session.refresh(version, with_for_update=True)
             version.deleted_at = None
+        elif kind in {"external_provider", "external_offer"}:
+            if kind == "external_provider":
+                provider = await session.get(
+                    ExternalProvider, entry.entity_id, with_for_update=True
+                )
+                if provider is None:
+                    raise NotFoundError("Исполнитель не найден")
+            else:
+                offer = await session.get(ExternalOffer, entry.entity_id)
+                if offer is None:
+                    raise NotFoundError("Техпроцесс исполнителя не найден")
+                await session.get(ExternalProvider, offer.provider_id, with_for_update=True)
+                if not await session.scalar(
+                    select(ExternalProvider.id).where(
+                        ExternalProvider.id == offer.provider_id,
+                        visible_entry(ExternalProvider.id, "external_provider"),
+                    )
+                ):
+                    raise ConflictError("Сначала восстановите внешнего исполнителя")
         elif kind != "finance_entry":
             target = await session.get(CATALOG_MODELS[kind], entry.entity_id, with_for_update=True)
             if target is None:

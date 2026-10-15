@@ -17,6 +17,7 @@ export function manufacturedItemToForm(
     name: item.name,
     isProduct: item.is_product,
     isByproduct: item.is_byproduct ?? false,
+    isAccountable: item.is_accountable,
     productId: item.product_id ?? "",
     unit: item.unit,
     initialQuantity: '0',

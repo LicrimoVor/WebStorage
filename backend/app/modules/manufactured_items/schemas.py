@@ -23,6 +23,7 @@ class ManufacturedItemKind(StrEnum):
 
 
 class ManufacturedItemCreate(BaseModel):
+    is_accountable: bool | None = None
     is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=200)
@@ -42,6 +43,7 @@ class ManufacturedItemCreate(BaseModel):
 
 
 class ManufacturedItemUpdate(BaseModel):
+    is_accountable: bool = False
     is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
@@ -62,6 +64,8 @@ class ManufacturedItemUpdate(BaseModel):
 
 
 class ManufacturedItemRead(BaseModel):
+    released_quantity: int = 0
+    is_accountable: bool = False
     is_byproduct: bool = False
     product_id: uuid.UUID | None = None
     model_config = ConfigDict(from_attributes=True)

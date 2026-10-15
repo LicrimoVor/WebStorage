@@ -1,4 +1,5 @@
-import {connectionCurve, nearestPort, portPoint, portSides, type PortSide} from '../model/connectionGeometry';
+import {FitNodeText} from './FitNodeText';
+import {connectionCurve, nodeDimensions, nearestPort, portPoint, portSides, type PortSide} from '../model/connectionGeometry';
 import {participatingNodes} from '../model/participatingNodes';
 import {ArrowRotateLeft, ArrowRotateRight, ArrowDownToLine, ArrowUpFromLine, LayoutCells, CircleQuestion, Copy, Pencil, TrashBin} from '@gravity-ui/icons';
 import {Select, TextArea, TextInput} from '@/shared/ui/FormControls';
@@ -39,8 +40,10 @@ import {
 } from "../model/excalidraw";
 import styles from "./ProcessCanvas.module.scss";
 
-const NODE_WIDTH = 260;
-const NODE_HEIGHT = 168;
+function nodePort(node: ProcessNode, side: PortSide) {
+  const {width, height} = nodeDimensions(node.type);
+  return portPoint(node.position ?? {x: 0, y: 0}, side, width, height);
+}
 const portNames: Record<PortSide, string> = {left: 'слева', right: 'справа', top: 'сверху', bottom: 'снизу'};
 
 const nodeTypeView: Record<
@@ -518,7 +521,7 @@ export const ProcessCanvas = forwardRef<
     if (!id) return undefined;
     const node = graph.nodes.find((item) => item.id === id);
     const port = element?.closest<HTMLElement>("[data-port-side]")?.dataset.portSide as PortSide | undefined;
-    return {id, side: port ?? nearestPort(node?.position ?? {x: 0, y: 0}, connectionPoint(clientX, clientY))};
+    return {id, side: port ?? nearestPort(node?.position ?? {x: 0, y: 0}, connectionPoint(clientX, clientY), nodeDimensions(node?.type ?? "").width, nodeDimensions(node?.type ?? "").height)};
   };
 
   const onConnectionPointerDown = (
@@ -673,7 +676,7 @@ export const ProcessCanvas = forwardRef<
       const top = Math.min(selectionArea.y, selectionArea.endY), bottom = Math.max(selectionArea.y, selectionArea.endY);
       setSelectedIds(new Set(graph.nodes.filter((node) => {
         const {x, y} = node.position ?? {x: 0, y: 0};
-        return x <= right && x + NODE_WIDTH >= left && y <= bottom && y + NODE_HEIGHT >= top;
+        return x <= right && x + nodeDimensions(node.type).width >= left && y <= bottom && y + nodeDimensions(node.type).height >= top;
       }).map((node) => node.id)));
       setSelectionArea(undefined);
     }
@@ -711,10 +714,10 @@ export const ProcessCanvas = forwardRef<
     const minX = Math.min(...graph.nodes.map((node) => node.position?.x ?? 0));
     const minY = Math.min(...graph.nodes.map((node) => node.position?.y ?? 0));
     const maxX = Math.max(
-      ...graph.nodes.map((node) => (node.position?.x ?? 0) + NODE_WIDTH),
+      ...graph.nodes.map((node) => (node.position?.x ?? 0) + nodeDimensions(node.type).width),
     );
     const maxY = Math.max(
-      ...graph.nodes.map((node) => (node.position?.y ?? 0) + NODE_HEIGHT),
+      ...graph.nodes.map((node) => (node.position?.y ?? 0) + nodeDimensions(node.type).height),
     );
     const zoom = Math.min(
       1.4,
@@ -958,8 +961,8 @@ export const ProcessCanvas = forwardRef<
                 if (!source || !target) return null;
                 const sourceSide = edge.sourceSide ?? 'right';
                 const targetSide = edge.targetSide ?? 'left';
-                const curve = connectionCurve(portPoint(source.position ?? {x: 0, y: 0}, sourceSide),
-                  portPoint(target.position ?? {x: 0, y: 0}, targetSide), sourceSide, targetSide);
+                const curve = connectionCurve(nodePort(source, sourceSide),
+                  nodePort(target, targetSide), sourceSide, targetSide);
                 return (
                   <g
                     key={edge.id}
@@ -1010,8 +1013,8 @@ export const ProcessCanvas = forwardRef<
                       : undefined;
                     const sourceSide = connectionDrag.sourceSide;
                     const targetSide = connectionDrag.targetSide ?? 'left';
-                    const curve = connectionCurve(portPoint(source.position ?? {x: 0, y: 0}, sourceSide),
-                      target ? portPoint(target.position ?? {x: 0, y: 0}, targetSide) : connectionDrag,
+                    const curve = connectionCurve(nodePort(source, sourceSide),
+                      target ? nodePort(target, targetSide) : connectionDrag,
                       sourceSide, targetSide);
                     return (
                       <path
@@ -1031,9 +1034,9 @@ export const ProcessCanvas = forwardRef<
               const compact = level !== 'normal';
               const actions = <div className={styles.nodeActions}>
                 {editable && node.type !== 'output' && <>
-                  <Button view="flat" size="m" aria-label="Изменить" title="Изменить узел" onClick={() => openNodeDialog(node)}><Icon data={Pencil} size={20} /></Button>
-                  <Button view="flat" size="m" aria-label={`Создать копию ${node.type === 'material' ? 'материала' : 'узла'} ${node.label ?? node.id}`} title="Создать копию" onClick={() => copyMaterial(node)}><Icon data={Copy} size={20} /></Button>
-                  <Button view="flat-danger" size="m" aria-label={`Удалить узел ${node.label ?? node.id}`} title="Удалить узел" onClick={() => deleteNode(node.id)}><Icon data={TrashBin} size={20} /></Button>
+                  <Button view="flat" size={node.type === 'material' ? 's' : 'm'} aria-label="Изменить" title="Изменить узел" onClick={() => openNodeDialog(node)}><Icon data={Pencil} size={node.type === 'material' ? 16 : 20} /></Button>
+                  <Button view="flat" size={node.type === 'material' ? 's' : 'm'} aria-label={`Создать копию ${node.type === 'material' ? 'материала' : 'узла'} ${node.label ?? node.id}`} title="Создать копию" onClick={() => copyMaterial(node)}><Icon data={Copy} size={node.type === 'material' ? 16 : 20} /></Button>
+                  <Button view="flat-danger" size={node.type === 'material' ? 's' : 'm'} aria-label={`Удалить узел ${node.label ?? node.id}`} title="Удалить узел" onClick={() => deleteNode(node.id)}><Icon data={TrashBin} size={node.type === 'material' ? 16 : 20} /></Button>
                 </>}
               </div>;
               return (
@@ -1046,6 +1049,7 @@ export const ProcessCanvas = forwardRef<
                   data-process-participating={node.type === "comment" || participating.has(node.id)}
                   className={`${styles.node} ${styles[node.type]} ${level === "far" ? styles.farNode : level === "compact" ? styles.compactNode : ""} ${node.type !== "comment" && persistedNodes.has(node.id) && !participating.has(node.id) ? styles.inactive : ""} ${selectedIds.has(node.id) ? styles.selected : ""} ${connectionDrag?.source === node.id ? styles.connecting : ""} ${connectionDrag?.target === node.id ? styles.connectionTarget : ""}`}
                   style={{
+                    ...nodeDimensions(node.type), minHeight: nodeDimensions(node.type).height,
                     transform: `translate(${node.position?.x ?? 0}px, ${node.position?.y ?? 0}px)`,
                   }}
                   onPointerDown={(event) => onNodePointerDown(event, node)}
@@ -1070,9 +1074,9 @@ export const ProcessCanvas = forwardRef<
                   {(node.type === 'material' || node.type === 'manufactured_item' || node.type === 'output') && <CanvasNodeImage
                     type={node.type === 'material' ? 'material' : 'manufactured_item'} referenceId={node.referenceId} name={node.label ?? view.title} fallbackToName={level === "far"}
                     image={(node.type === 'material' ? materialById : itemById).get(node.referenceId ?? '')?.image} />}
-                  {(level !== 'far' || !['material', 'manufactured_item', 'output'].includes(node.type)) && <Text className={styles.nodeLabel} variant="subheader-2">
+                  {(level !== 'far' || !['material', 'manufactured_item', 'output'].includes(node.type)) && <FitNodeText maxFontSize={level === "far" ? 32 : level === "compact" ? 30 : node.type === "material" ? 18 : 24}>
                     {node.label ?? "Не сопоставлено"}
-                  </Text>}
+                  </FitNodeText>}
                   </div>
                   {!imageNode && actions}
                   {editable && node.type !== 'comment' && portSides.map((side) => (
@@ -1180,12 +1184,13 @@ export const ProcessCanvas = forwardRef<
                     Расчёт использует активный рецепт и сначала расходует доступные
                     полуфабрикаты со склада.
                   </Text>
-                  {nodeDialog.type === "output" ? <Button href="/production-plans?tab=release" view="action">Открыть выпуск продукции</Button> : <ProduceManufacturedItemButton
+                  <ProduceManufacturedItemButton
                     itemId={nodeDialog.referenceId}
                     itemName={nodeDialog.label || "Позиция"}
                     size="l"
                     view="action"
-                  />}
+                  />
+                  {nodeDialog.type === "output" && <Button href="/production-plans?tab=release" view="outlined">Открыть выпуск продукции</Button>}
                 </div>
               ) : nodeDialog.type === "output" ? (
                 <Text color="secondary">

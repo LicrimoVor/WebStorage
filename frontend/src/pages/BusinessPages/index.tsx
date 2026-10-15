@@ -1,3 +1,4 @@
+import {ReleaseProductsButton} from '@/features/ProduceManufacturedItem/ui/ReleaseProductsButton';
 import {ExternalReceipt} from './ExternalReceipt';
 import {ImportStockJson} from "@/features/ImportStockJson";
 import { AppearanceSettings } from "./AppearanceSettings";
@@ -22,7 +23,6 @@ import {
 } from "@/entities/StockRevision";
 import { useInventoryGroupsQuery } from "@/entities/InventoryGroup";
 import { useProductOptionsQuery } from "@/entities/ManufacturedItem";
-import { ProduceManufacturedItemButton } from "@/features/ProduceManufacturedItem";
 import { apiRequest, getErrorMessage } from "@/shared/api";
 import styles from "./BusinessPages.module.scss";
 import {
@@ -150,8 +150,8 @@ export function ReceiptPage() {
   return (
     <main className={styles.page}>
       <h1>Приход</h1>
-      <TabList value={receiptTab} onUpdate={setReceiptTab}><Tab value="materials">Материалы</Tab><Tab value="external">Внешние</Tab></TabList>
-      {receiptTab === "external" ? <ExternalReceipt /> : <>
+      <TabList value={receiptTab} onUpdate={setReceiptTab}><Tab value="materials">Материалы</Tab><Tab value="external">Внешние</Tab><Tab value="history">История приходов</Tab></TabList>
+      {receiptTab === "history" ? <History kind="receipts" /> : receiptTab === "external" ? <ExternalReceipt /> : <>
       <ImportStockJson mode="receipt" catalog={rows.data ?? []} disabled={!rows.data || rows.isError || mutation.isPending}
         onImport={(document) => {
           setValues((current) => ({...current, ...Object.fromEntries(document.entries.map((entry) => [entry.id, {quantity: entry.quantity}]))}));
@@ -607,10 +607,10 @@ export function ProductionPage() {
         {products.data?.map((item) => (
           <div className={styles.row} key={item.id}>
             <strong>{item.name}</strong>
-            <ProduceManufacturedItemButton
-              itemId={item.id}
-              itemName={item.name}
-              serialized={item.is_product}
+            <ReleaseProductsButton
+              productId={item.id}
+              productName={item.name}
+
               label="Выпустить"
             />
           </div>
@@ -628,7 +628,7 @@ export function ProductionPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Номер</th>
+                <th>ID изделия</th>
                 <th>Продукт</th>
                 <th>Дата</th>
                 <th>Фото</th>

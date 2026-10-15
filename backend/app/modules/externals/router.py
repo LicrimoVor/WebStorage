@@ -16,6 +16,7 @@ from app.modules.externals.schemas import (
     ProviderRead,
     ProviderWrite,
 )
+from app.modules.trash.model import visible_entry
 
 router = APIRouter(tags=["external providers"])
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -24,7 +25,13 @@ CurrentActor = Annotated[Actor, Depends(get_current_actor)]
 
 @router.get("/external-providers", response_model=list[ProviderRead])
 async def list_providers(session: Session) -> Any:
-    return (await session.scalars(select(ExternalProvider).order_by(ExternalProvider.name))).all()
+    return (
+        await session.scalars(
+            select(ExternalProvider)
+            .where(visible_entry(ExternalProvider.id, "external_provider"))
+            .order_by(ExternalProvider.name)
+        )
+    ).all()
 
 
 @router.post("/external-providers", response_model=ProviderRead, status_code=201)

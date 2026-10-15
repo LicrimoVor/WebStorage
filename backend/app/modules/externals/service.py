@@ -26,12 +26,29 @@ from app.modules.inventory.types import MovementType
 from app.modules.manufactured_items.model import ManufacturedItem
 from app.modules.manufactured_items.movement_repository import create_movement as item_movement
 from app.modules.materials.model import Material
-from app.modules.operations.model import Operation
+from app.modules.trash.model import visible_entry
 
 
-def operation_name(provider: str, item: str, offer_id: uuid.UUID) -> str:
-    name = f"Обратиться к {provider} для {item}"
-    return name if len(name) <= 200 else name[:190] + " " + str(offer_id)[:8]
+async def visible_provider(session: AsyncSession, provider_id: uuid.UUID) -> bool:
+    return bool(
+        await session.scalar(
+            select(ExternalProvider.id).where(
+                ExternalProvider.id == provider_id,
+                visible_entry(ExternalProvider.id, "external_provider"),
+            )
+        )
+    )
+
+
+async def visible_offer(session: AsyncSession, offer_id: uuid.UUID) -> bool:
+    return bool(
+        await session.scalar(
+            select(ExternalOffer.id).where(
+                ExternalOffer.id == offer_id,
+                visible_entry(ExternalOffer.id, "external_offer"),
+            )
+        )
+    )
 
 
 async def save_provider(
@@ -42,7 +59,7 @@ async def save_provider(
         if provider_id
         else ExternalProvider()
     )
-    if provider is None:
+    if provider is None or (provider_id and not await visible_provider(session, provider_id)):
         raise NotFoundError("Исполнитель не найден")
     duplicate = await session.scalar(
         select(ExternalProvider.id).where(func.lower(ExternalProvider.name) == payload.name.lower())
@@ -51,18 +68,6 @@ async def save_provider(
         raise ConflictError("Такое название исполнителя уже существует")
     provider.name = payload.name
     session.add(provider)
-    if provider_id:
-        rows = (
-            await session.execute(
-                select(ExternalOffer, ManufacturedItem)
-                .join(ManufacturedItem, ManufacturedItem.id == ExternalOffer.item_id)
-                .where(ExternalOffer.provider_id == provider_id)
-            )
-        ).all()
-        for offer, item in rows:
-            operation = await session.get(Operation, offer.operation_id, with_for_update=True)
-            if operation:
-                operation.name = operation_name(provider.name, item.name, offer.id)
     try:
         await session.commit()
     except IntegrityError as error:
@@ -72,80 +77,144 @@ async def save_provider(
     return provider
 
 
+async def recipe(
+    session: AsyncSession, version_id: uuid.UUID
+) -> tuple[list[ExternalMaterial], Decimal]:
+    from app.modules.production_plans.service import CalculationContext, _expand_version
+    from app.modules.technological_processes.model import TechnologicalProcessVersion
+
+    version = await session.get(TechnologicalProcessVersion, version_id)
+    if version is None or version.deleted_at is not None or version.validation_errors:
+        raise DomainValidationError("Версия техпроцесса недоступна")
+    context = CalculationContext(session, item_stock={}, material_stock={})
+    await _expand_version(context, version, Decimal("1"), item_stack=(), version_overrides={})
+    return (
+        [
+            ExternalMaterial(material_id=id, quantity=line.quantity)
+            for id, line in context.materials.items()
+        ],
+        money(
+            sum(
+                (
+                    line.quantity * (line.operation.price_per_operation or Decimal("0"))
+                    for line in context.operations.values()
+                ),
+                Decimal("0"),
+            )
+        ),
+    )
+
+
 async def offers(session: AsyncSession, provider_id: uuid.UUID | None = None) -> list[OfferRead]:
+    from app.modules.technological_processes.model import (
+        TechnologicalProcess,
+        TechnologicalProcessVersion,
+    )
+
     query = (
         select(ExternalOffer, ExternalProvider, ManufacturedItem)
         .join(ExternalProvider, ExternalProvider.id == ExternalOffer.provider_id)
         .join(ManufacturedItem, ManufacturedItem.id == ExternalOffer.item_id)
         .where(ManufacturedItem.archived.is_(False))
+        .where(
+            visible_entry(ExternalProvider.id, "external_provider"),
+            visible_entry(ExternalOffer.id, "external_offer"),
+        )
         .order_by(ManufacturedItem.name, ExternalProvider.name)
     )
     if provider_id:
         query = query.where(ExternalOffer.provider_id == provider_id)
-    return [
-        OfferRead(
-            id=offer.id,
-            operation_id=offer.operation_id,
-            provider_id=provider.id,
-            provider_name=provider.name,
-            item_id=item.id,
-            item_name=item.name,
-            unit=item.unit,
-            money_cost=offer.money_cost,
-            materials=[ExternalMaterial.model_validate(line) for line in offer.materials],
-            active=offer.active,
+    result = []
+    for offer, provider, item in (await session.execute(query)).all():
+        version = (
+            await session.get(TechnologicalProcessVersion, offer.process_version_id)
+            if offer.process_version_id
+            else None
         )
-        for offer, provider, item in (await session.execute(query)).all()
-    ]
+        process = await session.get(TechnologicalProcess, version.process_id) if version else None
+        available = bool(
+            version
+            and version.deleted_at is None
+            and not version.validation_errors
+            and process
+            and not process.archived
+        )
+        materials, cost = (
+            await recipe(session, version.id)
+            if version and available
+            else (
+                [ExternalMaterial.model_validate(line) for line in offer.materials],
+                offer.money_cost,
+            )
+        )
+        result.append(
+            OfferRead(
+                id=offer.id,
+                process_id=process.id if process else uuid.UUID(int=0),
+                process_version_id=offer.process_version_id,
+                process_name=process.name if process else "Выберите техпроцесс",
+                provider_id=provider.id,
+                provider_name=provider.name,
+                item_id=item.id,
+                item_name=item.name,
+                unit=item.unit,
+                money_cost=cost,
+                materials=materials,
+                active=offer.active and available,
+            )
+        )
+    return result
 
 
 async def save_offer(
     session: AsyncSession, payload: OfferWrite, offer_id: uuid.UUID | None = None
 ) -> OfferRead:
+    from app.modules.technological_processes.model import (
+        TechnologicalProcess,
+        TechnologicalProcessVersion,
+    )
+
     provider = await session.get(ExternalProvider, payload.provider_id, with_for_update=True)
-    item = await session.get(ManufacturedItem, payload.item_id)
-    if provider is None or item is None or item.archived or item.is_product:
-        raise DomainValidationError("Выберите исполнителя и действующий полуфабрикат")
-    for line in payload.materials:
-        material = await session.get(Material, line.material_id)
-        if material is None or material.archived:
-            raise DomainValidationError("Материал не найден или архивирован")
+    if not await visible_provider(session, payload.provider_id):
+        raise NotFoundError("Исполнитель не найден")
+    process = await session.get(TechnologicalProcess, payload.process_id)
+    item = (
+        await session.get(ManufacturedItem, process.output_item_id)
+        if process and process.output_item_id
+        else None
+    )
+    if (
+        provider is None
+        or process is None
+        or process.archived
+        or item is None
+        or item.archived
+        or item.is_product
+    ):
+        raise DomainValidationError("Выберите исполнителя и действующий техпроцесс полуфабриката")
+    version = await session.scalar(
+        select(TechnologicalProcessVersion).where(
+            TechnologicalProcessVersion.process_id == process.id,
+            TechnologicalProcessVersion.status == "active",
+            TechnologicalProcessVersion.deleted_at.is_(None),
+        )
+    )
+    if version is None:
+        raise DomainValidationError("У техпроцесса нет активной версии")  # noqa: RUF001
+    materials, cost = await recipe(session, version.id)
     offer = (
         await session.get(ExternalOffer, offer_id, with_for_update=True)
         if offer_id
         else ExternalOffer(id=uuid.uuid4())
     )
-    if offer is None:
+    if offer is None or (offer_id and not await visible_offer(session, offer_id)):
         raise NotFoundError("Условия исполнителя не найдены")
-    if offer_id and (offer.provider_id != payload.provider_id or offer.item_id != payload.item_id):
-        raise DomainValidationError("Для другого исполнителя или п/ф создайте новые условия")
-    duplicate = await session.scalar(
-        select(ExternalOffer.id).where(
-            ExternalOffer.provider_id == provider.id, ExternalOffer.item_id == item.id
-        )
-    )
-    if duplicate and duplicate != offer.id:
-        raise ConflictError("Этот п/ф уже прикреплён к исполнителю")
-    operation = (
-        await session.get(Operation, offer.operation_id, with_for_update=True)
-        if offer_id
-        else Operation(id=uuid.uuid4())
-    )
-    if operation is None:
-        raise NotFoundError("Операция не найдена")
-    operation.name = operation_name(provider.name, item.name, offer.id)
-    operation.price_per_operation = payload.money_cost
-    operation.archived = not payload.active
-    session.add(operation)
-    try:
-        await session.flush()
-    except IntegrityError as error:
-        await session.rollback()
-        raise ConflictError("Такое название операции уже существует") from error
-    offer.provider_id, offer.item_id, offer.operation_id = provider.id, item.id, operation.id
+    if offer_id and offer.provider_id != provider.id:
+        raise DomainValidationError("Нельзя изменить исполнителя условий")
+    offer.provider_id, offer.item_id, offer.process_version_id = provider.id, item.id, version.id
     offer.money_cost, offer.materials, offer.active = (
-        payload.money_cost,
-        [line.model_dump(mode="json") for line in payload.materials],
+        cost,
+        [line.model_dump(mode="json") for line in materials],
         payload.active,
     )
     session.add(offer)
@@ -153,7 +222,7 @@ async def save_offer(
         await session.commit()
     except IntegrityError as error:
         await session.rollback()
-        raise ConflictError("Этот п/ф уже прикреплён к исполнителю") from error
+        raise ConflictError("Этот техпроцесс уже прикреплён к исполнителю") from error
     return next(entry for entry in await offers(session, provider.id) if entry.id == offer.id)
 
 
@@ -173,22 +242,43 @@ async def receive(
         if existing.fingerprint != fingerprint:
             raise ConflictError("Ключ уже использован для другого документа")
         return document_read(existing)
-    offer = await session.get(ExternalOffer, payload.offer_id, with_for_update=True)
-    if offer is None or not offer.active:
+    offer = await session.get(ExternalOffer, payload.offer_id)
+    if offer is None:
         raise DomainValidationError("Выберите действующие условия внешнего исполнителя")
-    provider = await session.get(ExternalProvider, offer.provider_id)
+    provider = await session.get(ExternalProvider, offer.provider_id, with_for_update=True)
+    await session.refresh(offer, with_for_update=True)
+    if (
+        not offer.active
+        or not await visible_offer(session, offer.id)
+        or not await visible_provider(session, offer.provider_id)
+    ):
+        raise DomainValidationError("Выберите действующие условия внешнего исполнителя")
     item = await session.get(ManufacturedItem, offer.item_id, with_for_update=True)
-    operation = await session.get(Operation, offer.operation_id)
+    from app.modules.technological_processes.model import (
+        TechnologicalProcess,
+        TechnologicalProcessVersion,
+    )
+
+    version = (
+        await session.get(TechnologicalProcessVersion, offer.process_version_id)
+        if offer.process_version_id
+        else None
+    )
+    process = await session.get(TechnologicalProcess, version.process_id) if version else None
     if (
         item is None
         or item.archived
         or item.is_product
         or provider is None
-        or operation is None
-        or operation.archived
+        or process is None
+        or process.archived
     ):
         raise DomainValidationError("Полуфабрикат или операция недоступны")
-    raw_total = offer.money_cost * payload.quantity
+    if version is None:
+        raise DomainValidationError("Выберите техпроцесс исполнителя")
+    materials, cost = await recipe(session, version.id)
+    description = f"Приход от {provider.name}: {item.name}"
+    raw_total = cost * payload.quantity
     if raw_total > Decimal("999999999999999999.99"):
         raise DomainValidationError("Сумма расходов слишком велика")
     total = money(raw_total)
@@ -206,7 +296,10 @@ async def receive(
     session.add(document)
     await session.flush()
     spent = []
-    for line in sorted(offer.materials, key=lambda entry: entry["material_id"]):
+    for line in sorted(
+        [entry.model_dump(mode="json") for entry in materials],
+        key=lambda entry: entry["material_id"],
+    ):
         raw_quantity = Decimal(str(line["quantity"])) * payload.quantity
         if raw_quantity > Decimal("99999999999999.999999"):
             raise DomainValidationError("Расход материала слишком велик")
@@ -218,7 +311,7 @@ async def receive(
             material_id=uuid.UUID(line["material_id"]),
             movement_type=MovementType.CONSUMPTION,
             quantity=-amount,
-            comment=payload.comment or operation.name,
+            comment=payload.comment or description,
             source_type="external_receipt",
             source_id=document.id,
         )
@@ -236,7 +329,7 @@ async def receive(
         item_id=item.id,
         movement_type=MovementType.RECEIPT,
         quantity=payload.quantity,
-        comment=payload.comment or operation.name,
+        comment=payload.comment or description,
         source_type="external_receipt",
         source_id=document.id,
     )
@@ -249,7 +342,7 @@ async def receive(
                 amount=total,
                 occurred_at=timestamp(payload.occurred_at),
                 category="Внешние исполнители",
-                comment=payload.comment or operation.name,
+                comment=payload.comment or description,
                 created_by=actor,
                 funding_source_id=payload.funding_source_id,
                 funding_allocations=allocations,
@@ -259,7 +352,8 @@ async def receive(
         **payload.model_dump(mode="json"),
         "provider_name": provider.name,
         "total_amount": str(total),
-        "operation_name": operation.name,
+        "process_name": process.name,
+        "process_version_id": str(version.id),
         "spent_materials": spent,
         "entries": [
             {"material_id": str(item.id), "name": item.name, "quantity": str(payload.quantity)}

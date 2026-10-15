@@ -618,7 +618,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^(receipt|repair|external_receipt)$",
+              "pattern": "^(receipt|receipts|repair|external_receipt|release)$",
               "title": "Kind"
             }
           },
@@ -717,6 +717,16 @@
               "default": 100,
               "title": "Limit"
             }
+          },
+          {
+            "name": "available_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Available Only"
+            }
           }
         ],
         "responses": {
@@ -726,6 +736,60 @@
               "application/json": {
                 "schema": {
                   "title": "Response Units Api V1 Product Units Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product-releases": {
+      "post": {
+        "tags": [
+          "business"
+        ],
+        "summary": "Release",
+        "operationId": "release_api_v1_product_releases_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductReleaseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Release Api V1 Product Releases Post"
                 }
               }
             }
@@ -2222,6 +2286,16 @@
                 }
               ],
               "title": "Group Id"
+            }
+          },
+          {
+            "name": "released_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Released Only"
             }
           }
         ],
@@ -8936,6 +9010,11 @@
             "format": "date-time",
             "title": "Updated At"
           },
+          "released_quantity": {
+            "type": "integer",
+            "title": "Released Quantity",
+            "default": 0
+          },
           "kind": {
             "type": "string",
             "enum": [
@@ -9845,35 +9924,7 @@
         ],
         "title": "ExportDataset"
       },
-      "ExternalMaterial-Input": {
-        "properties": {
-          "material_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Material Id"
-          },
-          "quantity": {
-            "anyOf": [
-              {
-                "type": "number",
-                "exclusiveMinimum": 0.0
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,14}|(?=[\\d.]{1,21}0*$)\\d{0,14}\\.\\d{0,6}0*$)"
-              }
-            ],
-            "title": "Quantity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "material_id",
-          "quantity"
-        ],
-        "title": "ExternalMaterial"
-      },
-      "ExternalMaterial-Output": {
+      "ExternalMaterial": {
         "properties": {
           "material_id": {
             "type": "string",
@@ -11527,6 +11578,17 @@
       },
       "ManufacturedItemCreate": {
         "properties": {
+          "is_accountable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Accountable"
+          },
           "is_byproduct": {
             "type": "boolean",
             "title": "Is Byproduct",
@@ -11800,6 +11862,16 @@
       },
       "ManufacturedItemRead": {
         "properties": {
+          "released_quantity": {
+            "type": "integer",
+            "title": "Released Quantity",
+            "default": 0
+          },
+          "is_accountable": {
+            "type": "boolean",
+            "title": "Is Accountable",
+            "default": false
+          },
           "is_byproduct": {
             "type": "boolean",
             "title": "Is Byproduct",
@@ -11924,6 +11996,11 @@
       },
       "ManufacturedItemUpdate": {
         "properties": {
+          "is_accountable": {
+            "type": "boolean",
+            "title": "Is Accountable",
+            "default": false
+          },
           "is_byproduct": {
             "type": "boolean",
             "title": "Is Byproduct",
@@ -12427,29 +12504,15 @@
       },
       "OfferRead": {
         "properties": {
+          "process_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Process Id"
+          },
           "provider_id": {
             "type": "string",
             "format": "uuid",
             "title": "Provider Id"
-          },
-          "item_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Item Id"
-          },
-          "money_cost": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)",
-            "title": "Money Cost",
-            "default": "0"
-          },
-          "materials": {
-            "items": {
-              "$ref": "#/components/schemas/ExternalMaterial-Output"
-            },
-            "type": "array",
-            "maxItems": 1000,
-            "title": "Materials"
           },
           "active": {
             "type": "boolean",
@@ -12461,10 +12524,38 @@
             "format": "uuid",
             "title": "Id"
           },
-          "operation_id": {
+          "process_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Version Id"
+          },
+          "process_name": {
+            "type": "string",
+            "title": "Process Name"
+          },
+          "item_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Operation Id"
+            "title": "Item Id"
+          },
+          "money_cost": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Money Cost"
+          },
+          "materials": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalMaterial"
+            },
+            "type": "array",
+            "title": "Materials"
           },
           "provider_name": {
             "type": "string",
@@ -12481,10 +12572,14 @@
         },
         "type": "object",
         "required": [
+          "process_id",
           "provider_id",
-          "item_id",
           "id",
-          "operation_id",
+          "process_version_id",
+          "process_name",
+          "item_id",
+          "money_cost",
+          "materials",
           "provider_name",
           "item_name",
           "unit"
@@ -12493,37 +12588,15 @@
       },
       "OfferWrite": {
         "properties": {
+          "process_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Process Id"
+          },
           "provider_id": {
             "type": "string",
             "format": "uuid",
             "title": "Provider Id"
-          },
-          "item_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Item Id"
-          },
-          "money_cost": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0.0
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,18}|(?=[\\d.]{1,21}0*$)\\d{0,18}\\.\\d{0,2}0*$)"
-              }
-            ],
-            "title": "Money Cost",
-            "default": "0"
-          },
-          "materials": {
-            "items": {
-              "$ref": "#/components/schemas/ExternalMaterial-Input"
-            },
-            "type": "array",
-            "maxItems": 1000,
-            "title": "Materials"
           },
           "active": {
             "type": "boolean",
@@ -12533,8 +12606,8 @@
         },
         "type": "object",
         "required": [
-          "provider_id",
-          "item_id"
+          "process_id",
+          "provider_id"
         ],
         "title": "OfferWrite"
       },
@@ -14344,6 +14417,48 @@
           "generated_at"
         ],
         "title": "ProcurementList"
+      },
+      "ProductReleaseCreate": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id"
+          },
+          "serial_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Serial Numbers"
+          },
+          "photo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "serial_numbers"
+        ],
+        "title": "ProductReleaseCreate"
       },
       "ProductSalesRow": {
         "properties": {

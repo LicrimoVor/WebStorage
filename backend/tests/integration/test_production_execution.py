@@ -233,7 +233,7 @@ async def test_atomic_product_registration_posts_components_and_progress(
     product_read = await client.get(f"/api/v1/manufactured-items/{product['id']}")
     assert Decimal(material_read.json()["free_quantity"]) == Decimal("14")
     assert Decimal(semi_read.json()["free_quantity"]) == Decimal("6")
-    assert Decimal(product_read.json()["free_quantity"]) == Decimal("2")
+    assert Decimal(product_read.json()["free_quantity"]) == Decimal("0")
 
     plan_read = await client.get(f"/api/v1/production-plans/{plan['id']}")
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("2")
@@ -341,7 +341,7 @@ async def test_idempotency_replay_returns_one_record_and_one_output(
     )
     assert conflict.status_code == 409
     product_read = await client.get(f"/api/v1/manufactured-items/{product['id']}")
-    assert Decimal(product_read.json()["free_quantity"]) == Decimal("1")
+    assert Decimal(product_read.json()["free_quantity"]) == Decimal("0")
     history = await client.get(path)
     assert history.json()["total"] == 1
 
@@ -415,7 +415,7 @@ async def test_concurrent_production_cannot_exceed_plan_remaining(
     plan_read = await client.get(f"/api/v1/production-plans/{plan['id']}")
     assert Decimal(plan_read.json()["produced_quantity"]) == Decimal("3")
     product_read = await client.get(f"/api/v1/manufactured-items/{product['id']}")
-    assert Decimal(product_read.json()["free_quantity"]) == Decimal("3")
+    assert Decimal(product_read.json()["free_quantity"]) == Decimal("0")
 
 
 @pytest.mark.asyncio

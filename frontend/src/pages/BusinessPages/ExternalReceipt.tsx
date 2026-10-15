@@ -55,6 +55,7 @@ export function ExternalReceipt() {
       <TextInput label={`Количество${offer ? `, ${offer.unit}` : ''}`} value={quantity} onUpdate={setQuantity}
         controlProps={{inputMode: 'decimal', 'aria-label': 'Количество внешнего полуфабриката'}} />
       {offer && <>
+        <p>Техпроцесс: <b>{offer.process_name}</b>. Операции не регистрируются.</p>
         <p>Денежный расход: <b>{total ? formatDecimal(total) : '—'} ₽</b> ({formatDecimal(offer.money_cost)} ₽ за 1 {offer.unit}).</p>
         {offer.materials.length ? <><h3>Будут списаны материалы</h3><ul>{offer.materials.map((line) => {
           const material = materials.data?.items.find((entry) => entry.id === line.material_id);

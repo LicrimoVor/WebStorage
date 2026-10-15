@@ -243,6 +243,7 @@ export function MaterialsTableWidget({kind = 'all', hideCreate = false}: {kind?:
       ) : (
         <div className={styles.content}>
           <MaterialsTable
+            showReleased={kind === 'product'}
             key={kind}
             items={query.data.items}
             onSelect={setSelected}

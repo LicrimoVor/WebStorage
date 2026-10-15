@@ -53,6 +53,7 @@ describe('CreateManufacturedItemButton', () => {
         name: 'Корпус редуктора',
         is_product: false,
         is_byproduct: true,
+        is_accountable: false,
         product_id: "owner-id",
         unit: 'шт.',
         initial_quantity: '4.5',

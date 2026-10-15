@@ -115,7 +115,7 @@ describe('ProcessCanvas', () => {
     const sourcePort = screen.getByRole('button', {name: 'Потянуть связь из Сталь (снизу)'});
     fireEvent.pointerDown(sourcePort, {clientX: 100, clientY: 100, button: 0});
     fireEvent.pointerUp(sourcePort, {clientX: 600, clientY: 200});
-    expect(document.querySelector('[data-process-edge] path')).toHaveAttribute('d', expect.stringMatching(/^M 130 168 C .*630 200$/));
+    expect(document.querySelector('[data-process-edge] path')).toHaveAttribute('d', expect.stringMatching(/^M 92 112 C .*664 200$/));
     await waitFor(() => expect(saveTechnologicalProcessDraft).toHaveBeenCalledWith(version.process_id, version.id,
       expect.objectContaining({graph: expect.objectContaining({edges: [expect.objectContaining({sourceSide: 'bottom', targetSide: 'top'})]})})), {timeout: 3000});
   });

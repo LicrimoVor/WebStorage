@@ -8,17 +8,18 @@ import { MaterialImage } from "./MaterialImage";
 import styles from "./MaterialsTable.module.scss";
 
 interface MaterialsTableProps {
-  items: (Material & {kind?: string})[];
+  items: (Material & {kind?: string; released_quantity?: number})[];
   onSelect: (material: Material) => void;
   selectedIds?: string[];
   onSelectionChange?: ((ids: string[]) => void) | undefined;
   selectionDisabled?: boolean;
+  showReleased?: boolean;
 }
 
-export function MaterialsTable({ items, onSelect, selectedIds = [], onSelectionChange, selectionDisabled }: MaterialsTableProps) {
+export function MaterialsTable({ items, onSelect, selectedIds = [], onSelectionChange, selectionDisabled, showReleased = false }: MaterialsTableProps) {
   const visibleIds = items.map(catalogRowId);
   const checkedCount = visibleIds.filter((id) => selectedIds.includes(id)).length;
-  const columns: TableColumnConfig<Material & {kind?: string}>[] = [
+  const columns: TableColumnConfig<Material & {kind?: string; released_quantity?: number}>[] = [
     ...(onSelectionChange ? [{
       id: 'selection',
       name: () => <Checkbox controlProps={{'aria-label': 'Выбрать все строки'}} disabled={selectionDisabled}
@@ -28,7 +29,7 @@ export function MaterialsTable({ items, onSelect, selectedIds = [], onSelectionC
           ? [...new Set([...selectedIds, ...visibleIds])]
           : selectedIds.filter((id) => !visibleIds.includes(id)))} />,
       width: 48,
-      template: (item: Material & {kind?: string}) => <Checkbox
+      template: (item: Material & {kind?: string; released_quantity?: number}) => <Checkbox
         controlProps={{'aria-label': `Выбрать: ${item.name}`}} disabled={selectionDisabled}
         checked={selectedIds.includes(catalogRowId(item))}
         onUpdate={(checked) => onSelectionChange(checked
@@ -58,6 +59,10 @@ export function MaterialsTable({ items, onSelect, selectedIds = [], onSelectionC
       align: "center",
       template: (item) => formatDecimal(item.free_quantity),
     },
+    ...(showReleased ? [{
+      id: 'released_quantity', name: 'Выпущенные', align: 'center' as const,
+      template: (item: Material & {released_quantity?: number}) => formatDecimal(String(item.released_quantity ?? 0)),
+    }] : []),
     {
       id: "required_quantity",
       name: "Требуется",

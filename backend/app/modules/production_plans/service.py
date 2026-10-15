@@ -11,7 +11,6 @@ from app.core.errors import ConflictError, DomainValidationError, NotFoundError
 from app.modules.inventory.model import InventoryMovement
 from app.modules.manufactured_items.model import (
     ManufacturedItem,
-    ManufacturedItemMovement,
 )
 from app.modules.materials.model import Material
 from app.modules.operations.model import Operation
@@ -148,14 +147,9 @@ class CalculationContext:
 async def _stock_balances(
     session: AsyncSession,
 ) -> tuple[dict[uuid.UUID, Decimal], dict[uuid.UUID, Decimal]]:
-    item_rows = (
-        await session.execute(
-            select(
-                ManufacturedItemMovement.manufactured_item_id,
-                func.sum(ManufacturedItemMovement.quantity),
-            ).group_by(ManufacturedItemMovement.manufactured_item_id)
-        )
-    ).all()
+    from app.modules.manufactured_items.repository import balance_expression
+
+    item_rows = (await session.execute(select(ManufacturedItem.id, balance_expression()))).all()
     material_rows = (
         await session.execute(
             select(InventoryMovement.material_id, func.sum(InventoryMovement.quantity)).group_by(

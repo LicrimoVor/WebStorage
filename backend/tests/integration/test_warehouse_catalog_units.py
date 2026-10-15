@@ -75,6 +75,9 @@ async def test_shared_catalog_groups_pagination_and_byproduct_sales(client: Asyn
 
 async def test_anonymous_and_named_units_release_sale_and_retry(client: AsyncClient) -> None:
     source, material, product, _ = await setup_catalog(client)
+    await client.patch(
+        f"/api/v1/manufactured-items/{product['id']}", json={"is_accountable": False}
+    )
     await post(
         client,
         f"/materials/{material['id']}/movements",
@@ -99,13 +102,14 @@ async def test_anonymous_and_named_units_release_sale_and_retry(client: AsyncCli
     assert activated.status_code == 200
     path = f"/manufactured-items/{product['id']}/produce"
     key = str(uuid.uuid4())
-    payload = {"quantity": "3", "serial_numbers": ["N1", ""]}
+    payload = {"quantity": "3"}
     first = await post(client, path, payload, key)
     assert (await post(client, path, payload, key))["id"] == first["id"]
+    await post(client, "/product-releases", {"product_id": product["id"], "serial_numbers": ["N1"]})
     units = (await client.get("/api/v1/product-units", params={"product_id": product["id"]})).json()
-    assert len(units) == 3
-    assert sum(u["serial_number"] is None for u in units) == 2
-    assert len({u["id"] for u in units}) == 3
+    assert len(units) == 1
+    assert sum(u["serial_number"] is None for u in units) == 0
+    assert len({u["id"] for u in units}) == 1
     sale = {
         "product_id": product["id"],
         "quantity": "1",
@@ -121,8 +125,8 @@ async def test_anonymous_and_named_units_release_sale_and_retry(client: AsyncCli
     await post(client, "/sales", {**sale, "serial_numbers": ["N1"]})
     await post(client, path, {"quantity": "2"})
     units = (await client.get("/api/v1/product-units", params={"product_id": product["id"]})).json()
-    assert len(units) == 5
-    assert sum(u["sale_id"] is not None for u in units) == 3
+    assert len(units) == 1
+    assert sum(u["sale_id"] is not None for u in units) == 1
     invalid = await client.post(
         "/api/v1" + path,
         json={"quantity": "1", "serial_numbers": ["X", "Y"]},

@@ -1,4 +1,4 @@
-import {portPoint, type PortSide} from './connectionGeometry';
+import {nodeDimensions, portPoint, type PortSide} from './connectionGeometry';
 import type {
   ProcessEdgeInput,
   ProcessGraphInput,
@@ -93,8 +93,7 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     return {
       ...baseElement(node.id, x, y),
       type: 'rectangle',
-      width: 220,
-      height: 144,
+      ...nodeDimensions(node.type),
       backgroundColor: nodeColors[node.type],
       roundness: node.type === 'output' ? {type: 2} : {type: 3},
       ...(node.type === 'output' ? {strokeColor: '#087f8c', strokeWidth: 3} : {}),
@@ -121,8 +120,10 @@ export function graphToExcalidraw(graph: CanvasGraph): ExcalidrawDocument {
     const source = nodeById.get(edge.source);
     const target = nodeById.get(edge.target);
     if (!source || !target) return [];
-    const {x, y} = portPoint(source.position ?? {x: 0, y: 0}, edge.sourceSide ?? 'right', 220, 144);
-    const {x: targetX, y: targetY} = portPoint(target.position ?? {x: 0, y: 0}, edge.targetSide ?? 'left', 220, 144);
+    const sourceSize = source.type === 'operation' || source.type === 'comment' ? {width: 220, height: 144} : nodeDimensions(source.type);
+    const targetSize = target.type === 'operation' || target.type === 'comment' ? {width: 220, height: 144} : nodeDimensions(target.type);
+    const {x, y} = portPoint(source.position ?? {x: 0, y: 0}, edge.sourceSide ?? 'right', sourceSize.width, sourceSize.height);
+    const {x: targetX, y: targetY} = portPoint(target.position ?? {x: 0, y: 0}, edge.targetSide ?? 'left', targetSize.width, targetSize.height);
     return [
       {
         ...baseElement(edge.id, x, y),

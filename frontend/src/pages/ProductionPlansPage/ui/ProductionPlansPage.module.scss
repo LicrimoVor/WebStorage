@@ -321,3 +321,9 @@
     white-space: normal;
   }
 }
+
+.planButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

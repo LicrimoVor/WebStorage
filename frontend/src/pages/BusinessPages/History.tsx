@@ -17,6 +17,8 @@ export interface Line {
 }
 export interface OperationLine {operation_id: string; quantity: string}
 export interface Document {
+  kind?: string;
+  process_name?: string;
   provider_name?: string;
   operation_name?: string;
   spent_materials?: Line[];
@@ -60,7 +62,7 @@ function DocumentDetails({document: doc}: {document: Document}) {
         {line.unit_price && `; цена: ${line.unit_price}`}
       </li>)}</ul>
     </section>
-    {doc.provider_name && <section><h3>Внешний исполнитель</h3><p>{doc.provider_name}</p><p>{doc.operation_name}</p></section>}
+    {doc.provider_name && <section><h3>Внешний исполнитель</h3><p>{doc.provider_name}</p><p>{doc.process_name ?? doc.operation_name}</p></section>}
     {doc.spent_materials && <section><h3>Списанные материалы</h3><ul>{doc.spent_materials.map((line) => <li key={line.material_id}>{line.name}: {formatDecimal(line.quantity)}</li>)}</ul></section>}
     {doc.operation_snapshots && <section>
       <h3>Операции</h3>
@@ -73,7 +75,7 @@ function DocumentDetails({document: doc}: {document: Document}) {
 }
 
 export function History({kind, onCopy, copyingDisabled = false}: {
-  kind: 'receipt' | 'repair' | 'external_receipt';
+  kind: 'receipt' | 'receipts' | 'repair' | 'external_receipt';
   onCopy?: (doc: Document) => void;
   copyingDisabled?: boolean;
 }) {

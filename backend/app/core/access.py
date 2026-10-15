@@ -56,6 +56,8 @@ def required_sections(
             if read
             else {Section.PERSONNEL}
         )
+    if resource == "product-releases":
+        return {Section.WAREHOUSE, Section.PLANNING}
     if resource == "external-receipts":
         return {Section.WAREHOUSE}
     if resource == "operations" and "work-entries" in parts:
@@ -127,7 +129,7 @@ def required_sections(
         "operations": {Section.PLANNING, Section.PROCESSES, Section.PERSONNEL, Section.REPAIRS},
         "operation-groups": {Section.PROCESSES, Section.PERSONNEL, Section.REPAIRS},
         "inventory-groups": {Section.PROCESSES},
-        "technological-processes": {Section.PLANNING},
+        "technological-processes": {Section.PLANNING, Section.PERSONNEL},
         "production-plans": {Section.PERSONNEL},
         "employees": {
             Section.REPAIRS,
