@@ -1,7 +1,8 @@
-import {fireEvent, screen, waitFor} from '@testing-library/react';
+import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, expect, it, vi} from 'vitest';
 import {saveExternalOffer, saveExternalProvider} from '@/entities/External';
+import {DeleteEntityButton} from '@/features/DeleteEntity/DeleteEntityButton';
 import {renderWithProviders} from '@/shared/lib/testing/renderWithProviders';
 import {ExternalProviders} from './ExternalProviders';
 import {apiRequest} from '@/shared/api';
@@ -57,9 +58,27 @@ it('removes a process assignment without deleting the shared process', async () 
   state.offers = [{id: 'offer', process_id: 'process', process_version_id: 'version', process_name: 'Обработка', provider_id: 'provider', provider_name: 'Подрядчик', item_id: 'semi', item_name: 'Узел', unit: 'шт', money_cost: '12.5', materials: [], active: true}];
   renderWithProviders(<ExternalProviders />);
   await userEvent.click(screen.getByText('Подрядчик'));
+  const providerOverlay = (await screen.findByRole('dialog')).closest('.g-modal')!;
   await userEvent.click(await screen.findByRole('button', {name: 'Удалить техпроцесс'}));
   await waitFor(() => expect(screen.getByText(/Будет удалена привязка/)).toBeVisible());
-  await userEvent.click(await screen.findByRole('button', {name: 'Удалить'}));
+  const confirmation = screen.getByText(/Будет удалена привязка/).closest('[role="dialog"]') as HTMLElement;
+  expect(providerOverlay).toContainElement(confirmation);
+  await userEvent.click(await within(confirmation).findByRole('button', {name: 'Удалить'}));
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('/trash/external_offer/offer', {method: 'DELETE'}));
   expect(vi.mocked(apiRequest).mock.calls.some(([path, init]) => path === '/technological-processes/process' && init?.method === 'DELETE')).toBe(false);
+});
+
+it('also supports cancelling and confirming deletion outside a parent dialog', async () => {
+  const onDeleted = vi.fn();
+  renderWithProviders(<DeleteEntityButton kind="material" id="material" name="Материал" onDeleted={onDeleted} />);
+  await userEvent.click(screen.getByRole('button', {name: 'Удалить'}));
+  await userEvent.click(await screen.findByRole('button', {name: 'Отмена'}));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(apiRequest).not.toHaveBeenCalled();
+  expect(onDeleted).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole('button', {name: 'Удалить'}));
+  const confirmation = await screen.findByRole('dialog');
+  await userEvent.click(await within(confirmation).findByRole('button', {name: 'Удалить'}));
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith('/trash/material/material', {method: 'DELETE'}));
+  await waitFor(() => expect(onDeleted).toHaveBeenCalledOnce());
 });

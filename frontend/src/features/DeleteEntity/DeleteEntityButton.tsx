@@ -12,6 +12,7 @@ export function DeleteEntityButton({kind, id, name, onDeleted, label = 'Удал
   const session = useAuthSessionQuery();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [container, setContainer] = useState<HTMLElement>();
   const mutation = useMutation({
     mutationFn: () => apiRequest(`/trash/${kind}/${id}`, {method: 'DELETE'}),
     onSuccess: async () => {
@@ -22,8 +23,14 @@ export function DeleteEntityButton({kind, id, name, onDeleted, label = 'Удал
   });
   if (!session.data || !isAdmin(session.data)) return null;
   return <>
-    <Button view="flat-danger" onClick={() => {mutation.reset(); setOpen(true);}}>{label}</Button>
-    <Dialog open={open} onClose={() => !mutation.isPending && setOpen(false)}>
+    <Button view="flat-danger" onClick={(event) => {
+      // Keep nested confirmation portals inside the parent's overlay so its
+      // focus manager does not hide the confirmation from assistive technology.
+      setContainer(event.currentTarget.closest<HTMLElement>('.g-modal') ?? undefined);
+      mutation.reset();
+      setOpen(true);
+    }}>{label}</Button>
+    <Dialog {...(container ? {container} : {})} open={open} onClose={() => !mutation.isPending && setOpen(false)}>
       <Dialog.Header caption="Переместить в корзину?" />
       <Dialog.Body>
         <p>«{name}» можно будет восстановить в настройках, в разделе «Корзина».</p>
