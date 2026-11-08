@@ -21,7 +21,7 @@ import {
 } from "@/entities/Auth";
 import { LoginPage } from "@/pages/LoginPage";
 import { ApiError, getErrorMessage } from "@/shared/api";
-import { usePageMetadata } from "@/shared/lib";
+import {RouteMetadata} from './RouteMetadata';
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary/ErrorBoundary";
 
 const SettingsPage = lazy(() => import("@/pages/BusinessPages").then((m) => ({default: m.SettingsPage})));
@@ -98,53 +98,10 @@ const PublicInstructionPage = lazy(async () => {
   return { default: module.PublicInstructionPage };
 });
 
-function getPageMetadata(pathname: string) {
-  if (pathname.startsWith("/help")) return ["Инструкция пользователя", "Пошаговое руководство по работе с Веб-складом."] as const;
-  if (pathname === "/settings/users") return ["Пользователи", "Учётные записи и доступ к разделам."] as const;
-  if (pathname === "/settings/trash") return ["Корзина", "Восстановление удалённых записей."] as const;
-  if (pathname === routes.profile) return ["Профиль пользователя", "Учётная запись и пароль."] as const;
-  if (pathname === "/production") return ["Выпуск", "Выпуск номерных изделий."] as const;
-  if (pathname === "/repairs") return ["Ремонт", "Материалы, операции и история ремонтов."] as const;
-  if (pathname === "/settings") return ["Настройки", "Источники финансирования и журнал."] as const;
-  if (pathname === "/warehouse/receipt") return ["Приход", "Поступление материалов."] as const;
-  if (pathname === routes.procurement) return ['Закупки по дефициту', 'Потребности в материалах и таблица закупок.'] as const;
-  if (pathname === routes.audit) return ['Журнал событий', 'История изменений и событий системы.'] as const;
-  if (pathname === routes.productionPlans) {
-    return ['Планирование производства', 'Планы производства, потребности и прогресс выпуска.'] as const;
-  }
-  if (pathname === routes.stockRevision) {
-    return ['Ревизия склада', 'Инвентаризация материалов, полуфабрикатов и продукции.'] as const;
-  }
-  if (pathname.startsWith(routes.warehouse)) {
-    return ['Склад', 'Остатки материалов, полуфабрикатов и готовой продукции.'] as const;
-  }
-  if (pathname.includes('/instruction')) {
-    return ['Техническая инструкция', 'Редактирование технического описания операции.'] as const;
-  }
-  if (pathname === routes.operations) {
-    return ['Операции', 'Справочник производственных операций.'] as const;
-  }
-  if (pathname === routes.processPrompt) {
-    return ['Промпт для техпроцесса', 'Промпт для формирования JSON технологического процесса.'] as const;
-  }
-  if (pathname.startsWith(routes.processes)) {
-    return ['Технологические процессы', 'Версии, графы и операции технологических процессов.'] as const;
-  }
-  if (pathname === routes.personnel) {
-    return ['Персонал', 'Сотрудники, выполненные работы и начисления.'] as const;
-  }
-  if (pathname === routes.sales) return ['Продажи', 'Журнал продаж готовой продукции.'] as const;
-  if (pathname === routes.finance) return ['Финансы', 'Доходы, расходы и финансовая сводка.'] as const;
-  if (pathname === routes.analytics) return ['Аналитика', 'Показатели производства и склада.'] as const;
-  return ['Страница не найдена', 'Запрошенная страница не существует.'] as const;
-}
-
 function AppLayout({ session }: { session: AuthSession }) {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [pageTitle, pageDescription] = getPageMetadata(location.pathname);
-  usePageMetadata(pageTitle, pageDescription);
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
@@ -154,6 +111,7 @@ function AppLayout({ session }: { session: AuthSession }) {
   });
   return (
     <div className={styles.app}>
+      <RouteMetadata pathname={location.pathname} search={location.search} />
       <PersonalAppearance key={session.username} username={session.username} />
       <AppHeader access={session} username={session.username} pending={logoutMutation.isPending} onLogout={() => logoutMutation.mutate()} />
       {!canOpenPath(session, location.pathname) ? <main className={styles.authError}><Alert theme="warning" title="Нет доступа к разделу" message="Обратитесь к администратору, чтобы получить нужные права." actions={<Button onClick={() => navigate(firstAvailablePath(session))}>Открыть доступный раздел</Button>} /></main> : <Suspense fallback={<div className={styles.routeLoader}>Загрузка…</div>}>

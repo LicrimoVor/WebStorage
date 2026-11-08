@@ -7,11 +7,16 @@ import styles from './HelpPage.module.scss';
 
 export function HelpPage() {
   const {chapterId = 'start'} = useParams();
-  const index = Math.max(0, chapters.findIndex((chapter) => chapter.id === chapterId));
+  const index = chapters.findIndex((chapter) => chapter.id === chapterId);
   const chapter = chapters[index];
-  usePageMetadata(`${chapter.title} · Инструкция`, chapter.purpose);
+  usePageMetadata(chapter ? `${chapter.title} · Инструкция` : 'Глава не найдена',
+    chapter?.purpose ?? 'Запрошенная глава инструкции не существует.');
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {heading.current?.focus({preventScroll: true}); window.scrollTo(0, 0);}, [chapterId]);
+  if (!chapter) return <main className={styles.page}>
+    <h1>Глава не найдена</h1><p>Проверьте адрес или откройте начало инструкции.</p>
+    <Button component={Link} to="/help">Открыть инструкцию</Button>
+  </main>;
   return <main className={styles.page}>
     <header><h1>Инструкция пользователя</h1><p>Порядок работы, заполнение форм и разбор ошибок.</p></header>
     <div className={styles.layout}>

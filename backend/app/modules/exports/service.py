@@ -444,7 +444,7 @@ async def create_export(
         )
         return ExportResult(
             filename=filename(dataset, effective_filters),
-            content=build_workbook(sheets),
+            content=await asyncio.to_thread(build_workbook, sheets),
         )
 
     rows = readable_rows(await repository.rows_for_dataset(session, dataset, filters))
@@ -453,5 +453,5 @@ async def create_export(
         columns = [column for column in columns if column.key != "created_by"]
     return ExportResult(
         filename=filename(dataset, filters),
-        content=build_workbook([ExportSheet(sheet_name, columns, rows)]),
+        content=await asyncio.to_thread(build_workbook, [ExportSheet(sheet_name, columns, rows)]),
     )
